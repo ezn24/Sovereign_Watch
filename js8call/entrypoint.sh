@@ -23,9 +23,8 @@
 #                               default.pa already loaded it, pactl will return
 #                               an error which we suppress.
 #
-#   5. KiwiSDR → PulseAudio pipeline
-#   6. JS8Call GUI (background)
-#   7. FastAPI bridge server (background)
+#   5. JS8Call GUI (background)
+#   6. FastAPI bridge server (background, owns KiwiSDR pipeline)
 #   8. tail -f /dev/null      – keeps the container PID-1 alive
 #
 # =============================================================================
@@ -182,60 +181,7 @@ log "Active PulseAudio sources:"
 pactl list sources short 2>&1 | sed 's/^/  /'
 
 # =============================================================================
-# STEP 5 – KiwiSDR → PulseAudio Audio Pipeline
-#
-# PIPELINE EXPLANATION:
-#
-#   kiwirecorder.py \
-#       --nc          : Raw PCM output mode; suppresses progress headers and
-#                       color codes – only raw binary audio frames on stdout.
-#                       Without --nc, stdout contains human-readable text mixed
-#                       with binary data which corrupts the pacat input stream.
-#       -s KIWI_HOST  : KiwiSDR WebSocket host (e.g. kiwisdr.example.com)
-#       -p KIWI_PORT  : KiwiSDR HTTP port (default 8073)
-#       -f KIWI_FREQ  : Tuning frequency in kHz (e.g. 14074 for 20m FT8/JS8)
-#       -m KIWI_MODE  : Demodulation mode (usb for JS8Call)
-#       --OV          : Suppress overload warnings on stdout
-#
-#   | pacat \
-#       --playback    : Write PCM into a PulseAudio sink (not record from source)
-#       --format=s16le: Signed 16-bit little-endian; matches kiwirecorder's
-#                       native output format (KiwiSDR always outputs S16LE)
-#       --rate=12000  : 12 kHz sample rate; KiwiSDR narrowband audio output
-#                       is fixed at 12 kHz. JS8Call expects this rate.
-#       --channels=1  : Mono audio; KiwiSDR outputs single-channel audio
-#       --device=KIWI_RX : Target our virtual null sink created in STEP 4
-#       --stream-name : Descriptive label visible in pavucontrol for debugging
-#       --latency-msec=100 : Tolerate network jitter from the KiwiSDR stream
-#
-# The entire pipeline is backgrounded with & and its PID saved for health-checks.
-# =============================================================================
-log "STEP 5: Starting KiwiSDR → PulseAudio pipeline..."
-log "  KiwiSDR target: ${KIWI_HOST}:${KIWI_PORT} @ ${KIWI_FREQ} kHz (${KIWI_MODE})"
-
-python3 /opt/kiwiclient/kiwirecorder.py \
-    --nc \
-    -s "${KIWI_HOST}" \
-    -p "${KIWI_PORT}" \
-    -f "${KIWI_FREQ}" \
-    -m "${KIWI_MODE:-usb}" \
-    --OV \
-    2>/tmp/kiwirecorder.log \
-| pacat \
-    --playback \
-    --format=s16le \
-    --rate=12000 \
-    --channels=1 \
-    --device=KIWI_RX \
-    --stream-name="KiwiSDR-RX-Feed" \
-    --latency-msec=100 \
-    2>/tmp/pacat.log \
-&
-KIWI_PIPE_PID=$!
-log "KiwiSDR pipeline PID: ${KIWI_PIPE_PID}"
-
-# =============================================================================
-# STEP 6 – Launch JS8Call (headless, background)
+# STEP 5 – Launch JS8Call (headless, background)
 #
 # JS8Call is started against the KIWI_RX.monitor source which appears to it
 # as a standard system microphone. The -rig-name flag identifies the virtual
@@ -247,7 +193,7 @@ log "KiwiSDR pipeline PID: ${KIWI_PIPE_PID}"
 # The TCP API server (port 2442) is always enabled in JS8Call's configuration;
 # our FastAPI bridge (server.py) connects to it as a client.
 # =============================================================================
-log "STEP 6: Launching JS8Call..."
+log "STEP 5: Launching JS8Call..."
 export QT_QPA_PLATFORM=xcb
 export QT_LOGGING_RULES="*.debug=false"
 export PULSE_PROP="media.role=phone"  # Hint to PulseAudio for priority routing
@@ -263,13 +209,18 @@ log "JS8Call PID: ${JS8CALL_PID}"
 sleep 3
 
 # =============================================================================
-# STEP 7 – Start FastAPI WebSocket Bridge
+# STEP 6 – Start FastAPI WebSocket Bridge
 #
 # server.py connects to JS8Call's TCP API on port 2442 and exposes:
 #   • /ws/js8        – WebSocket endpoint for the React frontend
 #   • /api/stations  – REST endpoint returning heard stations list
+#   • /api/kiwi      – KiwiSDR pipeline status
+#
+# server.py also owns the KiwiSDR → PulseAudio pipeline lifecycle: it launches
+# kiwirecorder at startup (using KIWI_* env vars) and allows the UI to
+# reconnect to different hosts/ports at runtime via the SET_KIWI WebSocket action.
 # =============================================================================
-log "STEP 7: Starting FastAPI bridge server on port 8080..."
+log "STEP 6: Starting FastAPI bridge server on port 8080..."
 python3 /app/server.py \
     2>/tmp/server.log \
 &
@@ -277,18 +228,17 @@ SERVER_PID=$!
 log "FastAPI bridge PID: ${SERVER_PID}"
 
 # =============================================================================
-# STEP 8 – Health monitor and container keep-alive
+# STEP 7 – Health monitor and container keep-alive
 #
 # tail -f /dev/null runs as a trivial foreground process that keeps PID-1
 # alive. Without a foreground process Docker would consider the container
 # exited and perform cleanup (killing all child processes).
 # =============================================================================
-log "STEP 8: All services started. Container is running."
+log "STEP 7: All services started. Container is running."
 log "  Xvfb:           PID ${XVFB_PID}        (display :99)"
 log "  PulseAudio:     system daemon           (KIWI_RX sink)"
-log "  KiwiSDR pipe:   PID ${KIWI_PIPE_PID}   (${KIWI_HOST}:${KIWI_PORT})"
 log "  JS8Call:        PID ${JS8CALL_PID}      (TCP API :2442)"
-log "  FastAPI bridge: PID ${SERVER_PID}       (:8080)"
+log "  FastAPI bridge: PID ${SERVER_PID}       (:8080, owns KiwiSDR pipeline)"
 log ""
 log "Logs:"
 log "  /tmp/pulseaudio.log   – PulseAudio daemon"
@@ -300,9 +250,8 @@ log "  /tmp/server.log       – FastAPI bridge"
 # Trap signals for graceful shutdown
 cleanup() {
     log "Caught shutdown signal – stopping services..."
-    kill "${SERVER_PID}" 2>/dev/null || true
+    kill "${SERVER_PID}" 2>/dev/null || true   # server.py will kill kiwirecorder on exit
     kill "${JS8CALL_PID}" 2>/dev/null || true
-    kill "${KIWI_PIPE_PID}" 2>/dev/null || true
     pulseaudio --kill 2>/dev/null || true
     kill "${XVFB_PID}" 2>/dev/null || true
     log "Shutdown complete."

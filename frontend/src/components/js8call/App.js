@@ -35,6 +35,7 @@ import {
   Activity,
   Globe,
   Wifi,
+  Server,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,19 @@ const WS_URL =
   typeof import.meta !== 'undefined' && import.meta.env?.VITE_JS8_WS_URL
     ? import.meta.env.VITE_JS8_WS_URL
     : 'ws://localhost:8080/ws/js8';
+
+const KIWI_DEFAULT_HOST =
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_KIWI_HOST
+    ? import.meta.env.VITE_KIWI_HOST
+    : 'kiwisdr.example.com';
+const KIWI_DEFAULT_PORT =
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_KIWI_PORT
+    ? Number(import.meta.env.VITE_KIWI_PORT)
+    : 8073;
+const KIWI_DEFAULT_FREQ =
+  typeof import.meta !== 'undefined' && import.meta.env?.VITE_KIWI_FREQ
+    ? Number(import.meta.env.VITE_KIWI_FREQ)
+    : 14074;
 
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_MAX_MS = 30000;
@@ -200,6 +214,15 @@ export default function RadioTerminal() {
   const [txMessage, setTxMessage] = useState('');
   const [txPending, setTxPending] = useState(false);
 
+  const [kiwiConfig, setKiwiConfig] = useState({
+    host: KIWI_DEFAULT_HOST,
+    port: KIWI_DEFAULT_PORT,
+    freq: KIWI_DEFAULT_FREQ,
+    mode: 'usb',
+  });
+  const [kiwiConnected, setKiwiConnected] = useState(false);
+  const [kiwiConnecting, setKiwiConnecting] = useState(false);
+
   // ── Refs ───────────────────────────────────────────────────────────────────
   const wsRef = useRef(null);
   const reconnectTimer = useRef(null);
@@ -276,7 +299,36 @@ export default function RadioTerminal() {
 
       if (type === 'CONNECTED') {
         setJs8Connected(payload.js8call_connected ?? false);
+        if (payload.kiwi_connected) {
+          setKiwiConnected(true);
+          setKiwiConfig((prev) => ({
+            ...prev,
+            host: payload.kiwi_host || prev.host,
+            port: payload.kiwi_port || prev.port,
+            freq: payload.kiwi_freq || prev.freq,
+            mode: payload.kiwi_mode || prev.mode,
+          }));
+        }
         appendSystem(payload.message || 'Bridge connected');
+        return;
+      }
+
+      if (type === 'KIWI.STATUS') {
+        setKiwiConnected(payload.connected ?? false);
+        setKiwiConnecting(false);
+        if (payload.connected && payload.host) {
+          setKiwiConfig({
+            host: payload.host,
+            port: payload.port,
+            freq: payload.freq,
+            mode: payload.mode || 'usb',
+          });
+        }
+        appendSystem(
+          payload.connected
+            ? `SDR connected: ${payload.host}:${payload.port} @ ${payload.freq} kHz`
+            : 'SDR disconnected'
+        );
         return;
       }
 
@@ -364,6 +416,25 @@ export default function RadioTerminal() {
     setTimeout(() => setTxPending(false), 16000);
   }, [connected, txMessage, txTarget, txPending]);
 
+  // ── KiwiSDR connect / disconnect ───────────────────────────────────────────
+
+  const handleKiwiConnect = useCallback(() => {
+    if (!connected || kiwiConnecting) return;
+    setKiwiConnecting(true);
+    wsRef.current?.send(JSON.stringify({
+      action: 'SET_KIWI',
+      host: kiwiConfig.host,
+      port: Number(kiwiConfig.port),
+      freq: Number(kiwiConfig.freq),
+      mode: kiwiConfig.mode,
+    }));
+  }, [connected, kiwiConnecting, kiwiConfig]);
+
+  const handleKiwiDisconnect = useCallback(() => {
+    if (!connected) return;
+    wsRef.current?.send(JSON.stringify({ action: 'DISCONNECT_KIWI' }));
+  }, [connected]);
+
   // ── Sorted station array ───────────────────────────────────────────────────
 
   const sortedStations = useMemo(
@@ -391,17 +462,83 @@ export default function RadioTerminal() {
           </div>
         </div>
 
-        {/* Center: frequency / station info */}
-        <div className="flex items-center gap-4 text-xs text-slate-400">
-          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded">
-            <Signal className="w-4 h-4 text-emerald-500" />
-            <span className="font-semibold text-emerald-400">{statusLine.freq}</span>
+        {/* Center: KiwiSDR config widget + JS8Call station info */}
+        <div className="flex items-center gap-3 text-xs">
+
+          {/* KiwiSDR inline config */}
+          <div className="flex items-center gap-1.5">
+            <Server className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            {kiwiConnected ? (
+              /* Connected – read-only display */
+              <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-2.5 py-1.5 rounded font-mono">
+                <span className="text-cyan-400">{kiwiConfig.host}</span>
+                <span className="text-slate-700">:</span>
+                <span className="text-slate-400">{kiwiConfig.port}</span>
+                <span className="text-slate-700 px-0.5">@</span>
+                <span className="text-emerald-400">{kiwiConfig.freq} kHz</span>
+              </div>
+            ) : (
+              /* Disconnected – editable inputs */
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={kiwiConfig.host}
+                  onChange={(e) => setKiwiConfig((p) => ({ ...p, host: e.target.value }))}
+                  placeholder="sdr.host.com"
+                  disabled={!connected || kiwiConnecting}
+                  className="bg-slate-950 border border-slate-700 rounded px-2 py-1 font-mono text-xs text-slate-300 w-36 focus:outline-none focus:border-indigo-500 disabled:opacity-40"
+                />
+                <span className="text-slate-600">:</span>
+                <input
+                  type="number"
+                  value={kiwiConfig.port}
+                  onChange={(e) => setKiwiConfig((p) => ({ ...p, port: Number(e.target.value) || 8073 }))}
+                  placeholder="8073"
+                  disabled={!connected || kiwiConnecting}
+                  className="bg-slate-950 border border-slate-700 rounded px-2 py-1 font-mono text-xs text-slate-300 w-16 focus:outline-none focus:border-indigo-500 disabled:opacity-40"
+                />
+                <span className="text-slate-600 px-0.5">@</span>
+                <input
+                  type="number"
+                  value={kiwiConfig.freq}
+                  onChange={(e) => setKiwiConfig((p) => ({ ...p, freq: Number(e.target.value) || 14074 }))}
+                  placeholder="14074"
+                  disabled={!connected || kiwiConnecting}
+                  className="bg-slate-950 border border-slate-700 rounded px-2 py-1 font-mono text-xs text-slate-300 w-20 focus:outline-none focus:border-indigo-500 disabled:opacity-40"
+                />
+                <span className="text-slate-600 text-[10px]">kHz</span>
+              </div>
+            )}
+            <button
+              onClick={kiwiConnected ? handleKiwiDisconnect : handleKiwiConnect}
+              disabled={!connected || kiwiConnecting}
+              className={`
+                px-3 py-1.5 rounded font-mono text-xs font-bold uppercase tracking-wider
+                transition-colors duration-150 focus:outline-none
+                ${kiwiConnected
+                  ? 'bg-rose-600/20 border border-rose-500/30 text-rose-400 hover:bg-rose-600/40'
+                  : kiwiConnecting
+                  ? 'bg-slate-800 border border-slate-700 text-slate-500 cursor-wait'
+                  : 'bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600/40 disabled:opacity-40 disabled:cursor-not-allowed'}
+              `}
+            >
+              {kiwiConnected ? 'Disconnect SDR' : kiwiConnecting ? 'Connecting…' : 'Connect SDR'}
+            </button>
           </div>
-          <div>
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-slate-800 shrink-0" />
+
+          {/* JS8Call frequency / station */}
+          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-2.5 py-1.5 rounded">
+            <Signal className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span className="font-semibold text-emerald-400 font-mono">{statusLine.freq}</span>
+          </div>
+          <div className="text-slate-400">
             <span className="text-slate-600">CALL </span>
             <span className="text-slate-300 font-semibold">{statusLine.callsign}</span>
           </div>
-          <div>
+          <div className="text-slate-400">
             <span className="text-slate-600">GRID </span>
             <span className="text-slate-300">{statusLine.grid}</span>
           </div>

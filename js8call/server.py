@@ -35,6 +35,9 @@ import json
 import logging
 import math
 import os
+import re
+import shlex
+import subprocess
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -67,6 +70,11 @@ JS8CALL_PORT = int(os.getenv("JS8CALL_PORT", "2442"))
 BRIDGE_PORT = int(os.getenv("BRIDGE_PORT", "8080"))
 MY_GRID = os.getenv("MY_GRID", "CN85")  # Operator's Maidenhead locator
 
+KIWI_HOST = os.getenv("KIWI_HOST", "kiwisdr.example.com")
+KIWI_PORT = int(os.getenv("KIWI_PORT", "8073"))
+KIWI_FREQ = int(os.getenv("KIWI_FREQ", "14074"))
+KIWI_MODE = os.getenv("KIWI_MODE", "usb")
+
 # ---------------------------------------------------------------------------
 # Global state
 # ---------------------------------------------------------------------------
@@ -90,6 +98,101 @@ _ws_clients: list[WebSocket] = []
 # In-memory station registry keyed by callsign.
 # Written from the background task (single asyncio thread) – no lock needed.
 _station_registry: dict[str, dict] = {}
+
+# KiwiSDR subprocess state – managed by _start/_stop_kiwi_pipeline().
+# Accessed from both asyncio executor threads and the main thread; guarded by _kiwi_lock.
+_kiwi_proc: Optional[subprocess.Popen] = None
+_kiwi_lock = threading.Lock()
+_kiwi_config: dict = {}
+
+
+# ===========================================================================
+# KiwiSDR Pipeline Management
+# ===========================================================================
+
+_KIWI_VALID_MODES = {"usb", "lsb", "am", "cw", "nbfm"}
+
+
+def _start_kiwi_pipeline(host: str, port: int, freq: int, mode: str) -> None:
+    """
+    Kill any running kiwirecorder pipeline and start a fresh one.
+
+    The pipeline is:
+        kiwirecorder.py --nc -s HOST -p PORT -f FREQ -m MODE --OV
+        | pacat --playback --format=s16le --rate=12000 --channels=1
+                --device=KIWI_RX --stream-name=KiwiSDR-RX-Feed --latency-msec=100
+
+    Input validation guards against command injection before shell=True is used.
+    shlex.quote is belt-and-suspenders on top of the regex/range checks.
+    """
+    global _kiwi_proc, _kiwi_config
+
+    if not re.fullmatch(r'[a-zA-Z0-9._-]+', host):
+        raise ValueError(f"Invalid host (only alphanumeric, dots, dashes allowed): {host!r}")
+    if not (1 <= port <= 65535):
+        raise ValueError(f"Port out of range: {port}")
+    if not (100 <= freq <= 30000):
+        raise ValueError(f"Frequency out of range (100–30000 kHz): {freq}")
+    if mode not in _KIWI_VALID_MODES:
+        raise ValueError(f"Mode must be one of {sorted(_KIWI_VALID_MODES)}: {mode!r}")
+
+    cmd = (
+        f"python3 /opt/kiwiclient/kiwirecorder.py "
+        f"--nc -s {shlex.quote(host)} -p {port} -f {freq} -m {shlex.quote(mode)} --OV "
+        f"2>/tmp/kiwirecorder.log "
+        f"| pacat --playback --format=s16le --rate=12000 --channels=1 "
+        f"--device=KIWI_RX --stream-name=KiwiSDR-RX-Feed --latency-msec=100 "
+        f"2>/tmp/pacat.log"
+    )
+
+    with _kiwi_lock:
+        # Terminate any existing pipeline first
+        if _kiwi_proc is not None:
+            try:
+                _kiwi_proc.terminate()
+                _kiwi_proc.wait(timeout=5)
+            except Exception:
+                try:
+                    _kiwi_proc.kill()
+                except Exception:
+                    pass
+            _kiwi_proc = None
+
+        proc = subprocess.Popen(cmd, shell=True)
+        _kiwi_proc = proc
+        _kiwi_config = {"host": host, "port": port, "freq": freq, "mode": mode}
+
+    logger.info(
+        "KiwiSDR pipeline started: %s:%d @ %d kHz %s (PID %d)",
+        host, port, freq, mode, proc.pid,
+    )
+
+
+def _stop_kiwi_pipeline() -> None:
+    """Terminate the running kiwirecorder pipeline, if any."""
+    global _kiwi_proc, _kiwi_config
+
+    with _kiwi_lock:
+        if _kiwi_proc is None:
+            return
+        try:
+            _kiwi_proc.terminate()
+            _kiwi_proc.wait(timeout=5)
+        except Exception:
+            try:
+                _kiwi_proc.kill()
+            except Exception:
+                pass
+        _kiwi_proc = None
+        _kiwi_config = {}
+
+    logger.info("KiwiSDR pipeline stopped")
+
+
+def _kiwi_is_running() -> bool:
+    """Return True if the pipeline subprocess is alive."""
+    with _kiwi_lock:
+        return _kiwi_proc is not None and _kiwi_proc.poll() is None
 
 
 # ===========================================================================
@@ -319,6 +422,12 @@ async def lifespan(app: FastAPI):
     # Start the background broadcast task
     broadcaster = asyncio.create_task(_queue_broadcaster())
 
+    # Start KiwiSDR → PulseAudio pipeline with env-var defaults
+    try:
+        _start_kiwi_pipeline(KIWI_HOST, KIWI_PORT, KIWI_FREQ, KIWI_MODE)
+    except Exception as exc:
+        logger.warning("KiwiSDR pipeline startup failed (will retry via UI): %s", exc)
+
     # Connect pyjs8call to the local JS8Call TCP API
     if PYJS8CALL_AVAILABLE:
         try:
@@ -348,6 +457,7 @@ async def lifespan(app: FastAPI):
 
     # --- Shutdown ---
     broadcaster.cancel()
+    _stop_kiwi_pipeline()
     if js8_client is not None:
         try:
             js8_client.stop()
@@ -405,6 +515,11 @@ async def ws_js8(websocket: WebSocket) -> None:
         "type": "CONNECTED",
         "message": "JS8Call bridge active",
         "js8call_connected": js8_client is not None,
+        "kiwi_connected": _kiwi_is_running(),
+        "kiwi_host": _kiwi_config.get("host", ""),
+        "kiwi_port": _kiwi_config.get("port", 0),
+        "kiwi_freq": _kiwi_config.get("freq", 0),
+        "kiwi_mode": _kiwi_config.get("mode", ""),
         "timestamp": time.strftime("%H:%M:%SZ", time.gmtime()),
     })
 
@@ -494,6 +609,57 @@ async def ws_js8(websocket: WebSocket) -> None:
             elif action == "GET_STATIONS":
                 stations = _build_station_list()
                 await websocket.send_json({"type": "STATION_LIST", "stations": stations})
+
+            # ------------------------------------------------------------------
+            # Action: SET_KIWI – (re)connect KiwiSDR pipeline to a new target
+            # Payload: {"action": "SET_KIWI", "host": "sdr.example.com",
+            #           "port": 8073, "freq": 14074, "mode": "usb"}
+            # ------------------------------------------------------------------
+            elif action == "SET_KIWI":
+                host = str(cmd.get("host", "")).strip()
+                port = int(cmd.get("port", 8073))
+                freq = int(cmd.get("freq", 14074))
+                mode = str(cmd.get("mode", "usb")).lower().strip()
+                try:
+                    await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda: _start_kiwi_pipeline(host, port, freq, mode),
+                    )
+                    _enqueue_from_thread({
+                        "type": "KIWI.STATUS",
+                        "connected": True,
+                        "host": host,
+                        "port": port,
+                        "freq": freq,
+                        "mode": mode,
+                        "timestamp": time.strftime("%H:%M:%SZ", time.gmtime()),
+                    })
+                except ValueError as exc:
+                    await websocket.send_json({
+                        "type": "ERROR",
+                        "message": f"SET_KIWI validation: {exc}",
+                    })
+                except Exception as exc:
+                    await websocket.send_json({
+                        "type": "ERROR",
+                        "message": f"SET_KIWI failed: {exc}",
+                    })
+
+            # ------------------------------------------------------------------
+            # Action: DISCONNECT_KIWI – stop the KiwiSDR pipeline
+            # Payload: {"action": "DISCONNECT_KIWI"}
+            # ------------------------------------------------------------------
+            elif action == "DISCONNECT_KIWI":
+                await asyncio.get_event_loop().run_in_executor(None, _stop_kiwi_pipeline)
+                _enqueue_from_thread({
+                    "type": "KIWI.STATUS",
+                    "connected": False,
+                    "host": "",
+                    "port": 0,
+                    "freq": 0,
+                    "mode": "",
+                    "timestamp": time.strftime("%H:%M:%SZ", time.gmtime()),
+                })
 
             else:
                 await websocket.send_json({
@@ -585,6 +751,18 @@ async def get_stations() -> dict:
 
 
 # ===========================================================================
+# REST Endpoint  GET /api/kiwi
+# ===========================================================================
+
+@app.get("/api/kiwi", summary="KiwiSDR pipeline status and current config")
+async def get_kiwi() -> dict:
+    return {
+        "connected": _kiwi_is_running(),
+        **_kiwi_config,
+    }
+
+
+# ===========================================================================
 # Health Check
 # ===========================================================================
 
@@ -593,6 +771,8 @@ async def health() -> dict:
     return {
         "status": "ok",
         "js8call_connected": js8_client is not None,
+        "kiwi_connected": _kiwi_is_running(),
+        "kiwi_config": _kiwi_config,
         "active_ws_clients": len(_ws_clients),
         "heard_stations": len(_station_registry),
         "bridge_port": BRIDGE_PORT,
