@@ -1,0 +1,561 @@
+import { useEffect, useRef, MutableRefObject } from "react";
+import { CoTEntity, TrailPoint } from "../types";
+import { getDistanceMeters, getBearing, uidToHash } from "../utils/map/geoUtils";
+import type { EntityClassification } from "../types";
+
+export interface DeadReckoningState {
+  serverLat: number;
+  serverLon: number;
+  serverSpeed: number;
+  serverCourseRad: number;
+  serverTime: number;
+  blendLat: number;
+  blendLon: number;
+  blendSpeed: number;
+  blendCourseRad: number;
+  expectedInterval: number;
+}
+
+interface UseEntityWorkerOptions {
+  onEvent:
+    | ((event: {
+        type: "new" | "lost" | "alert";
+        message: string;
+        entityType?: "air" | "sea" | "orbital";
+        classification?: EntityClassification;
+      }) => void)
+    | undefined;
+  currentMissionRef: MutableRefObject<{
+    lat: number;
+    lon: number;
+    radius_nm: number;
+  } | null>;
+}
+
+interface UseEntityWorkerReturn {
+  entitiesRef: MutableRefObject<Map<string, CoTEntity>>;
+  satellitesRef: MutableRefObject<Map<string, CoTEntity>>;
+  knownUidsRef: MutableRefObject<Set<string>>;
+  drStateRef: MutableRefObject<Map<string, DeadReckoningState>>;
+  visualStateRef: MutableRefObject<
+    Map<string, { lon: number; lat: number; alt: number }>
+  >;
+  prevCourseRef: MutableRefObject<Map<string, number>>;
+}
+
+export function useEntityWorker({
+  onEvent,
+  currentMissionRef,
+}: UseEntityWorkerOptions): UseEntityWorkerReturn {
+  const entitiesRef = useRef<Map<string, CoTEntity>>(new Map());
+  const satellitesRef = useRef<Map<string, CoTEntity>>(new Map());
+  const knownUidsRef = useRef<Set<string>>(new Set());
+  const drStateRef = useRef<Map<string, DeadReckoningState>>(new Map());
+  const visualStateRef = useRef<
+    Map<string, { lon: number; lat: number; alt: number }>
+  >(new Map());
+  const prevCourseRef = useRef<Map<string, number>>(new Map());
+  const workerRef = useRef<Worker | null>(null);
+
+  // Initial Data Generation (Mock) & Worker Setup
+  useEffect(() => {
+    // Initialize Worker
+    const worker = new Worker(
+      new URL("../workers/tak.worker.ts", import.meta.url),
+      {
+        type: "module",
+      },
+    );
+
+    // Pass Proto URL (Vite allows importing assets via ?url)
+    // We need a way to resolve the proto file URL at runtime.
+    // For now, we assume it's served from /tak.proto if we put it in public,
+    // OR we try to import it. Let's try the import method if configured, otherwise public.
+    // Simplest for now: Assume we will move tak.proto to public folder for easy fetch.
+    worker.postMessage({ type: "init", payload: "/tak.proto?v=" + Date.now() });
+
+    const processEntityUpdate = (updateData: any) => {
+      // Handle Decoded Data from Worker
+      const entity = updateData.cotEvent; // Based on our proto structure
+      if (entity && entity.uid) {
+        const existing = entitiesRef.current.get(entity.uid);
+        const isNew = !existing && !knownUidsRef.current.has(entity.uid);
+        const newLon = entity.lon;
+        const newLat = entity.lat;
+        const isShip = entity.type?.includes("S");
+
+        // Spatial Filter: Drop entities outside active mission area
+        // (Backend should filter, but this cleanup prevents stale data artifacts)
+        const mission = currentMissionRef.current;
+
+        // Check if Satellite
+        const isSat =
+          entity.type === "a-s-K" ||
+          (typeof entity.type === "string" && entity.type.indexOf("K") === 4);
+
+        if (isSat) {
+          const existing = satellitesRef.current.get(entity.uid);
+          const isNew = !existing && !knownUidsRef.current.has(entity.uid);
+
+          const norad_id =
+            entity.detail?.norad_id ?? entity.detail?.classification?.norad_id;
+          // Category can come from entity.detail.category (direct) OR
+          // entity.detail.classification.category (current: API maps classification: meta which contains all sat fields)
+          const category =
+            entity.detail?.category ??
+            (entity.detail?.classification as any)?.category;
+          const period_min =
+            entity.detail?.period_min ??
+            (entity.detail?.classification as any)?.period_min;
+          const inclination_deg =
+            entity.detail?.inclination_deg ??
+            (entity.detail?.classification as any)?.inclination_deg;
+
+          // Minimal trail for satellite if needed, but we don't need PVB here for MVP
+          // We can just rely on the 30s updates and let it snap.
+          let trail: TrailPoint[] = existing?.trail || [];
+          const newLat = entity.lat;
+          const newLon = entity.lon;
+
+          // Dist check for trail so it doesn't just pile up if it hasn't moved
+          const lastTrail = trail[trail.length - 1];
+          const distFromLastTrail = lastTrail
+            ? getDistanceMeters(lastTrail[1], lastTrail[0], newLat, newLon)
+            : Infinity;
+
+          if (distFromLastTrail > 1000) {
+            // Only if moved 1km
+            trail = [
+              ...trail,
+              [
+                newLon,
+                newLat,
+                entity.hae || 0,
+                entity.detail?.track?.speed || 0,
+                Date.now(),
+              ] as TrailPoint,
+            ].slice(-100);
+          }
+
+          const newSat: CoTEntity = {
+            ...entity,
+            lon: newLon,
+            lat: newLat,
+            altitude: entity.hae || 0,
+            course: entity.detail?.track?.course || 0,
+            speed: entity.detail?.track?.speed || 0,
+            callsign: entity.detail?.contact?.callsign?.trim() || entity.uid,
+            detail: {
+              ...entity.detail,
+              norad_id,
+              category,
+              period_min,
+              inclination_deg,
+            },
+            lastSeen: Date.now(),
+            time: entity.time,
+            trail,
+            uidHash: existing ? existing.uidHash : uidToHash(entity.uid),
+          };
+
+          satellitesRef.current.set(entity.uid, newSat);
+
+          if (isNew) {
+            knownUidsRef.current.add(entity.uid);
+            // Satellites are too numerous to emit Intel Feed events per new track.
+            // With thousands of sats and huge footprints, virtually all would match,
+            // flooding the Intelligence Stream. Suppressed by design.
+          }
+          // DO NOT CONTINUE TO AIR/SEA processing
+          return;
+        }
+
+        if (mission) {
+          const distToCenter = getDistanceMeters(
+            newLat,
+            newLon,
+            mission.lat,
+            mission.lon,
+          );
+          const maxRadiusM = mission.radius_nm * 1852;
+
+          // Allow 5% buffer for edge cases, but drop outliers
+          if (distToCenter > maxRadiusM * 1.05) {
+            // If it exists, remove it (it moved out of bounds)
+            if (existing) {
+              entitiesRef.current.delete(entity.uid);
+              knownUidsRef.current.delete(entity.uid);
+              onEvent?.({
+                type: "lost",
+                message: `${isShip ? "🚢" : "✈️"} ${existing.callsign || entity.uid} (Out of Range)`,
+                entityType: isShip ? "sea" : "air",
+                classification: existing.classification,
+              });
+            }
+            return; // Skip update
+          }
+        }
+
+        // Build trail from existing positions (max 100 points for rich history).
+        // Minimum distance gate (30m) prevents multilateration noise between
+        // ADS-B source networks from accumulating as zigzag artefacts in the trail.
+        // Minimum distance gate (50m) and temporal gate (3s) prevent multilateration noise
+        const MIN_TRAIL_DIST_M = 50;
+        const MIN_TRAIL_INTERVAL_MS = 3000;
+
+        let trail: TrailPoint[] = existing?.trail || [];
+        const lastTrail = trail[trail.length - 1];
+        const distFromLastTrail = lastTrail
+          ? getDistanceMeters(lastTrail[1], lastTrail[0], newLat, newLon)
+          : Infinity;
+
+        const timeSinceLastTrail =
+          lastTrail && lastTrail[4] != null
+            ? Date.now() - lastTrail[4]
+            : Infinity;
+
+        // console.log(`Trail check: d=${distFromLastTrail.toFixed(1)}m, t=${timeSinceLastTrail}ms`);
+
+        if (
+          distFromLastTrail > MIN_TRAIL_DIST_M &&
+          timeSinceLastTrail > MIN_TRAIL_INTERVAL_MS
+        ) {
+          const speed = entity.detail?.track?.speed || 0;
+          trail = [
+            ...trail,
+            [newLon, newLat, entity.hae || 0, speed, Date.now()] as TrailPoint,
+          ].slice(-100);
+        }
+
+        const callsign = entity.detail?.contact?.callsign?.trim() || entity.uid;
+
+        // TIMESTAMP CHECK: Prevent "Sawtooth" / Time-Travel
+        // If we have a newer update already, ignore this one.
+        const existingEntity = entitiesRef.current.get(entity.uid);
+
+        // 1. Strict Source Ordering (if both have timestamps)
+        if (existingEntity && existingEntity.lastSourceTime && entity.time) {
+          if (existingEntity.lastSourceTime >= entity.time) {
+            return; // Drop stale AND duplicate packets (Strictly Monotonic)
+          }
+        }
+
+        // Snapshot for interpolation (BEFORE updating the entity)
+
+        // PVB State Update
+        const now = Date.now();
+        const currentDr = drStateRef.current.get(entity.uid);
+
+        // FIX #1: Capture previous DR state BEFORE overwriting it.
+        // The course-fallback branch below reads drStateRef to get the
+        // "previous" position for bearing calculation. If we write first
+        // and read second, prevPos.serverLat === newLat (distance = 0)
+        // and the fallback bearing is never computed.
+        const previousDr = drStateRef.current.get(entity.uid);
+
+        // Capture current visual state as blend origin
+        const visual = visualStateRef.current.get(entity.uid);
+        const blendLat = visual ? visual.lat : newLat;
+        const blendLon = visual ? visual.lon : newLon;
+
+        const classification = entity.detail?.classification as
+          | EntityClassification
+          | undefined;
+        const vesselClassification = entity.detail?.vesselClassification as
+          | import("../types").VesselClassification
+          | undefined;
+
+        // Calculate interval (clamped to avoid jitter from rapid updates)
+        const lastServerTime = currentDr ? currentDr.serverTime : now - 1000;
+        const timeSinceLast = Math.max(now - lastServerTime, 800); // Minimum 800ms
+
+        // Prepare new DR state
+        drStateRef.current.set(entity.uid, {
+          serverLat: newLat,
+          serverLon: newLon,
+          serverSpeed: entity.detail?.track?.speed || 0,
+          serverCourseRad:
+            ((entity.detail?.track?.course || 0) * Math.PI) / 180,
+          serverTime: now,
+          blendLat,
+          blendLon,
+          blendSpeed: currentDr
+            ? currentDr.serverSpeed
+            : entity.detail?.track?.speed || 0,
+          blendCourseRad: currentDr
+            ? currentDr.serverCourseRad
+            : ((entity.detail?.track?.course || 0) * Math.PI) / 180,
+          expectedInterval: timeSinceLast,
+        });
+
+        entitiesRef.current.set(entity.uid, {
+          uid: entity.uid,
+          lat: newLat,
+          lon: newLon,
+          altitude: entity.hae || 0, // Height Above Ellipsoid in meters (Proto is flat)
+          type: entity.type,
+          course: entity.detail?.track?.course || 0,
+          speed: entity.detail?.track?.speed || 0,
+          vspeed: entity.detail?.track?.vspeed || 0,
+          callsign,
+          // SEPARATION OF CONCERNS:
+          // time: The raw source time from the packet
+          // lastSourceTime: The newest source time we have accepted (for ordering)
+          // lastSeen: The local wall-clock time (for fading/stale checks)
+          time: entity.time,
+          lastSourceTime: entity.time || existingEntity?.lastSourceTime,
+          lastSeen: Date.now(),
+          trail,
+          uidHash: 0, // Will be set below
+          raw: updateData.raw, // Map raw hex from worker
+          classification: classification
+            ? {
+                ...existingEntity?.classification,
+                ...classification,
+                // Priority: keep existing description if new one is missing/empty
+                description:
+                  classification.description ||
+                  existingEntity?.classification?.description ||
+                  "",
+                operator:
+                  classification.operator ||
+                  existingEntity?.classification?.operator ||
+                  "",
+                registration:
+                  classification.registration ||
+                  existingEntity?.classification?.registration ||
+                  "",
+              }
+            : existingEntity?.classification,
+          vesselClassification:
+            vesselClassification || existingEntity?.vesselClassification,
+        } as CoTEntity);
+
+        // Pre-compute UID hash for glow animation (once per entity, not per frame)
+        const stored = entitiesRef.current.get(entity.uid)!;
+        if (stored.uidHash == null || stored.uidHash === 0) {
+          stored.uidHash = uidToHash(entity.uid);
+        }
+
+        // Kinematic Bearing Priority:
+        // Instead of trusting the reported 'course' (which may be magnetic heading,
+        // crabbed due to wind, or a false zero), we calculate the actual Ground Track
+        // from the history trail. This guarantees the Icon and Velocity Vector
+        // align perfectly with the visual line segment.
+        const rawCourse = entity.detail?.track?.course ?? 0;
+        let computedCourse = rawCourse;
+
+        // Use the last segment of the trail if available (most accurate visual alignment)
+        if (trail && trail.length >= 2) {
+          const last = trail[trail.length - 1];
+          const prev = trail[trail.length - 2];
+          const dist = getDistanceMeters(prev[1], prev[0], last[1], last[0]);
+          // Only override if the segment is significant (> 2m)
+          if (dist > 2.0) {
+            computedCourse = getBearing(prev[1], prev[0], last[1], last[0]);
+          }
+        } else if (previousDr) {
+          // FIX #1 (cont): Use the CAPTURED previous state, not a fresh
+          // read of drStateRef which was already overwritten above.
+          const dist = getDistanceMeters(
+            previousDr.serverLat,
+            previousDr.serverLon,
+            newLat,
+            newLon,
+          );
+          if (dist > 2.0) {
+            computedCourse = getBearing(
+              previousDr.serverLat,
+              previousDr.serverLon,
+              newLat,
+              newLon,
+            );
+          }
+        }
+
+        // Directly use the computed course. No smoothing (to avoid lag).
+        const smoothedCourse = computedCourse;
+        prevCourseRef.current.set(entity.uid, smoothedCourse);
+        stored.course = smoothedCourse;
+
+        // Track known UIDs and emit new entity event
+        if (isNew) {
+          knownUidsRef.current.add(entity.uid);
+
+          let prefix = isShip ? "🚢" : "✈️";
+          let tags = "";
+          let dims = "";
+
+          if (isShip && vesselClassification) {
+            const cat = vesselClassification.category;
+            if (cat === "tanker") {
+              prefix = "⛽";
+            } else if (cat === "fishing") {
+              prefix = "🎣";
+            } else if (cat === "pleasure") {
+              prefix = "⛵";
+            } else if (cat === "military") {
+              prefix = "⚓";
+            } else if (cat === "cargo") {
+              prefix = "🚢";
+            } else if (cat === "passenger") {
+              prefix = "🚢";
+            } else if (cat === "law_enforcement") {
+              prefix = "⚓";
+            } else if (cat === "tug") {
+              prefix = "⛴️";
+            }
+
+            if (
+              vesselClassification.length &&
+              vesselClassification.length > 0
+            ) {
+              dims = ` — ${vesselClassification.length}m`;
+            }
+          } else if (!isShip && classification) {
+            if (classification.platform === "helicopter") {
+              prefix = "🚁";
+            } else if (
+              classification.platform === "drone" ||
+              classification.platform === "uav"
+            ) {
+              prefix = "🛸";
+            } else if (classification.affiliation === "military") {
+              prefix = "🦅";
+            } else if (classification.affiliation === "government") {
+              prefix = "🏛️";
+            } else {
+              prefix = "✈️";
+            }
+
+            if (classification.icaoType) {
+              tags += `[${classification.icaoType}] `;
+            } else if (classification.operator) {
+              tags += `[${classification.operator.slice(0, 10).toUpperCase()}] `;
+            }
+          }
+
+          onEvent?.({
+            type: "new",
+            message: `${prefix} ${tags}${callsign}${dims}`,
+            entityType: isShip ? "sea" : "air",
+            classification:
+              isShip && vesselClassification
+                ? { ...classification, category: vesselClassification.category }
+                : classification,
+          });
+        }
+      }
+    };
+
+    worker.onmessage = (event: MessageEvent) => {
+      const { type, data, status } = event.data;
+      if (type === "status" && status === "ready") {
+        console.log("Main Thread: TAK Worker Ready");
+      }
+      if (type === "entity_batch") {
+        // Process batched entities
+        for (const item of data) {
+          processEntityUpdate(item);
+        }
+        return;
+      }
+      if (type === "entity_update") {
+        processEntityUpdate(data);
+      }
+    };
+
+    workerRef.current = worker;
+
+    // Robust WebSocket URL selection
+    let wsUrl: string;
+    if (import.meta.env.VITE_API_URL) {
+      const apiBase = import.meta.env.VITE_API_URL.replace("http", "ws");
+      wsUrl = `${apiBase}/api/tracks/live`;
+    } else {
+      // Default to proxy-friendly relative URL
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      wsUrl = `${protocol}//${window.location.host}/api/tracks/live`;
+    }
+
+    let ws: WebSocket | null = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 10;
+    const baseDelay = 1000; // 1 second
+    let reconnectTimeout: number | null = null;
+    let isCleaningUp = false;
+
+    const connect = () => {
+      if (isCleaningUp) return;
+
+      console.log(
+        `Connecting to Feed: ${wsUrl} (attempt ${reconnectAttempts + 1})`,
+      );
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        console.log("Connected to TAK Stream");
+        reconnectAttempts = 0; // Reset on successful connection
+      };
+
+      ws.onmessage = (event) => {
+        if (workerRef.current) {
+          workerRef.current.postMessage(
+            {
+              type: "decode_batch",
+              payload: event.data,
+            },
+            [event.data],
+          );
+        }
+      };
+
+      ws.onerror = () => {
+        // Don't log noisy errors - onclose will handle reconnection
+      };
+
+      ws.onclose = (event) => {
+        if (isCleaningUp) return;
+
+        // Only log if it was previously connected (not initial failures)
+        if (reconnectAttempts === 0 && event.wasClean) {
+          console.log("TAK Stream disconnected");
+        }
+
+        // Exponential backoff: 1s, 2s, 4s, 8s... max 30s
+        if (reconnectAttempts < maxReconnectAttempts) {
+          const delay = Math.min(
+            baseDelay * Math.pow(2, reconnectAttempts),
+            30000,
+          );
+          reconnectAttempts++;
+          // console.log(`Reconnecting in ${delay/1000}s...`);
+          reconnectTimeout = window.setTimeout(connect, delay);
+        } else {
+          console.error(
+            "Max reconnection attempts reached. Please refresh the page.",
+          );
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      isCleaningUp = true;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      worker.terminate();
+      if (ws) ws.close();
+    };
+  }, [onEvent]);
+
+  return {
+    entitiesRef,
+    satellitesRef,
+    knownUidsRef,
+    drStateRef,
+    visualStateRef,
+    prevCourseRef,
+  };
+}
