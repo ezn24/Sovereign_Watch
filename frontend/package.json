@@ -2,6 +2,7 @@
   "name": "sovereign-watch-ui",
   "private": true,
   "version": "0.9.5",
+
   "type": "module",
   "scripts": {
     "dev": "vite",
