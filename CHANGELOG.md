@@ -1,3 +1,12 @@
+## [0.9.3] - 2026-02-23
+
+### Fixed
+
+- **Globe Rendering Architecture:**
+  - **Interleaved Binding Reversion:** Explicitly disabled interleaved mode in `TacticalMap` (`interleaved: false`) and restored the pure `useControl` prop passthrough in `MapboxAdapter.tsx` to ensure absolute stability and prevent "double-wrapping" projection crashes in Deck.GL v9.
+  - **Explicit Projection Mapping:** Manually pass `projection: { name: 'globe' }` to the `MapboxOverlay` init when in globe mode to correctly warp the 2D WebGL canvas over Mapbox's 3D sphere without requiring interleave integration.
+  - **Camera Synchronization:** Removed the hardcoded `viewState` lock in `deckProps` for globe mode, allowing the 2D Deck.GL overlay to natively query Mapbox for real-time pitch and bearing during rotation and panning.
+
 ## [0.9.2] - 2026-02-21
 
 ### Added
