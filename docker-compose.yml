@@ -75,6 +75,7 @@ services:
       - CENTER_LAT=${CENTER_LAT:-45.5152}
       - CENTER_LON=${CENTER_LON:--122.6784}
       - COVERAGE_RADIUS_NM=${COVERAGE_RADIUS_NM:-150}
+      - ARBITRATION_CLEANUP_INTERVAL=${ARBITRATION_CLEANUP_INTERVAL:-30}
     networks:
       - backend-net
     depends_on:
