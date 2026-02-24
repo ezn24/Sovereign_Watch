@@ -1,3 +1,26 @@
+## [0.9.5] - 2026-02-24
+
+### Refactored
+
+- **TacticalMap Modularization (Structural — no behavioral changes):**
+  - **Decomposed monolith:** `TacticalMap.tsx` reduced from **2,762 lines → 556 lines** (80% reduction) by extracting all logic into purpose-scoped modules.
+  - **New hooks:**
+    - `hooks/useEntityWorker.ts` (561L) — TAK worker lifecycle, WebSocket management, dead-reckoning state
+    - `hooks/useAnimationLoop.ts` (733L) — RAF loop, PVB interpolation, per-frame layer assembly
+    - `hooks/useMapCamera.ts` (237L) — globe projection switching, graticule overlay, 3D terrain/fog
+    - `hooks/useMissionArea.ts` (303L) — mission area polling, AOT geometry calculation, entity clearing
+  - **New layer builders:**
+    - `layers/buildAOTLayers.ts` (52L) — maritime box + aviation circle `PathLayer`s
+    - `layers/buildTrailLayers.ts` (137L) — history trail + gap-bridge `PathLayer`/`LineLayer`
+    - `layers/buildEntityLayers.ts` (244L) — halos, glow sprites, altitude shadows, heading arrows, velocity vectors
+  - **New utilities:**
+    - `utils/map/colorUtils.ts` (86L) — altitude/speed color gradient functions
+    - `utils/map/geoUtils.ts` (142L) — haversine, bearing, Chaikin smoothing, graticule, zoom helpers
+    - `utils/map/iconAtlas.ts` (60L) — canvas icon-atlas singleton
+  - **Lazy-loaded adapter selection:** `TacticalMap.tsx` now dynamically picks Mapbox vs. MapLibre adapter via `VITE_MAPBOX_TOKEN` using `React.lazy`.
+  - **TypeScript health:** Pre-existing error count reduced from **56 → 33**; zero new errors introduced.
+=======
+
 ## [0.9.4] - 2026-02-23
 
 ### Refactored
