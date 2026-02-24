@@ -9,6 +9,16 @@
 ### Refactored
 
 - **Code Deduplication:** Removed duplicate `chaikinSmooth` implementation from `OrbitalLayer.tsx` and centralized usage to `utils/map/geoUtils.ts`.
+=======
+
+## [0.9.6] - 2026-02-24
+
+### Optimized
+
+- **Aviation Poller Performance:**
+  - **Background Cache Eviction:** Moved the `evict_stale_entries` operation from the synchronous ingestion loop to a dedicated background task.
+  - **Reduced Latency:** Eliminated a ~4ms blocking call per aircraft batch, significantly improving throughput under high load.
+  - **Configurable Interval:** Added `ARBITRATION_CLEANUP_INTERVAL` (default: 30s) to control the frequency of cache cleanup.
 
 ## [0.9.5] - 2026-02-24
 
