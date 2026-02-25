@@ -8,7 +8,7 @@ from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
 from uvicorn.protocols.utils import ClientDisconnected
 
 from core.config import settings
-from .tak import transform_to_proto
+from services.tak import transform_to_proto
 
 logger = logging.getLogger("SovereignWatch.Broadcast")
 
