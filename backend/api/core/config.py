@@ -15,6 +15,9 @@ class Settings:
     # Security Limits
     TRACK_HISTORY_MAX_LIMIT = int(os.getenv('TRACK_HISTORY_MAX_LIMIT', '1000'))
     TRACK_HISTORY_MAX_HOURS = int(os.getenv('TRACK_HISTORY_MAX_HOURS', '72'))
+    
+    # Kafka
+    KAFKA_BROKERS = os.getenv('KAFKA_BROKERS', 'sovereign-redpanda:9092')
 
     # AI
     LITELLM_MODEL = "deep-reasoner"

@@ -26,7 +26,7 @@ async def websocket_endpoint(websocket: WebSocket):
     # Subscribe to aviation, maritime, and orbital topics
     consumer = AIOKafkaConsumer(
         "adsb_raw", "ais_raw", "orbital_raw",
-        bootstrap_servers='sovereign-redpanda:9092',
+        bootstrap_servers=settings.KAFKA_BROKERS,
         # No group_id = Broadcast mode (unique random consumer group per instance)
         # Prevents offset commit accumulation on the broker.
         group_id=None,
