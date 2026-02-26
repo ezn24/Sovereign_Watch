@@ -1,3 +1,21 @@
+## [0.10.3] - 2026-02-25
+
+### Added
+
+- **Sovereign Glass UI:**
+  - **Sky Atmosphere:** Enabled a native `sky` layer in MapLibre Globe mode, providing a deep navy horizon-to-space gradient and realistic solar orientation.
+
+### Changed
+
+- **Globe Rendering Overhaul:**
+  - **Polygon-Based Tactical Symbols:** Replaced `IconLayer` chevrons with geographic `PolygonLayer` triangles in Globe mode. This completely bypasses MapLibre v5 billboarding/depth-testing bugs, ensuring entities drape perfectly over the 3D sphere and scale/rotate with zero artifacts.
+  - **Optimized Zoom Fly-out:** Adjusted globe transition easing to prioritize stability at high altitudes.
+
+### Fixed
+
+- **MapLibre Logic Stability:**
+  - **Redundant Atmosphere Triggers:** Added protective guards and deferred one-tick execution (`setTimeout`) to prevent style-clobbering when simultaneously switching projection and adding sky layers.
+
 ## [0.10.2] - 2026-02-25
 
 ### Added

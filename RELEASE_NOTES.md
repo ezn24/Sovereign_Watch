@@ -1,20 +1,29 @@
-# Release - v0.10.2 - Performance & UI Streamlining
+# Release - v0.10.3 - Sovereign Glass: Globe Redux
 
-This release focuses on significantly improving backend ingestion throughput, enhancing the real-time websocket broadcast stability, and refining the tactical user interface for better situational awareness.
+This update marks a significant architectural shift in how Sovereign Watch handles spherical projections. By moving away from standard billboarding icons in favor of native geographic polygons, we have achieved absolute rendering stability in MapLibre Globe mode.
 
-## Key Features
+### 🌌 High-Fidelity Atmosphere
+We've introduced a dedicated **Sky Atmosphere** layer. In Globe mode, you'll now see a realistic deep-space gradient transitioning into a navy horizon glow. The system intelligently detects solar orientation to simulate tactical lighting conditions.
 
-- **Broadcast WebSocket Service**: Implemented a centralized O(1) broadcast manager, improving concurrent client capacity and raw message throughput by over 1.5x.
-- **Maritime Ingestion Overhaul**: Switched to non-blocking Kafka sends inside the AIS Python poller, boosting ingestion speed by ~35x and eliminating stream stutter. 
-- **JS8Call UI Optimization**: The secondary JS8Call window now defaults to a collapsed, space-saving layout while keeping critical data (callsign, grid, frequency) permanently visible. The redundant Radio Terminal footer has been removed.
-- **Security & Stability fixes**: Added validation for historical track queries to prevent resource exhaustion, and fixed Deck.gl billboarding bugs that occasionally caused aircraft and satellite icons to disappear in Globe View.
+### 📐 Geometric Precision
+MapLibre v5's globe implementation has known conflicts with standard `IconLayer` depth testing. 
+- **The Solution**: We've replaced these icons with procedural `PolygonLayer` triangles that are mathematically calculated to drape perfectly across the Earth's curvature.
+- **The Result**: Zero flickering, zero "bleeding" through the planet, and perfect alignment with tactical headings at any zoom level.
 
-## Upgrade Instructions
+### ⚙️ Under the Hood
+- Optimized `useMapCamera` to handle rapid projection transitions without style collisions.
+- Unified 3D visuals logic to ensure performance remains high even with complex atmosphere layers active.
+
+---
+
+## 🚀 Upgrade Instructions
 
 ```bash
-# Pull new changes
+# Pull latest changes
 git pull origin main
 
-# Rebuild integration services and frontend
-docker compose up -d --build
+# Rebuild and restart the frontend for the new version
+docker compose up -d --build frontend
 ```
+
+_Monitor. Analyze. Secure._
