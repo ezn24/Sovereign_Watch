@@ -65,8 +65,15 @@ interface UseAnimationLoopOptions {
     showSatComms?: boolean;
     showSatSurveillance?: boolean;
     showSatOther?: boolean;
-    [key: string]: boolean | undefined;
+    showCables?: boolean;
+    showCableStations?: boolean;
+    cableOpacity?: number;
+    [key: string]: any;
   } | undefined;
+  cablesData?: any;
+  stationsData?: any;
+  setHoveredInfra?: (info: any) => void;
+  setSelectedInfra?: (info: any) => void;
   globeMode: boolean | undefined;
   enable3d: boolean;
   mapToken: string;
@@ -479,7 +486,7 @@ export function useAnimationLoop({
                   );
                   map.jumpTo({
                     center: [centerLon, centerLat],
-                    animate: false,
+
                   });
                 } catch (e) {
                   console.error("FollowMode jumpTo failed:", e);

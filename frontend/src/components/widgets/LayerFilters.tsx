@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plane, Ship, ChevronRight, Satellite } from 'lucide-react';
+import { Plane, Ship, ChevronRight, Satellite, Network } from 'lucide-react';
 
 interface LayerFiltersProps {
   filters: { 
@@ -14,15 +14,16 @@ interface LayerFiltersProps {
       showTanker?: boolean;
       showPassenger?: boolean;
       showFishing?: boolean;
-      [key: string]: boolean | undefined;
+      [key: string]: any;
   };
-  onFilterChange: (key: string, value: boolean) => void;
+  onFilterChange: (key: string, value: any) => void;
 }
 
 export const LayerFilters: React.FC<LayerFiltersProps> = ({ filters, onFilterChange }) => {
   const [airExpanded, setAirExpanded] = useState(false);
   const [seaExpanded, setSeaExpanded] = useState(false);
   const [satExpanded, setSatExpanded] = useState(false);
+  const [infraExpanded, setInfraExpanded] = useState(false);
 
   return (
     <div className="flex flex-col rounded-sm border border-tactical-border bg-black/40 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden relative">
