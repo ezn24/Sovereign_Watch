@@ -1,3 +1,17 @@
+## [0.11.0] - 2026-03-01
+
+### Added
+
+- **RF Infrastructure Intelligence:**
+  - **Repeater Network Layer:** Integrated a new map layer for tracking and visualizing Amateur Radio Repeaters.
+  - **Tactical Repeater Sidebar:** Created a custom sidebar for visualizing detailed telemetry (Frequency, Offset, CTCSS, Modes, Use, Status, Location) when selecting a repeater.
+  - **Repeater API:** Added backend endpoints `/api/repeaters` to support the new UI elements.
+
+### Changed
+
+- **Tactical UI Polish:**
+  - **Consolidated Layers Filter:** Eliminated the standalone `MapLayersWidget` and beautifully integrated the Map Layers toggle directly into the header of the **System Status (Total Objects)** widget to preserve HUD real-estate.
+
 ## [0.10.4] - 2026-03-01
 
 ### Fixed

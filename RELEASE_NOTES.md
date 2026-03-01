@@ -1,12 +1,11 @@
-# Release - v0.10.4 - Orbital Tooltip Styling
+# Release - v0.11.0 - RF Infrastructure Awareness
 
-This patch update ensures that orbital entities correctly inherit their intended tactical aesthetics within the HUD, instead of falling back to default avionics styling.
+This minor release introduces comprehensive mapping and intelligence tracking for RF infrastructure, explicitly focusing on the Amateur Radio Repeater network. This enhancement provides operators with critical context regarding vital communication relays across the Area of Responsibility (AOR).
 
-### 🛰️ Orbital Metadata Refinement
-Satellites in the tactical view now display precise metadata directly on hover or selection:
-- **Type Accuracy**: Properly labels entities as `ORBITAL` in tooltips.
-- **Speed Output**: Correctly formats orbital velocity in `km/s` rather than marine/air `kts`.
-- **Aesthetic Integration**: Employs the "Sovereign Glass" purple accent (`text-purple-400` and glow) globally for all orbital interactions, replacing the generic plane icon with a specialized satellite glyph.
+### 📡 New Capabilities 
+- **RF Infrastructure Layer**: Visualize active radio repeaters directly on the tactical map alongside dynamic air, sea, and orbital traffic.
+- **Detailed Telemetry**: Clicking on a repeater reveals a tailored sidebar with essential signal intelligence, including operating frequencies, CTCSS tones, offsets, and operational status.
+- **Streamlined HUD**: Map layer filtering has been tightly integrated into the System Status widget header, simplifying layer management without sacrificing precious screen real estate.
 
 ---
 
@@ -16,8 +15,8 @@ Satellites in the tactical view now display precise metadata directly on hover o
 # Pull latest changes
 git pull origin main
 
-# Rebuild and restart the frontend for the new version
-docker compose up -d --build frontend
+# Rebuild and restart the frontend & backend for the new version
+docker compose up -d --build frontend backend
 ```
 
 _Monitor. Analyze. Secure._
