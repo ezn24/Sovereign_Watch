@@ -7,6 +7,7 @@ import { buildTrailLayers } from "../layers/buildTrailLayers";
 import { buildEntityLayers } from "../layers/buildEntityLayers";
 import { buildJS8Layers } from "../layers/buildJS8Layers";
 import { buildRepeaterLayers } from "../layers/buildRepeaterLayers";
+import { buildInfraLayers } from "../layers/buildInfraLayers";
 import type { DeadReckoningState } from "./useEntityWorker";
 import type { MapboxOverlay } from "@deck.gl/mapbox";
 import type { MapRef } from "react-map-gl/maplibre";
@@ -67,7 +68,7 @@ interface UseAnimationLoopOptions {
     showSatSurveillance?: boolean;
     showSatOther?: boolean;
     showCables?: boolean;
-    showCableStations?: boolean;
+    showLandingStations?: boolean;
     cableOpacity?: number;
     [key: string]: any;
   } | undefined;
@@ -83,12 +84,12 @@ interface UseAnimationLoopOptions {
   replayMode: boolean | undefined;
   onCountsUpdate: ((counts: { air: number; sea: number; orbital: number }) => void) | undefined;
   onEvent:
-    | ((event: {
-        type: "new" | "lost" | "alert";
-        message: string;
-        entityType?: "air" | "sea" | "orbital";
-      }) => void)
-    | undefined;
+  | ((event: {
+    type: "new" | "lost" | "alert";
+    message: string;
+    entityType?: "air" | "sea" | "orbital";
+  }) => void)
+  | undefined;
   onEntitySelect: (entity: CoTEntity | null) => void;
   onEntityLiveUpdate: ((entity: CoTEntity) => void) | undefined;
   onFollowModeChange: ((enabled: boolean) => void) | undefined;
@@ -120,6 +121,10 @@ export function useAnimationLoop({
   aotShapes,
   selectedEntity,
   filters,
+  cablesData,
+  stationsData,
+  setHoveredInfra,
+  setSelectedInfra,
   globeMode,
   enable3d,
   mapToken,
@@ -711,6 +716,17 @@ export function useAnimationLoop({
         );
       }
 
+      // Submarine Cables & Stations Layers
+      const infraLayers = buildInfraLayers(
+        cablesData,
+        stationsData,
+        filters,
+        setHoveredInfra || (() => { }),
+        setSelectedInfra,
+        currentSelected,
+        globeMode
+      );
+
       const layers = [
         ...getOrbitalLayers({
           satellites: filteredSatellites,
@@ -736,6 +752,9 @@ export function useAnimationLoop({
 
         // 1. Repeater infrastructure (rendered below entity icons for context)
         ...repeaterLayers,
+
+        // Infra layers (cables and landing stations)
+        ...infraLayers,
 
         // 2-3. Trail layers (history trails, gap bridges, selected trail)
         ...buildTrailLayers(
@@ -795,5 +814,7 @@ export function useAnimationLoop({
     selectedEntity,
     onFollowModeChange,
     showRepeaters,
+    cablesData,
+    stationsData,
   ]);
 }

@@ -151,7 +151,8 @@ The frontend is the "Single Pane of Glass" for the analyst.
 
 | ID             | Task Name        | Component | Description                                                                                    |
 | :------------- | :--------------- | :-------- | :--------------------------------------------------------------------------------------------- |
-| **FE-09**      | Coverage Viz     | Frontend  | H3 polling fidelity visualization.                                                             |
+| **Ingest-08**  | **Infra Caching**       | Data Eng  | **(P2)**. Move Submarine Cable/Landing Station caching to a backend Python service to replace client-side localStorage.                             |
+| **FE-09**      | Coverage Viz     | Frontend  | H3 polling fidelity visualization.                                                                                                              |
 | **FE-10**      | Payload Eval     | Frontend  | Raw JSON inspector (Terminal Mode).                                                            |
 | **FE-12**      | Settings UI      | Frontend  | Configure API keys/Pollers via UI (no more ENV editing).                                       |
 | **FE-13**      | Mission Labels   | Frontend  | Floating text labels for coverage areas.                                                       |

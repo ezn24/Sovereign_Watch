@@ -1,6 +1,6 @@
 import React from 'react';
 import { CoTEntity } from '../../types';
-import { Plane, Ship, Satellite, Zap, Crosshair, Radio, Signal } from 'lucide-react';
+import { Plane, Ship, Satellite, Zap, Crosshair, Radio, Signal, Network } from 'lucide-react';
 
 interface MapTooltipProps {
   entity: CoTEntity;
@@ -12,26 +12,31 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({ entity, position }) => {
   const isRepeater = entity.type === 'repeater';
   const isJS8 = entity.type === 'js8';
   const isOrbital = entity.type === "a-s-K" || (typeof entity.type === "string" && entity.type.indexOf("K") === 4);
+  const isInfra = entity.type === 'infra';
 
   const accentColor = isRepeater
-    ? 'text-teal-400'
+    ? 'text-emerald-400'
     : isJS8
       ? 'text-emerald-400'
       : isOrbital
         ? 'text-purple-400'
         : isShip
           ? 'text-sea-accent'
-          : 'text-air-accent';
+          : isInfra
+            ? 'text-cyan-400'
+            : 'text-air-accent';
 
   const borderColor = isRepeater
-    ? 'border-teal-400/50'
+    ? 'border-emerald-400/50'
     : isJS8
       ? 'border-emerald-400/50'
       : isOrbital
         ? 'border-purple-400/50'
         : isShip
           ? 'border-sea-accent/50'
-          : 'border-air-accent/50';
+          : isInfra
+            ? 'border-cyan-400/50'
+            : 'border-air-accent/50';
 
   const HeaderIcon = isRepeater
     ? Radio
@@ -41,7 +46,9 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({ entity, position }) => {
         ? Satellite
         : isShip
           ? Ship
-          : Plane;
+          : isInfra
+            ? Network
+            : Plane;
 
   return (
     <div
@@ -63,7 +70,7 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({ entity, position }) => {
         <div className="flex items-center gap-1">
           <div className={`h-1.5 w-1.5 rounded-full ${accentColor} animate-pulse shadow-[0_0_4px_currentColor]`} />
           <span className="text-[8px] font-mono text-white/50">
-            {isRepeater ? 'INFRA' : isJS8 ? 'JS8CALL' : 'LIVE'}
+            {isRepeater ? 'INFRA' : isJS8 ? 'JS8CALL' : isInfra ? 'UNDERSEA' : 'LIVE'}
           </span>
         </div>
       </div>
@@ -92,8 +99,8 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({ entity, position }) => {
           <div>
             <span className="text-[8px] text-white/40 block leading-tight">STATUS</span>
             <span className={`text-[10px] font-mono font-bold leading-tight ${String(entity.detail?.status ?? '').toLowerCase().includes('off')
-                ? 'text-red-400'
-                : 'text-teal-400'
+              ? 'text-red-400'
+              : 'text-emerald-400'
               }`}>
               {(entity.detail?.status as string) || '--'}
             </span>
@@ -112,6 +119,35 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({ entity, position }) => {
               </span>
             </div>
           )}
+        </div>
+      ) : isInfra ? (
+        <div className="p-3 grid grid-cols-2 gap-y-2 gap-x-4">
+          <div className="col-span-2 border-b border-white/5 pb-2 mb-1">
+            <span className="text-[8px] text-white/40 block leading-tight">SYSTEM</span>
+            <span className="text-[10px] text-cyan-400 font-mono font-bold leading-tight uppercase">
+              {entity.detail?.geometry?.type === 'Point' ? 'LANDING STATION' : 'SUBMARINE CABLE'}
+            </span>
+          </div>
+          <div>
+            <span className="text-[8px] text-white/40 block leading-tight">{entity.detail?.geometry?.type === 'Point' ? 'COUNTRY' : 'LENGTH'}</span>
+            <span className="text-[10px] text-white/80 font-mono font-bold leading-tight truncate">
+              {entity.detail?.geometry?.type === 'Point'
+                ? (entity.detail?.properties?.country || 'UNKNOWN')
+                : (entity.detail?.properties?.length_km ? `${Number(entity.detail.properties.length_km).toLocaleString()} km` : 'VARIES')}
+            </span>
+          </div>
+          <div>
+            <span className="text-[8px] text-white/40 block leading-tight">STATUS</span>
+            <span className="text-[10px] text-hud-green font-mono font-bold leading-tight flex items-center gap-1">
+              <Zap size={8} /> {entity.detail?.properties?.status || 'ACTIVE'}
+            </span>
+          </div>
+          <div className="col-span-2">
+            <span className="text-[8px] text-white/40 block leading-tight">OWNERS</span>
+            <span className="text-[10px] text-amber-400 font-mono font-bold leading-tight truncate block" title={entity.detail?.properties?.owners}>
+              {entity.detail?.properties?.owners || 'CONSORTIUM'}
+            </span>
+          </div>
         </div>
       ) : (
         <div className="p-3 grid grid-cols-2 gap-y-2 gap-x-4">

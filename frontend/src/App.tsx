@@ -32,35 +32,50 @@ function App() {
   // Map Actions (Search, FlyTo)
   const [mapActions, setMapActions] = useState<import('./types').MapActions | null>(null);
 
-  // Filter state
-  const [filters, setFilters] = useState({
-    showAir: true,
-    showSea: true,
-    showHelicopter: true,
-    showMilitary: true,
-    showGovernment: true,
-    showCommercial: true,
-    showPrivate: true,
-    showCargo: true,
-    showTanker: true,
-    showPassenger: true,
-    showFishing: true,
-    showSeaMilitary: true,
-    showLawEnforcement: true,
-    showSar: true,
-    showTug: true,
-    showPleasure: true,
-    showHsc: true,
-    showPilot: true,
-    showSpecial: true,
-    showDrone: true,
-    showSatellites: false,
-    showSatGPS: true,
-    showSatWeather: true,
-    showSatComms: true,
-    showSatSurveillance: true,
-    showSatOther: true,
-    showRepeaters: false,
+  // Filter state with persistence
+  const [filters, setFilters] = useState(() => {
+    const defaultFilters = {
+      showAir: true,
+      showSea: true,
+      showHelicopter: true,
+      showMilitary: true,
+      showGovernment: true,
+      showCommercial: true,
+      showPrivate: true,
+      showCargo: true,
+      showTanker: true,
+      showPassenger: true,
+      showFishing: true,
+      showSeaMilitary: true,
+      showLawEnforcement: true,
+      showSar: true,
+      showTug: true,
+      showPleasure: true,
+      showHsc: true,
+      showPilot: true,
+      showSpecial: true,
+      showDrone: true,
+      showSatellites: false,
+      showSatGPS: true,
+      showSatWeather: true,
+      showSatComms: true,
+      showSatSurveillance: true,
+      showSatOther: true,
+      showRepeaters: false,
+      showCables: false,
+      showLandingStations: false,
+      cableOpacity: 0.6,
+    };
+    const saved = localStorage.getItem('mapFilters');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...defaultFilters, ...parsed };
+      } catch (e) {
+        console.error("Failed to parse mapFilters:", e);
+      }
+    }
+    return defaultFilters;
   });
 
   // Velocity Vector Toggle
@@ -112,7 +127,7 @@ function App() {
   const [missionProps, setMissionProps] = useState<MissionProps | null>(null);
 
   // Repeater infrastructure layer
-  const { repeatersRef } = useRepeaters(
+  const { repeatersRef, loading: repeatersLoading } = useRepeaters(
     filters.showRepeaters,
     missionProps?.currentMission?.lat ?? 45.5152,
     missionProps?.currentMission?.lon ?? -122.6784,
@@ -270,8 +285,36 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleFilterChange = (key: string, value: boolean) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => {
+      const next = { ...prev, [key]: value };
+      localStorage.setItem('mapFilters', JSON.stringify(next));
+
+      // Add Intel Feed notifications for core layer toggles
+      if (prev[key] !== value) {
+        if (key === 'showAir') {
+          addEvent({
+            message: value ? "Aviation Tracking Uplink Established" : "Aviation Tracking Offline",
+            type: value ? 'new' : 'lost',
+            entityType: 'air'
+          });
+        } else if (key === 'showSea') {
+          addEvent({
+            message: value ? "Maritime AIS Ingestion Subsystem Active" : "Maritime AIS Ingestion Offline",
+            type: value ? 'new' : 'lost',
+            entityType: 'sea'
+          });
+        } else if (key === 'showSatellites') {
+          addEvent({
+            message: value ? "Orbital Surveillance Network Synchronized" : "Orbital Surveillance Network Offline",
+            type: value ? 'new' : 'lost',
+            entityType: 'orbital'
+          });
+        }
+      }
+
+      return next;
+    });
   };
 
   const alertsCount = useMemo(() =>
@@ -381,6 +424,7 @@ function App() {
             ownGridRef={js8OwnGridRef}
             repeatersRef={repeatersRef}
             showRepeaters={filters.showRepeaters}
+            repeatersLoading={repeatersLoading}
           />
 
           {/* Replay Controls Overlay */}

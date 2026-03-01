@@ -1,4 +1,4 @@
-# Sovereign Watch v0.11.0: Distributed Multi-INT Fusion Center
+# Sovereign Watch v0.12.0: Distributed Multi-INT Fusion Center
 
 > **Operational Status**: Phase 2 (Tactical Intelligence & Tracking) - _Active Development_
 
@@ -59,7 +59,7 @@ Sovereign Watch is designed purely for research, educational, and hobbyist data 
 
 ---
 
-## 📂 Architecture Overview
+## � Architecture Overview
 
 ```mermaid
 graph TD
@@ -67,7 +67,9 @@ graph TD
         A[ADS-B Network] -->|JSON| B(Ingestion Services)
         C[AIS Stream] -->|JSON| B
         Z[Orbital TLE Feed] -->|TLE| B
-        J[JS8Call HF Radio] -->|TCP API| B
+        JS[JS8Call HF Radio] -->|TCP API| B
+        RP[RF Repeaters] -->|REST API| B
+        SC[Submarine Cables] -->|REST API| FE
         B -->|TAK Protobuf| D(Redpanda Bus)
     end
 
@@ -79,16 +81,63 @@ graph TD
     subgraph "Cognition (LiteLLM)"
         G[Fusion API] -->|Query| H{AI Router}
         H -->|Tier 1| I[Local Llama3]
-        H -->|Tier 3| J[Claude 3.5]
+        H -->|Tier 3| CL[Claude]
     end
 
     subgraph "Presentation (React + Deck.gl)"
-        K[MainHUD Shell] --> L[Intelligence Feed]
-        K --> M[Projective Velocity Blending]
-        M -->|WebGL 3D| N[Mapbox / CARTO Overlay]
-        K --> O[Radio Terminal]
+        FE[MainHUD Shell] --> L[Intelligence Feed]
+        FE --> M[Projective Velocity Blending]
+        M -->|WebGL 3D| N[Mapbox / MapLibre Overlay]
+        FE --> O[Radio Terminal]
+        FE --> INF[Infrastructure Layers]
     end
 ```
+
+## 🗂️ Data Sources
+
+All upstream data is sourced from **public, open-access networks**. No proprietary feeds are required for basic operation.
+
+### ✈️ Aviation (ADS-B)
+
+Sovereign Watch uses a **multi-source round-robin poller** with automatic failover and exponential backoff.
+
+| Feed | URL | Notes |
+| :--- | :--- | :--- |
+| **adsb.fi** | [opendata.adsb.fi](https://opendata.adsb.fi) | Primary. No key required. |
+| **adsb.lol** | [api.adsb.lol](https://api.adsb.lol) | Primary. No key required. |
+| **airplanes.live** | [api.airplanes.live](https://api.airplanes.live) | Backup. Throttled to 1 req/30s. |
+
+### 🚢 Maritime (AIS)
+
+| Feed | URL | Notes |
+| :--- | :--- | :--- |
+| **AISStream.io** | [aisstream.io](https://aisstream.io) | WebSocket stream, requires `AISSTREAM_API_KEY`. Bounding-box filtered. |
+
+### 🛰️ Orbital (Satellites)
+
+TLE data is fetched from Celestrak and propagated locally via SGP4. Updated every 6 hours.
+
+| Group | URL | Category |
+| :--- | :--- | :--- |
+| GPS Ops | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops) | `gps` |
+| GLONASS Ops | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=glonass-ops) | `gps` |
+| Galileo | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo) | `gps` |
+| BeiDou | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou) | `gps` |
+| Weather | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=weather) | `weather` |
+| NOAA | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=noaa) | `weather` |
+
+### 📻 RF Infrastructure (Repeaters)
+
+| Feed | URL | Notes |
+| :--- | :--- | :--- |
+| **RepeaterBook** | [repeaterbook.com/api](https://www.repeaterbook.com/api/export.php) | No key required. Proxied server-side to avoid CORS. 24h client-side cache. |
+
+### 🌊 Undersea Infrastructure (Submarine Cables)
+
+| Feed | URL | Notes |
+| :--- | :--- | :--- |
+| **Submarine Cable Map** | [submarinecablemap.com/api](https://www.submarinecablemap.com/api/v3/) | No key required. Includes cable routes & landing points. 24h client-side cache. |
+
 
 ## 🛡️ Tactical Design ("Sovereign Glass")
 
@@ -103,7 +152,7 @@ graph TD
 ### Asset Symbology
 
 - **Chevrons**: Indicate directional heading and asset type (Aviation/Maritime). Hovering/Clicking reveals the target's specific classification.
-- **⊕ Cross/Star**: Orbital assets (Satellites). Rendered at ground-track position with predicted orbital paths.
+- **Star**: Orbital assets (Satellites). Rendered at ground-track position with predicted orbital paths.
 - **Pulsating Rings**: Active telemetry updates. Intensity increases when an asset is selected.
 - **Tactical Outline**: High-value/special assets (SAR, Military, Law Enforcement vessels, Drones, Helicopters) emit a glowing **Tactical Orange** signature aura for instantaneous operator recognition.
 
@@ -134,10 +183,16 @@ The Tactical Map uses dynamic "thermal" gradients to visualize critical metadata
 - 🔴 **Rose**: Surveillance & Known ISR Satellites
 - ⚪ **Gray**: Other / Unclassified Satellites
 
+**Infrastructure (System)**
+
+- 🟢 **Emerald**: RF Infrastructure (Amateur Radio Repeaters, JS8Call Stations)
+- 🔵 **Cyan**: Undersea Infrastructure (Submarine Cables, Landing Stations)
+
 ## 🔍 Core Capabilities
 
 - **Deep Vessel Classification**: Real-time parsing of Maritime ShipStaticData to classify tankers, cargo, military, SAR, and passenger vessels with absolute precision.
 - **Orbital Pulse Tracking**: End-to-end satellite tracking using Celestrak TLE ingestion and live SGP4 propagation (accuracy updated every 30s) to visualize LEO/MEO/GEO assets.
+- **Undersea Infrastructure Awareness**: Global visualization of the submarine cable network and strategic landing stations. Provides real-time access to cable ownership, length, and operational status, integrated directly into the tactical map for multi-INT fusion.
 - **RF Infrastructure Awareness**: Comprehensive mapping of amateur radio repeater networks across the theater, providing operators with immediate access to vital communication relays, operational frequencies, and signal coverage radii.
 - **JS8Call Signal Intelligence**: Integrated HF digital mode (JS8) radio bridge and interactive HUD terminal for real-time tactical communications and station tracking.
 - **Projective Velocity Blending (PVB)**: Physics-based kinematic rendering ensures fast-moving aircraft coast smoothly between delayed transponder pings, with zero "rubber-banding."

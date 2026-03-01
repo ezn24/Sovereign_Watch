@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, ShieldCheck, ChevronDown, ChevronUp, Radio } from 'lucide-react';
+import { Database, ShieldCheck, ChevronDown, ChevronUp, Radio, Network, ChevronRight } from 'lucide-react';
 import { MapFilters } from '../../types';
 
 interface SystemStatusProps {
@@ -10,15 +10,13 @@ interface SystemStatusProps {
 
 export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters, onFilterChange }) => {
   const [showLayers, setShowLayers] = useState(false);
+  const [infraExpanded, setInfraExpanded] = useState(false);
 
   const orbitalCount = trackCounts.orbital || 0;
   const total = trackCounts.air + trackCounts.sea + orbitalCount;
   const airPercent = total > 0 ? (trackCounts.air / total) * 100 : 0;
   const seaPercent = total > 0 ? (trackCounts.sea / total) * 100 : 0;
   const orbitalPercent = total > 0 ? (orbitalCount / total) * 100 : 0;
-
-  // Active layers count for the indicator if needed
-  const activeLayersCount = filters ? [filters.showRepeaters].filter(Boolean).length : 0;
 
   return (
     <div className="flex flex-col rounded-sm border border-tactical-border bg-black/40 backdrop-blur-md shadow-inner overflow-hidden">
@@ -38,12 +36,33 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
                   onFilterChange('showRepeaters', !filters.showRepeaters);
                 }}
                 className={`p-1 rounded transition-colors ${filters.showRepeaters
-                  ? 'bg-teal-400/20 text-teal-400 border border-teal-400/30'
+                  ? 'bg-emerald-400/20 text-emerald-400 border border-emerald-400/30'
                   : 'text-white/30 hover:text-white/70 hover:bg-white/5 border border-transparent'
                   }`}
                 title="Toggle Amateur Radio Repeaters"
               >
                 <Radio size={12} className={filters.showRepeaters ? 'animate-pulse' : ''} />
+              </button>
+              <button
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  const isCurrentlyOn = filters.showCables !== false;
+                  // If turning ON: only turn on cables (landing stations default to OFF)
+                  // If turning OFF: turn off both for clean map state
+                  if (isCurrentlyOn) {
+                    onFilterChange('showCables', false);
+                    onFilterChange('showLandingStations', false);
+                  } else {
+                    onFilterChange('showCables', true);
+                  }
+                }}
+                className={`p-1 rounded transition-colors ${filters.showCables !== false
+                  ? 'bg-cyan-400/20 text-cyan-400 border border-cyan-400/30'
+                  : 'text-white/30 hover:text-white/70 hover:bg-white/5 border border-transparent'
+                  }`}
+                title="Toggle Submarine Cables"
+              >
+                <Network size={12} className={filters.showCables !== false ? 'animate-pulse' : ''} />
               </button>
             </div>
           )}
@@ -61,21 +80,102 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
           {/* RF Infrastructure Toggle Detail */}
           <div
             className={`flex items-center justify-between p-2 rounded border transition-colors cursor-pointer group ${filters.showRepeaters
-              ? 'bg-teal-400/10 border-teal-400/30 text-teal-400'
+              ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
               : 'bg-black/40 border-white/5 text-white/50 hover:bg-white/5 hover:text-white/80'
               }`}
             onClick={() => onFilterChange('showRepeaters', !filters.showRepeaters)}
           >
             <div className="flex items-center gap-3">
-              <Radio size={14} className={filters.showRepeaters ? 'text-teal-400 animate-pulse' : 'text-white/30 group-hover:text-white/50'} />
+              <Radio size={14} className={filters.showRepeaters ? 'text-emerald-400 animate-pulse' : 'text-white/30 group-hover:text-white/50'} />
               <div className="flex flex-col">
-                <span className="text-mono-sm font-bold tracking-wider uppercase">RF Infrastructure</span>
-                <span className="text-[9px] font-mono opacity-60">Amateur Radio Repeaters, Coverage area: ~75km</span>
+                <span className="text-mono-sm font-bold tracking-wider uppercase text-white/90">RF Infrastructure</span>
+                <span className="text-[9px] font-mono text-emerald-400/60">Amateur Radio Repeaters</span>
               </div>
             </div>
-            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${filters.showRepeaters ? 'bg-teal-400/30' : 'bg-white/10'}`}>
-              <div className={`w-3 h-3 rounded-full bg-current transition-transform ${filters.showRepeaters ? 'translate-x-4' : 'translate-x-0'}`} />
+            <div
+              className={`h-3 w-6 shrink-0 rounded-full transition-colors duration-200 ease-in-out relative ${filters.showRepeaters ? 'bg-emerald-400' : 'bg-white/10 hover:bg-white/20'}`}
+            >
+              <div className={`absolute top-0.5 h-2 w-2 transform rounded-full bg-black transition duration-200 ease-in-out ${filters.showRepeaters ? 'left-3.5' : 'left-0.5'}`} />
             </div>
+          </div>
+
+          {/* Infra Filter */}
+          <div className="flex flex-col gap-1">
+            <div className={`group flex items-center justify-between rounded border transition-all ${filters.showCables !== false ? 'border-cyan-400/30 bg-cyan-400/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}>
+              <div
+                className="flex flex-1 items-center justify-between p-2 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setInfraExpanded(!infraExpanded);
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <Network size={14} className={filters.showCables !== false ? 'text-cyan-400' : 'text-white/20'} />
+                  <div className="flex flex-col">
+                    <span className="text-mono-sm font-bold tracking-wider uppercase text-white/90">SUBMARINE CABLES</span>
+                    <span className="text-[9px] font-mono text-cyan-400/60">Global Undersea Infrastructure</span>
+                  </div>
+                </div>
+                <div className="w-4 flex justify-center transition-transform duration-200 shrink-0" style={{ transform: infraExpanded ? 'rotate(90deg)' : 'none' }}>
+                  <ChevronRight size={14} className="text-white/40" />
+                </div>
+              </div>
+
+              <div className="border-l border-white/10 p-2" onClick={(e) => e.stopPropagation()}>
+                <input type="checkbox" className="sr-only" checked={filters.showCables !== false} onChange={() => {
+                  const isCurrentlyOn = filters.showCables !== false;
+                  onFilterChange('showCables', !isCurrentlyOn);
+                  onFilterChange('showLandingStations', !isCurrentlyOn);
+                }} />
+                <div
+                  className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showCables !== false ? 'bg-cyan-400' : 'bg-white/10 hover:bg-white/20'}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const isCurrentlyOn = filters.showCables !== false;
+                    if (isCurrentlyOn) {
+                      onFilterChange('showCables', false);
+                      onFilterChange('showLandingStations', false);
+                    } else {
+                      onFilterChange('showCables', true);
+                    }
+                  }}
+                >
+                  <div className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${filters.showCables !== false ? 'left-3.5' : 'left-0.5'}`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-filters for Infra */}
+            {infraExpanded && (
+              <div className="flex flex-col gap-1 px-1 opacity-90">
+                {/* Landing Stations */}
+                <label className={`group flex cursor-pointer items-center justify-between rounded border p-1.5 transition-all ${filters.showLandingStations !== false ? 'border-cyan-400/20 bg-cyan-400/5' : 'border-white/5 bg-white/5'}`}>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px]">⚓</span>
+                    <span className={`text-[9px] font-bold tracking-wide ${filters.showLandingStations !== false ? 'text-cyan-400/80' : 'text-cyan-400/30'}`}>LANDING STATIONS</span>
+                  </div>
+                  <input type="checkbox" className="sr-only" checked={filters.showLandingStations !== false} onChange={(e) => onFilterChange('showLandingStations', e.target.checked)} />
+                  <div className={`h-2 w-4 shrink-0 cursor-pointer rounded-full transition-colors relative ${filters.showLandingStations !== false ? 'bg-cyan-400/80' : 'bg-white/10'}`}><div className={`absolute top-0.5 h-1 w-1 rounded-full bg-black transition-all ${filters.showLandingStations !== false ? 'left-2.5' : 'left-0.5'}`} /></div>
+                </label>
+
+                {/* Opacity Slider */}
+                <div className="group flex flex-col gap-1 rounded border border-white/5 bg-white/5 p-2 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold tracking-wide text-white/50">CABLE OPACITY</span>
+                    <span className="text-[9px] text-white/50">{Math.round((filters.cableOpacity ?? 0.6) * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.2"
+                    max="1"
+                    step="0.1"
+                    value={filters.cableOpacity ?? 0.6}
+                    onChange={(e) => onFilterChange('cableOpacity', parseFloat(e.target.value))}
+                    className="h-1 w-full appearance-none rounded bg-white/10 outline-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-cyan-400"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -84,7 +184,7 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
         {/* Compact Headers & Counts */}
         <div className="flex items-end justify-between">
           <div className="flex flex-col">
-            <span className="text-[9px] text-white/40 font-bold tracking-widest uppercase mb-1">Total Objects</span>
+            <span className="text-[9px] text-white/40 font-bold tracking-widest uppercase mb-1">Total Tracking</span>
             <span className="text-xl font-bold text-hud-green tabular-nums leading-none">{total}</span>
           </div>
 

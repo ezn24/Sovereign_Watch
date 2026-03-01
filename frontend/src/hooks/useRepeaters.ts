@@ -40,6 +40,10 @@ export function useRepeaters(
   useEffect(() => {
     if (!enabled) return;
 
+    const CACHE_KEY = `repeaters_cache_${missionLat.toFixed(2)}_${missionLon.toFixed(2)}`;
+    const CACHE_TS_KEY = `${CACHE_KEY}_ts`;
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
     // Skip if the mission centre hasn't moved significantly
     const last = lastFetchRef.current;
     if (last) {
@@ -54,6 +58,23 @@ export function useRepeaters(
       setLoading(true);
       setError(null);
 
+      // 1. Check local cache first
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        const cachedTs = localStorage.getItem(CACHE_TS_KEY);
+        if (cached && cachedTs && (Date.now() - parseInt(cachedTs)) < CACHE_TTL) {
+          const parsed = JSON.parse(cached);
+          repeatersRef.current = parsed;
+          setRepeaters(parsed);
+          setLoading(false);
+          lastFetchRef.current = { lat: missionLat, lon: missionLon };
+          return;
+        }
+      } catch (e) {
+        console.warn("Repeater cache read failed:", e);
+      }
+
+      // 2. Fetch fresh
       try {
         const url = `${API_BASE}?lat=${missionLat}&lon=${missionLon}&radius=${radiusMi}`;
         const resp = await fetch(url);
@@ -65,6 +86,10 @@ export function useRepeaters(
           repeatersRef.current = results;
           setRepeaters(results);
           lastFetchRef.current = { lat: missionLat, lon: missionLon };
+
+          // Update cache
+          localStorage.setItem(CACHE_KEY, JSON.stringify(results));
+          localStorage.setItem(CACHE_TS_KEY, Date.now().toString());
         }
       } catch (err: any) {
         if (!cancelled) {

@@ -69,7 +69,7 @@ interface TacticalMapProps {
   onEvent?: (event: {
     type: "new" | "lost" | "alert";
     message: string;
-    entityType?: "air" | "sea" | "orbital";
+    entityType?: "air" | "sea" | "orbital" | "infra";
     classification?: import("../../types").EntityClassification;
   }) => void;
   selectedEntity: CoTEntity | null;
@@ -89,6 +89,7 @@ interface TacticalMapProps {
   ownGridRef?: MutableRefObject<string>;
   repeatersRef?: MutableRefObject<RepeaterStation[]>;
   showRepeaters?: boolean;
+  repeatersLoading?: boolean;
 }
 
 export function TacticalMap({
@@ -112,6 +113,7 @@ export function TacticalMap({
   ownGridRef,
   repeatersRef,
   showRepeaters,
+  repeatersLoading,
 }: TacticalMapProps) {
   // Fetch infra data (Submarine cables & landing stations)
   const { cablesData, stationsData } = useInfraData();
@@ -130,7 +132,36 @@ export function TacticalMap({
     lat: number;
     lon: number;
   } | null>(null);
-  const [hoveredInfra, setHoveredInfra] = useState<any>(null);
+  const [hoveredInfra, setHoveredInfraState] = useState<any>(null);
+  const handleHoveredInfra = useCallback((info: any) => {
+    const obj = info?.object || null;
+    setHoveredInfraState(obj);
+    if (obj) {
+      const props = obj.properties || {};
+      const lat = obj.geometry.type === 'Point' ? obj.geometry.coordinates[1] : obj.geometry.coordinates[0][1];
+      const lon = obj.geometry.type === 'Point' ? obj.geometry.coordinates[0] : obj.geometry.coordinates[0][0];
+
+      const entity: CoTEntity = {
+        uid: props.id || String(obj.id),
+        type: 'infra',
+        callsign: props.name || 'Unknown Infra',
+        lat,
+        lon,
+        altitude: 0,
+        course: 0,
+        speed: 0,
+        lastSeen: Date.now(),
+        uidHash: 0,
+        trail: [],
+        detail: obj
+      };
+      setHoveredEntity(entity);
+      setHoverPosition({ x: info.x, y: info.y });
+    } else {
+      // Clear tooltip only if current hovered item is infra
+      setHoveredEntity(prev => (prev?.type === 'infra' ? null : prev));
+    }
+  }, []);
 
   // Map & Style States
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -162,24 +193,110 @@ export function TacticalMap({
   });
 
   // Refs for transient state
-  // Store previously active filters for detecting when cables are turned on
-  const prevActiveRef = useRef<{showCables?: boolean}>({ showCables: false });
+  // Store previously active filters and notification states for Detecting transitions
+  const infraNotifiedRef = useRef<{
+    showCables?: boolean;
+    showRepeaters?: boolean;
+    showLandingStations?: boolean;
+    notifiedCables?: boolean;
+    notifiedRepeaters?: boolean;
+    notifiedLandingStations?: boolean;
+  }>({
+    showCables: false,
+    showRepeaters: false,
+    showLandingStations: false,
+    notifiedCables: false,
+    notifiedRepeaters: false,
+    notifiedLandingStations: false,
+  });
 
   useEffect(() => {
-    const prevCables = prevActiveRef.current?.showCables;
-    const currCables = filters?.showCables;
+    const prevCables = infraNotifiedRef.current?.showCables;
+    const currCables = filters?.showCables !== false;
+    const prevLanding = infraNotifiedRef.current?.showLandingStations;
+    const currLanding = !!filters?.showLandingStations;
+    const prevRepeaters = infraNotifiedRef.current?.showRepeaters;
+    const currRepeaters = !!showRepeaters;
 
-    if (prevCables === false && currCables !== false && cablesData && stationsData) {
-       const cableCount = cablesData.features?.length || 0;
-       const stationCount = stationsData.features?.length || 0;
-       onEvent?.({
-          message: `INFRA: ${cableCount} submarine cables loaded — ${stationCount} landing stations active`,
+    // 1. Submarine Cables Trigger
+    if (currCables) {
+      if (!infraNotifiedRef.current.notifiedCables && cablesData) {
+        const cableCount = cablesData.features?.length || 0;
+        onEvent?.({
+          message: `INFRA: ${cableCount} global undersea cable systems synchronized`,
           type: "new",
-
-       });
+          entityType: "infra",
+        });
+        infraNotifiedRef.current.notifiedCables = true;
+      }
+    } else {
+      if (prevCables === true) {
+        onEvent?.({
+          message: "INFRA: Undersea cable infrastructure data stream terminated",
+          type: "lost",
+          entityType: "infra",
+        });
+      }
+      infraNotifiedRef.current.notifiedCables = false;
     }
-    prevActiveRef.current = { showCables: filters?.showCables !== false };
-  }, [filters?.showCables, cablesData, stationsData, onEvent]);
+
+    // 2. Landing Stations Trigger (Independent)
+    if (currLanding) {
+      if (!infraNotifiedRef.current.notifiedLandingStations && stationsData) {
+        const stationCount = stationsData.features?.length || 0;
+        onEvent?.({
+          message: `INFRA: ${stationCount} international landing points active`,
+          type: "new",
+          entityType: "infra",
+        });
+        infraNotifiedRef.current.notifiedLandingStations = true;
+      }
+    } else {
+      if (prevLanding === true) {
+        onEvent?.({
+          message: "INFRA: Landing point precision tracking offline",
+          type: "lost",
+          entityType: "infra",
+        });
+      }
+      infraNotifiedRef.current.notifiedLandingStations = false;
+    }
+
+    // 3. RF Repeaters Trigger
+    if (currRepeaters) {
+      const dataReady = repeatersRef?.current && repeatersRef.current.length > 0;
+      const loadFinished = !repeatersLoading;
+
+      // Notify if:
+      // 1. Data is ready (non-zero count)
+      // 2. OR loading has explicitly finished AFTER we already transitioned showRepeaters to true
+      // This prevents the "0 repeaters" flash during the initial frame of a toggle.
+      if (!infraNotifiedRef.current.notifiedRepeaters) {
+        if (dataReady || (loadFinished && infraNotifiedRef.current.showRepeaters === true)) {
+          const count = repeatersRef?.current?.length || 0;
+          onEvent?.({
+            message: `RF_NET: ${count} amateur radio repeaters active in regional sector`,
+            type: "new",
+            entityType: "infra",
+          });
+          infraNotifiedRef.current.notifiedRepeaters = true;
+        }
+      }
+    } else {
+      if (prevRepeaters === true) {
+        onEvent?.({
+          message: "RF_NET: Local repeater network visualization offline",
+          type: "lost",
+          entityType: "infra",
+        });
+      }
+      infraNotifiedRef.current.notifiedRepeaters = false;
+    }
+
+    infraNotifiedRef.current.showCables = currCables;
+    infraNotifiedRef.current.showLandingStations = currLanding;
+    infraNotifiedRef.current.showRepeaters = currRepeaters;
+  }, [filters?.showCables, filters?.showLandingStations, showRepeaters, cablesData, stationsData, onEvent, repeatersRef, repeatersLoading]);
 
   const countsRef = useRef({ air: 0, sea: 0, orbital: 0 });
   const currentMissionRef = useRef<{
@@ -298,7 +415,7 @@ export function TacticalMap({
     filters,
     cablesData: cablesData,
     stationsData: stationsData,
-    setHoveredInfra: setHoveredInfra,
+    setHoveredInfra: handleHoveredInfra,
     setSelectedInfra: (info: any) => {
       if (!info || !info.object) return;
 

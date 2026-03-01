@@ -55,7 +55,7 @@ export interface IntelEvent {
   time: Date;
   type: 'new' | 'lost' | 'alert';
   message: string;
-  entityType?: 'air' | 'sea' | 'orbital';
+  entityType?: 'air' | 'sea' | 'orbital' | 'infra';
   classification?: EntityClassification;
 }
 

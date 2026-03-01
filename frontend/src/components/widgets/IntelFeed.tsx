@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { Radio, Bell, TrendingDown, TrendingUp, Filter, Plane, Ship, Satellite } from 'lucide-react';
+import { Radio, Bell, TrendingDown, TrendingUp, Filter, Plane, Ship, Satellite, Network } from 'lucide-react';
 import { CoTEntity, MapActions, IntelEvent, MapFilters } from '../../types';
 import { LayerFilters } from './LayerFilters';
 
@@ -179,32 +179,37 @@ const IntelEventItem = React.memo(({
     const isAir = event.entityType === 'air';
     const isSea = event.entityType === 'sea';
     const isOrbital = event.entityType === 'orbital';
+    const isInfra = event.entityType === 'infra';
     const isLost = event.type === 'lost';
     const isAlert = event.type === 'alert';
-
     const isMil = event.classification?.affiliation === 'military';
     const isGov = event.classification?.affiliation === 'government';
+    const isRF = isInfra && (event.message?.includes('RF') || event.message?.includes('Repeater'));
+    const infraColor = isRF ? 'emerald-400' : 'cyan-400';
 
     const accentColor = isAlert ? 'bg-alert-red' :
         isLost ? 'bg-alert-amber' :
             isMil ? 'bg-amber-500' :
                 isGov ? 'bg-blue-400' :
                     isOrbital ? 'bg-purple-400' :
-                        isAir ? 'bg-air-accent' : 'bg-sea-accent';
+                        isInfra ? `bg-${infraColor}` :
+                            isAir ? 'bg-air-accent' : 'bg-sea-accent';
 
     const textColor = isAlert ? 'text-alert-red' :
         isLost ? 'text-alert-amber' :
             isMil ? 'text-amber-500' :
                 isGov ? 'text-blue-400' :
                     isOrbital ? 'text-purple-400' :
-                        isAir ? 'text-air-accent' : 'text-sea-accent';
+                        isInfra ? `text-${infraColor}` :
+                            isAir ? 'text-air-accent' : 'text-sea-accent';
 
     const borderLight = isAlert ? 'border-alert-red/30' :
         isLost ? 'border-alert-amber/30' :
             isMil ? 'border-amber-500/30' :
                 isGov ? 'border-blue-400/30' :
                     isOrbital ? 'border-purple-400/30' :
-                        isAir ? 'border-air-accent/30' : 'border-sea-accent/30';
+                        isInfra ? `border-${infraColor}/30` :
+                            isAir ? 'border-air-accent/30' : 'border-sea-accent/30';
 
     return (
         <div
@@ -249,7 +254,9 @@ const IntelEventItem = React.memo(({
             </div>
 
             <div className="absolute -bottom-2 -right-2 opacity-[0.03] transition-opacity group-hover:opacity-[0.08]">
-                {isOrbital ? <Satellite size={40} className="text-purple-400" /> : isAir ? <PlaneIcon size={40} /> : <ShipIcon size={40} />}
+                {isOrbital ? <Satellite size={40} className="text-purple-400" /> :
+                    isInfra ? <Network size={40} className="text-cyan-400" /> :
+                        isAir ? <PlaneIcon size={40} /> : <ShipIcon size={40} />}
             </div>
         </div>
     );

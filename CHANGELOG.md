@@ -1,3 +1,39 @@
+## [0.12.0] - 2026-03-01
+
+### Added
+
+- **Undersea Infrastructure Awareness:**
+  - **Submarine Cable Layer:** New Deck.gl map layer rendering the global submarine cable network with per-cable color coding sourced from SubmarineCableMap.com.
+  - **Landing Stations Layer:** Independent toggle for submarine cable landing points, visualized as colored dots matching their cable's signature color.
+  - **Infrastructure Tooltips:** Specialized tactical tooltips for cables (name, length, owners, status) and landing stations (name, country, connected cables).
+  - **Intelligence Feed Integration:** Automatic Intel Feed notifications when submarine cable or landing station layers are toggled on/off.
+  - **24h Client Cache:** Submarine cable + landing station GeoJSON cached in `localStorage` to minimize external API calls.
+
+- **RF Infrastructure Enhancements:**
+  - **Tactical Clustering (Refined):** Refactored the repeater clustering algorithm: tighter grid grouping, Emerald-themed halos (replacing off-theme Violet), reduced visual weight of cluster bubbles, and a higher zoom breakpoint (7.5) for better density management in high-repeater regions like the Pacific Northwest.
+  - **Intelligence Feed Notifications:** Toggle-on/off events for RF repeaters now fire in the Intel Feed, consistent with all other map layers.
+  - **Notification Race Fix:** Fixed a race condition where the Intel Feed would report "0 repeaters" before data had loaded. The gate now waits for a non-zero count or a confirmed loading cycle before broadcasting.
+  - **Globe Mode Optimization:** RF repeater dots fully billboard in globe mode with correct `depthBias` to prevent half-moon clipping.
+  - **Callsign Labels:** Repeater callsigns and frequencies appear at zoom ≥ 9 as tactical overlays.
+
+- **Infrastructure Color System:**
+  - Standardized **Emerald-400** (`#34D399`) as the canonical color for all RF Infrastructure elements (Repeaters, JS8Call indicators, status messages).
+  - Standardized **Cyan-400** (`#22D3EE`) as the canonical color for all Undersea Infrastructure elements (Cables, Landing Stations).
+  - Updated `SystemStatus.tsx`, `LayerFilters.tsx`, `IntelFeed.tsx`, and `MapTooltip.tsx` to reflect the new scheme consistently.
+  - Header toggle buttons for each infrastructure group now match their assigned color.
+
+### Changed
+
+- **HUD Terminology:** Renamed "Total Objects" → "Total Tracking" in `SystemStatus.tsx` for more accurate tactical terminology.
+- **Landing Stations Default:** Landing stations now default to **OFF** when submarine cables are first enabled, preventing UI overload on first toggle.
+- **Architecture Diagram:** Fixed a node ID collision in `README.md` Mermaid diagram (node `J` was dual-assigned to JS8Call and Claude). Added RF Repeaters, Submarine Cables, and Infrastructure Layers to the Presentation block.
+- **Data Sources Documentation:** Added a comprehensive `## 🗂️ Data Sources` section to `README.md` documenting all upstream APIs with URLs, auth requirements, and caching behavior.
+
+### Fixed
+
+- **`ReferenceError` in `IntelFeed.tsx`:** Restored missing variable declarations that were causing the intelligence stream to crash on toggle.
+- **Map Tooltip Sync:** Verified and corrected tooltip color themes for Repeaters (Emerald), Cables (Cyan), and JS8Call stations.
+
 ## [0.11.0] - 2026-03-01
 
 ### Added
