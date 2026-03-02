@@ -1,3 +1,30 @@
+## [0.13.0] - 2026-03-01
+
+### Fixed
+
+- **Stability Audit (20 bugs resolved across 13 files):**
+
+  - **BUG-001** — Aviation Poller double rate-limiter: Removed redundant `async with source.limiter` wrapper in `source_loop()`. The inner `_fetch()` already holds the limiter; double-acquisition halved the effective polling rate.
+  - **BUG-002** — Historian shutdown data loss: Added batch flush in the `finally` block before consumer teardown. In-flight data was silently discarded on SIGTERM.
+  - **BUG-003** — Signal handler `asyncio.create_task()` crash: Changed to `loop.create_task()` in both `aviation_poller/main.py` and `maritime_poller/main.py`. Signal handlers run outside the async context, making `asyncio.create_task()` raise `RuntimeError`.
+  - **BUG-004** — Analysis API crash on NULL `avg_speed`/`avg_alt`: Added `or 0` guards before `.1f`/`.0f` format specifiers. `PostgreSQL AVG()` returns `None` on all-NULL groups, causing `TypeError`.
+  - **BUG-005** — Blocking LLM call stalling event loop: Wrapped synchronous `litellm.completion()` in `asyncio.to_thread()` within the analysis SSE generator, restoring API concurrency.
+  - **BUG-006** — Replay endpoint accepts reversed time windows: Added `dt_end <= dt_start` validation; previously a negative duration silently produced empty results.
+  - **BUG-007** — Track history accepts zero/negative `limit` and `hours`: Added positive-value guard on both query parameters.
+  - **BUG-008** — CORS misconfiguration (`allow_credentials=True` with `allow_origins=["*"]`): Removed `allow_credentials` from JS8Call bridge CORSMiddleware — the combination is rejected by all browsers per spec.
+  - **BUG-009** — Historian silently drops batch when DB pool unavailable: Retained batch and logged a warning instead of clearing; data is retried on the next flush cycle.
+  - **BUG-010** — ECEF→LLA division by zero at the poles: Clamped `lat` with `np.clip` before dividing by `cos(lat)` in `orbital_pulse/utils.py`.
+  - **BUG-011** — Deprecated `asyncio.get_event_loop()` in JS8Call WebSocket handlers: Replaced with `asyncio.get_running_loop()` (correct inside a running coroutine, Python 3.10+).
+  - **BUG-012** — Historian clears batch after write failure: Moved `batch.clear()` inside the `try` block so data is only discarded after a confirmed successful DB write.
+  - **BUG-013** — Debug `console.log` in production hot paths: Removed 5 console log calls from WebSocket connect/open/close, followMode effect, and map load events.
+  - **BUG-014** — Redundant inner `if action == "SEND"` guard in JS8Call WebSocket handler: Removed always-True dead check and unified variable naming.
+  - **BUG-015** — Duplicate DR-state lookup in `useEntityWorker.ts`: Consolidated `currentDr` / `previousDr` (identical `drStateRef.current.get()` calls before any write) into a single `existingDr`.
+  - **BUG-016** — `_message_queue` type annotation in JS8Call server: Corrected from `asyncio.Queue` → `Optional[asyncio.Queue]` to match actual `None` initialization.
+  - **BUG-017** — Deprecated `@app.on_event("startup/shutdown")` lifecycle hooks: Migrated `backend/api/main.py` to the modern `@asynccontextmanager` `lifespan` pattern (FastAPI ≥ 0.93).
+  - **BUG-018** — Hex debug computation in protobuf decode hot path: Removed `Array.from().map().join()` byte-to-hex conversion that ran on every decoded TAK message; no UI feature consumed `.raw`.
+  - **BUG-019** — AIS magic number 511: Defined `AIS_HEADING_NOT_AVAILABLE = 511` module constant (per ITU-R M.1371) and replaced bare literals in both position report handlers.
+  - **BUG-020** — AISStream bounding box unclamped latitude: Clamped `min_lat`/`max_lat` to `[-90.0, 90.0]` in `maritime_poller/utils.py` to prevent invalid subscription coordinates for large-radius or polar-centered AORs.
+
 ## [0.12.1] - 2026-03-01
 
 ### Fixed

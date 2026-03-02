@@ -315,7 +315,6 @@ export function TacticalMap({
 
   // Sync followMode ref
   useEffect(() => {
-    console.log("FollowMode prop changed:", followMode);
     if (followMode && !followModeRef.current) {
       lastFollowEnableRef.current = Date.now();
     }
@@ -491,7 +490,6 @@ export function TacticalMap({
             ? evt.target.getMap()
             : evt.target;
       }
-      console.log("[TacticalMap] Map Loaded Successfully");
       setMapLoaded(true);
     },
     [],

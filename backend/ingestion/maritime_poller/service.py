@@ -33,6 +33,11 @@ CENTER_LON = float(os.getenv("CENTER_LON", "-122.6784"))
 COVERAGE_RADIUS_NM = int(os.getenv("COVERAGE_RADIUS_NM", "150"))
 
 
+# BUG-019: 511 is the AIS "not available" sentinel for TrueHeading per ITU-R M.1371.
+# Define as a named constant so usage sites are self-documenting.
+AIS_HEADING_NOT_AVAILABLE = 511
+
+
 class MaritimePollerService:
     def __init__(self):
         self.running = True
@@ -230,7 +235,7 @@ class MaritimePollerService:
                     "track": {
                         "course": msg.get("Cog", 0),
                         "speed": msg.get("Sog", 0) * 0.514444,
-                        "heading": msg.get("TrueHeading", 511)
+                        "heading": msg.get("TrueHeading", AIS_HEADING_NOT_AVAILABLE)
                     },
                     "contact": {
                         "callsign": name
@@ -297,7 +302,7 @@ class MaritimePollerService:
                     "track": {
                         "course": msg.get("Cog", 0),
                         "speed": msg.get("Sog", 0) * 0.514444,  # knots to m/s
-                        "heading": msg.get("TrueHeading", 511)
+                        "heading": msg.get("TrueHeading", AIS_HEADING_NOT_AVAILABLE)
                     },
                     "contact": {
                         "callsign": name

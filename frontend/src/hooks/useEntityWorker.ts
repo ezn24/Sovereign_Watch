@@ -26,13 +26,13 @@ export interface DeadReckoningState {
 
 interface UseEntityWorkerOptions {
   onEvent:
-    | ((event: {
-        type: "new" | "lost" | "alert";
-        message: string;
-        entityType?: "air" | "sea" | "orbital";
-        classification?: EntityClassification;
-      }) => void)
-    | undefined;
+  | ((event: {
+    type: "new" | "lost" | "alert";
+    message: string;
+    entityType?: "air" | "sea" | "orbital";
+    classification?: EntityClassification;
+  }) => void)
+  | undefined;
   currentMissionRef: MutableRefObject<{
     lat: number;
     lon: number;
@@ -253,14 +253,10 @@ export function useEntityWorker({
 
         // PVB State Update
         const now = Date.now();
-        const currentDr = drStateRef.current.get(entity.uid);
-
-        // FIX #1: Capture previous DR state BEFORE overwriting it.
-        // The course-fallback branch below reads drStateRef to get the
-        // "previous" position for bearing calculation. If we write first
-        // and read second, prevPos.serverLat === newLat (distance = 0)
-        // and the fallback bearing is never computed.
-        const previousDr = drStateRef.current.get(entity.uid);
+        // BUG-015: `currentDr` and `previousDr` were both drStateRef.current.get(entity.uid)
+        // — identical lookups before any write. Consolidated to a single `existingDr`
+        // variable that serves both the interval calculation and the course-fallback.
+        const existingDr = drStateRef.current.get(entity.uid);
 
         // Capture current visual state as blend origin
         const visual = visualStateRef.current.get(entity.uid);
@@ -275,7 +271,7 @@ export function useEntityWorker({
           | undefined;
 
         // Calculate interval (clamped to avoid jitter from rapid updates)
-        const lastServerTime = currentDr ? currentDr.serverTime : now - 1000;
+        const lastServerTime = existingDr ? existingDr.serverTime : now - 1000;
         const timeSinceLast = Math.max(now - lastServerTime, 800); // Minimum 800ms
 
         // Prepare new DR state
@@ -288,11 +284,11 @@ export function useEntityWorker({
           serverTime: now,
           blendLat,
           blendLon,
-          blendSpeed: currentDr
-            ? currentDr.serverSpeed
+          blendSpeed: existingDr
+            ? existingDr.serverSpeed
             : entity.detail?.track?.speed || 0,
-          blendCourseRad: currentDr
-            ? currentDr.serverCourseRad
+          blendCourseRad: existingDr
+            ? existingDr.serverCourseRad
             : ((entity.detail?.track?.course || 0) * Math.PI) / 180,
           expectedInterval: timeSinceLast,
         });
@@ -320,22 +316,22 @@ export function useEntityWorker({
           raw: updateData.raw, // Map raw hex from worker
           classification: classification
             ? {
-                ...existingEntity?.classification,
-                ...classification,
-                // Priority: keep existing description if new one is missing/empty
-                description:
-                  classification.description ||
-                  existingEntity?.classification?.description ||
-                  "",
-                operator:
-                  classification.operator ||
-                  existingEntity?.classification?.operator ||
-                  "",
-                registration:
-                  classification.registration ||
-                  existingEntity?.classification?.registration ||
-                  "",
-              }
+              ...existingEntity?.classification,
+              ...classification,
+              // Priority: keep existing description if new one is missing/empty
+              description:
+                classification.description ||
+                existingEntity?.classification?.description ||
+                "",
+              operator:
+                classification.operator ||
+                existingEntity?.classification?.operator ||
+                "",
+              registration:
+                classification.registration ||
+                existingEntity?.classification?.registration ||
+                "",
+            }
             : existingEntity?.classification,
           vesselClassification:
             vesselClassification || existingEntity?.vesselClassification,
@@ -364,19 +360,19 @@ export function useEntityWorker({
           if (dist > 2.0) {
             computedCourse = getBearing(prev[1], prev[0], last[1], last[0]);
           }
-        } else if (previousDr) {
-          // FIX #1 (cont): Use the CAPTURED previous state, not a fresh
+        } else if (existingDr) {
+          // FIX #1 (cont): Use the CAPTURED previous state (existingDr), not a fresh
           // read of drStateRef which was already overwritten above.
           const dist = getDistanceMeters(
-            previousDr.serverLat,
-            previousDr.serverLon,
+            existingDr.serverLat,
+            existingDr.serverLon,
             newLat,
             newLon,
           );
           if (dist > 2.0) {
             computedCourse = getBearing(
-              previousDr.serverLat,
-              previousDr.serverLon,
+              existingDr.serverLat,
+              existingDr.serverLon,
               newLat,
               newLon,
             );
@@ -461,7 +457,7 @@ export function useEntityWorker({
     worker.onmessage = (event: MessageEvent) => {
       const { type, data, status } = event.data;
       if (type === "status" && status === "ready") {
-        console.log("Main Thread: TAK Worker Ready");
+        // BUG-013: Removed debug console.log — not needed in production
       }
       if (type === "entity_batch") {
         // Process batched entities
@@ -498,14 +494,12 @@ export function useEntityWorker({
     const connect = () => {
       if (isCleaningUp) return;
 
-      console.log(
-        `Connecting to Feed: ${wsUrl} (attempt ${reconnectAttempts + 1})`,
-      );
+      // BUG-013: Removed debug console.log for WebSocket connect attempts
       ws = new WebSocket(wsUrl);
       ws.binaryType = "arraybuffer";
 
       ws.onopen = () => {
-        console.log("Connected to TAK Stream");
+        // BUG-013: Removed debug console.log
         reconnectAttempts = 0; // Reset on successful connection
       };
 

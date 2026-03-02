@@ -37,7 +37,11 @@ def ecef_to_lla_vectorized(r_ecef):
                      p - e2 * a * (np.cos(th)**3))
 
     N = a / np.sqrt(1 - e2 * (np.sin(lat)**2))
-    alt = p / np.cos(lat) - N
+    # BUG-010: cos(lat) = 0 at geographic poles (±π/2), causing division by zero
+    # (returns inf in NumPy) or a ZeroDivisionError. Clamp lat epsilon away from
+    # ±π/2 before the division to keep altitude well-defined for polar orbits.
+    safe_lat = np.clip(lat, -np.pi / 2 + 1e-9, np.pi / 2 - 1e-9)
+    alt = p / np.cos(safe_lat) - N
 
     return np.degrees(lat), np.degrees(lon), alt
 

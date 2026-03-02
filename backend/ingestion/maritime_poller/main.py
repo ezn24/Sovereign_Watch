@@ -8,7 +8,7 @@ async def main():
 
     # Graceful Shutdown
     for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, lambda: asyncio.create_task(service.shutdown()))
+        loop.add_signal_handler(sig, lambda: loop.create_task(service.shutdown()))
     
     try:
         await service.setup()

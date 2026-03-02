@@ -11,11 +11,11 @@ const BATCH_SIZE = 10;
 const FLUSH_INTERVAL_MS = 50;
 
 function flushBatch() {
-  if (batch.length > 0) {
-    self.postMessage({ type: "entity_batch", data: batch });
-    batch = [];
-  }
-  flushTimer = null;
+    if (batch.length > 0) {
+        self.postMessage({ type: "entity_batch", data: batch });
+        batch = [];
+    }
+    flushTimer = null;
 }
 
 // --- Constants ---
@@ -47,11 +47,11 @@ self.onmessage = async (e: MessageEvent) => {
 
     if (type === 'decode_batch') {
         if (!takType) return;
-        
+
         // Payload is Array<ArrayBuffer> or just ArrayBuffer
         // We expect raw bytes.
         const buffer = new Uint8Array(payload);
-        
+
         // 1. Check Magic Bytes (Simple Check)
         if (buffer[0] === 0xbf && buffer[1] === 0x01 && buffer[2] === 0xbf) {
             try {
@@ -59,12 +59,8 @@ self.onmessage = async (e: MessageEvent) => {
                 // Usually protocol wrappers strip headers before proto decoding.
                 // If the proto IS the payload after magic bytes:
                 const cleanBuffer = buffer.subarray(3);
-                
+
                 const message = takType.decode(cleanBuffer);
-                // Convert raw buffer to Hex String for inspection
-                const hex = Array.from(cleanBuffer)
-                    .map(b => b.toString(16).padStart(2, '0'))
-                    .join(' ');
 
                 // Convert to plain object
                 const object = takType.toObject(message, {
@@ -72,21 +68,21 @@ self.onmessage = async (e: MessageEvent) => {
                     enums: String,
                     bytes: String,
                 });
-                
-                // Attach raw payload
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (object as any).raw = hex;
-                
+
+                // BUG-018: Removed hex debug computation (Array.from().map().join())
+                // that ran on every decoded message in production. Raw hex is
+                // a debug/inspection artifact and not consumed by any UI feature.
+
                 // Return Parsed Data
                 // Optimization: In real world, we would write to a SharedArrayBuffer here.
                 // For FE-05 MVP, we just return the object.
                 batch.push(object);
                 if (batch.length >= BATCH_SIZE) {
-                  flushBatch();
+                    flushBatch();
                 } else if (!flushTimer) {
-                  flushTimer = setTimeout(flushBatch, FLUSH_INTERVAL_MS);
+                    flushTimer = setTimeout(flushBatch, FLUSH_INTERVAL_MS);
                 }
-                
+
             } catch (parseErr) {
                 // console.warn("TAK Parse Error:", parseErr);
             }

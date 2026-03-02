@@ -154,19 +154,21 @@ class PollerService:
                 url = f"{source.base_url}{path}"
                 
                 try:
-                    # Respect per-source rate limits
-                    async with source.limiter:
-                        data = await self.poller._fetch(source, url)
-                        aircraft = data.get("ac") or data.get("aircraft") or []
-                        
-                        if aircraft:
-                            # Add metadata for arbitration
-                            fetched_at = time.time()
-                            for ac in aircraft:
-                                ac["_source"] = source.name
-                                ac["_fetched_at"] = fetched_at
-                                
-                            await self.process_aircraft_batch(aircraft, lat, lon)
+                    # BUG-001: Rate limiting is enforced inside _fetch() via the
+                    # per-source limiter in multi_source_poller.py. A second
+                    # async with source.limiter: here would consume two tokens
+                    # per poll, halving the configured rate. Removed.
+                    data = await self.poller._fetch(source, url)
+                    aircraft = data.get("ac") or data.get("aircraft") or []
+
+                    if aircraft:
+                        # Add metadata for arbitration
+                        fetched_at = time.time()
+                        for ac in aircraft:
+                            ac["_source"] = source.name
+                            ac["_fetched_at"] = fetched_at
+
+                        await self.process_aircraft_batch(aircraft, lat, lon)
                 except Exception as e:
                     logger.error(f"Error in {source.name} cycle: {e}")
                     # Note: source.penalize() is already called inside _fetch for 429s

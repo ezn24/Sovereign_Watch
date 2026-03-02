@@ -84,7 +84,9 @@ _event_loop: Optional[asyncio.AbstractEventLoop] = None
 
 # Thread-safe asyncio queue for bridging sync callbacks → async consumers.
 # maxsize=500 prevents unbounded memory growth under high RF traffic.
-_message_queue: asyncio.Queue = None  # initialized in lifespan
+# BUG-016: Annotation corrected — initialized to None in lifespan(), so the
+# type must be Optional, not asyncio.Queue directly.
+_message_queue: Optional[asyncio.Queue] = None  # initialized in lifespan
 
 # Active WebSocket connections.
 # Accessed from the asyncio thread only – no lock needed.
@@ -464,8 +466,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Tighten in production
-    allow_credentials=True,
+    allow_origins=["*"],
+    # BUG-008: allow_credentials=True is invalid when allow_origins=["*"].
+    # Per CORS spec, credentialed responses MUST use an explicit origin, not "*".
+    # Browsers enforce this and reject the response. Removed allow_credentials.
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -549,33 +553,33 @@ async def ws_js8(websocket: WebSocket) -> None:
             # ------------------------------------------------------------------
             if action == "SEND":
                 target = cmd.get("target", "@ALLCALL")
-                text = cmd.get("message", "")
-                if not text:
+                message = cmd.get("message", "")
+                if not message:
                     await websocket.send_json({"type": "ERROR", "message": "Empty message"})
                     continue
 
-                if action == "SEND" and cmd.get("target") and cmd.get("message"):
-                    target = cmd["target"].upper()
-                    message = cmd["message"]
-                    tx_msg = f"{target} {message}"
-                    # Forward dynamically to JS8Call UDP port
-                    try:
-                        import socket
-                        tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                        doc = {"TYPE": "TX.SEND_MESSAGE", "VALUE": tx_msg, "PARAMS": {}}
-                        tx.sendto(json.dumps(doc).encode("utf-8") + b"\n", ("127.0.0.1", JS8CALL_UDP_SERVER_PORT))
-                        tx.close()
-                    except Exception as e:
-                        logger.warning("TX error: %s", e)
-                    # Echo the sent message back so the UI can display it in the log
-                    _enqueue_from_thread({
-                        "type": "TX.SENT",
-                        "from": "LOCAL",
-                        "to": target,
-                        "text": text,
-                        "timestamp": time.strftime("%H:%M:%SZ", time.gmtime()),
-                        "ts_unix": int(time.time()),
-                    })
+                # BUG-014: Removed redundant inner `if action == "SEND"` guard
+                # (always True here) and unified to a single `message` variable.
+                tx_target = target.upper()
+                tx_msg = f"{tx_target} {message}"
+                # Forward dynamically to JS8Call UDP port
+                try:
+                    import socket
+                    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    doc = {"TYPE": "TX.SEND_MESSAGE", "VALUE": tx_msg, "PARAMS": {}}
+                    tx.sendto(json.dumps(doc).encode("utf-8") + b"\n", ("127.0.0.1", JS8CALL_UDP_SERVER_PORT))
+                    tx.close()
+                except Exception as e:
+                    logger.warning("TX error: %s", e)
+                # Echo the sent message back so the UI can display it in the log
+                _enqueue_from_thread({
+                    "type": "TX.SENT",
+                    "from": "LOCAL",
+                    "to": tx_target,
+                    "text": message,
+                    "timestamp": time.strftime("%H:%M:%SZ", time.gmtime()),
+                    "ts_unix": int(time.time()),
+                })
 
             # ------------------------------------------------------------------
             # Action: SET_FREQ – change JS8Call dial frequency
@@ -615,7 +619,9 @@ async def ws_js8(websocket: WebSocket) -> None:
                 freq = int(cmd.get("freq", 14074))
                 mode = str(cmd.get("mode", "usb")).lower().strip()
                 try:
-                    await asyncio.get_event_loop().run_in_executor(
+                    # BUG-011: get_event_loop() is deprecated in Python 3.10+;
+                    # get_running_loop() is correct inside a running coroutine.
+                    await asyncio.get_running_loop().run_in_executor(
                         None,
                         lambda: _start_kiwi_pipeline(host, port, freq, mode),
                     )
@@ -644,7 +650,8 @@ async def ws_js8(websocket: WebSocket) -> None:
             # Payload: {"action": "DISCONNECT_KIWI"}
             # ------------------------------------------------------------------
             elif action == "DISCONNECT_KIWI":
-                await asyncio.get_event_loop().run_in_executor(None, _stop_kiwi_pipeline)
+                # BUG-011: get_event_loop() deprecated → get_running_loop()
+                await asyncio.get_running_loop().run_in_executor(None, _stop_kiwi_pipeline)
                 _enqueue_from_thread({
                     "type": "KIWI.STATUS",
                     "connected": False,

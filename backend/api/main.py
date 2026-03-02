@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from routers import system, tracks, analysis, repeaters
@@ -12,7 +13,39 @@ from services.broadcast import broadcast_service
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("SovereignWatch")
 
-app = FastAPI(title="Sovereign Watch API")
+
+
+# Global task handle
+historian_task_handle: asyncio.Task | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    BUG-017: Replaced deprecated @app.on_event("startup") / @app.on_event("shutdown")
+    decorators with the modern lifespan context manager pattern (FastAPI >= 0.93).
+    """
+    global historian_task_handle
+    # --- Startup ---
+    await db.connect()
+    historian_task_handle = asyncio.create_task(historian_task())
+    await broadcast_service.start()
+    logger.info("Database, Redis, Historian, and Broadcast Service started")
+
+    yield
+
+    # --- Shutdown ---
+    if historian_task_handle:
+        historian_task_handle.cancel()
+        try:
+            await historian_task_handle
+        except asyncio.CancelledError:
+            pass
+    await broadcast_service.stop()
+    await db.disconnect()
+
+# --- Application ---
+app = FastAPI(title="Sovereign Watch API", lifespan=lifespan)
 
 # Security Headers Middleware
 @app.middleware("http")
@@ -46,39 +79,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Global task handle
-historian_task_handle: asyncio.Task | None = None
-
-@app.on_event("startup")
-async def startup():
-    global historian_task_handle
-    await db.connect()
-    
-    # Start Historian
-    historian_task_handle = asyncio.create_task(historian_task())
-
-    # Start Broadcast Service
-    await broadcast_service.start()
-    
-    logger.info("Database, Redis, Historian, and Broadcast Service started")
-
-@app.on_event("shutdown")
-async def shutdown():
-    global historian_task_handle
-    if historian_task_handle:
-        historian_task_handle.cancel()
-        try:
-            await historian_task_handle
-        except asyncio.CancelledError:
-            pass
-
-    # Stop Broadcast Service
-    await broadcast_service.stop()
-            
-    await db.disconnect()
-
-# Include Routers
 app.include_router(system.router)
 app.include_router(tracks.router)
 app.include_router(analysis.router)

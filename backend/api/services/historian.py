@@ -87,12 +87,27 @@ async def historian_task():
                         try:
                             async with db.pool.acquire() as conn:
                                 await conn.executemany(insert_sql, batch)
-                            # logger.info(f"Historian: wrote {len(batch)} rows")
+                            # BUG-009 / BUG-012: Only reset batch after a confirmed
+                            # successful write. If the write fails the batch is kept
+                            # so it will be retried on the next flush cycle.
+                            batch = []
+                            last_flush = now
                         except Exception as db_err:
                             logger.error(f"Historian DB Error: {db_err}")
-
-                    batch = []
-                    last_flush = now
+                            # Do NOT clear batch — retry on next cycle.
+                    else:
+                        # BUG-009: Pool not ready yet; retain the batch rather than
+                        # silently discarding it. Cap growth to avoid unbounded memory.
+                        logger.warning(
+                            f"Historian: DB pool not ready, retaining {len(batch)} records "
+                            "(will retry on next flush cycle)"
+                        )
+                        if len(batch) > BATCH_SIZE * 10:
+                            logger.error(
+                                f"Historian: batch overflow ({len(batch)} records). "
+                                "Dropping oldest entries to prevent OOM."
+                            )
+                            batch = batch[-BATCH_SIZE:]
 
             except Exception as e:
                 logger.error(f"Historian message processing error: {e}")
@@ -103,5 +118,14 @@ async def historian_task():
     except Exception as e:
         logger.error(f"Historian Fatal Error: {e}")
     finally:
+        # BUG-002: Flush any records still in the batch before the consumer stops.
+        # Previously these were silently dropped on shutdown.
+        if batch and db.pool:
+            try:
+                async with db.pool.acquire() as conn:
+                    await conn.executemany(insert_sql, batch)
+                logger.info(f"Historian: flushed {len(batch)} records on shutdown")
+            except Exception as e:
+                logger.error(f"Historian shutdown flush error: {e}")
         await consumer.stop()
         logger.info("Historian consumer stopped")

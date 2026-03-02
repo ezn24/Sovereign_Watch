@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from fastapi import APIRouter, HTTPException
@@ -80,8 +81,8 @@ async def analyze_track(uid: str, req: AnalyzeRequest):
     TARGET: {uid}
     TELEMETRY SUMMARY ({req.lookback_hours}h):
     - Points: {track_summary['points']}
-    - Avg Speed: {track_summary['avg_speed']:.1f} m/s
-    - Avg Alt: {track_summary['avg_alt']:.0f} m
+    - Avg Speed: {track_summary['avg_speed'] or 0:.1f} m/s
+    - Avg Alt: {track_summary['avg_alt'] or 0:.0f} m
     - Last Seen: {track_summary['last_seen']}
 
     INTELLIGENCE CONTEXT:
@@ -91,8 +92,13 @@ async def analyze_track(uid: str, req: AnalyzeRequest):
     """
 
     # 4. Stream AI Response
+    # BUG-005: completion() is a synchronous blocking call. Running it directly
+    # inside an async generator stalls the entire FastAPI event loop for the
+    # duration of the LLM response. asyncio.to_thread() offloads it to a
+    # threadpool so the event loop stays free for WebSocket broadcasts etc.
     async def event_generator():
-        response = completion(
+        response = await asyncio.to_thread(
+            completion,
             model=settings.LITELLM_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},

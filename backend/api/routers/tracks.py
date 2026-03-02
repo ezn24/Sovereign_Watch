@@ -49,6 +49,13 @@ async def get_track_history(entity_id: str, limit: int = 100, hours: int = 24):
             detail=f"Hours exceeds maximum allowed ({settings.TRACK_HISTORY_MAX_HOURS})"
         )
 
+    # BUG-007: Reject zero or negative values which would produce nonsensical queries
+    if limit <= 0 or hours <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="limit and hours must be positive integers"
+        )
+
     if not db.pool:
         raise HTTPException(status_code=503, detail="Database not ready")
 
@@ -133,6 +140,10 @@ async def replay_tracks(start: str, end: str, limit: int = 1000):
 
         # Validate time window
         duration_hours = (dt_end - dt_start).total_seconds() / 3600
+        # BUG-006: A negative duration means dt_end < dt_start. Without this check
+        # the value is always < MAX_HOURS so the window guard is silently bypassed.
+        if dt_end <= dt_start:
+            raise HTTPException(status_code=400, detail="end must be after start")
         if duration_hours > settings.TRACK_REPLAY_MAX_HOURS:
             raise HTTPException(
                 status_code=400,

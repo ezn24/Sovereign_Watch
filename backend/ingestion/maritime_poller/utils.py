@@ -12,8 +12,10 @@ def calculate_bbox(center_lat: float, center_lon: float, radius_nm: int) -> List
     lat_offset = radius_nm / 60.0
     lon_offset = radius_nm / (60.0 * math.cos(math.radians(center_lat)))
 
-    min_lat = center_lat - lat_offset
-    max_lat = center_lat + lat_offset
+    # BUG-020: Unclamped offsets can exceed ±90° for large radii or polar centers,
+    # producing invalid coordinates that AISStream may reject or silently ignore.
+    min_lat = max(-90.0, center_lat - lat_offset)
+    max_lat = min(90.0, center_lat + lat_offset)
     min_lon = center_lon - lon_offset
     max_lon = center_lon + lon_offset
 

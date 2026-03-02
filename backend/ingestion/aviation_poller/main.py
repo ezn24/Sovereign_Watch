@@ -9,7 +9,7 @@ if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(sig, lambda: asyncio.create_task(service.shutdown()))
+        loop.add_signal_handler(sig, lambda: loop.create_task(service.shutdown()))
 
     loop.run_until_complete(service.setup())
     try:
