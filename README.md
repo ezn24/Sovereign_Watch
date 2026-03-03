@@ -1,4 +1,4 @@
-# Sovereign Watch v0.13.0: Distributed Multi-INT Fusion Center
+# Sovereign Watch v0.13.1: Distributed Multi-INT Fusion Center
 
 > **Operational Status**: Phase 2 (Tactical Intelligence & Tracking) - _Active Development_
 
@@ -130,7 +130,7 @@ TLE data is fetched from Celestrak and propagated locally via SGP4. Updated ever
 
 | Feed | URL | Notes |
 | :--- | :--- | :--- |
-| **RepeaterBook** | [repeaterbook.com/api](https://www.repeaterbook.com/api/export.php) | No key required. Proxied server-side to avoid CORS. 24h client-side cache. |
+| **RepeaterBook** | [repeaterbook.com/api](https://www.repeaterbook.com/api/export.php) | API Key Required. (working to get app approved) Proxied server-side to avoid CORS. 24h client-side cache. |
 
 ### 🌊 Undersea Infrastructure (Submarine Cables)
 

@@ -1,86 +1,51 @@
-# Release — v0.13.0 — Stability Hardening
+# Release — v0.13.1 — Stability Hotfixes & Repeater Auth
 
-**Released:** 2026-03-01
+**Released:** 2026-03-02
 
 ---
 
 ## Overview
 
-v0.13.0 is a comprehensive **stability and code-quality release** driven by a full systematic audit of the Sovereign Watch codebase (`BUG_AUDIT_REPORT_2026-03-01.md`). All **20 identified bugs** across P0 (Fix Now), P1 (This Sprint), P2 (This Sprint), and P3 (Code Quality) priority tiers have been resolved.
-
-No new features were added. This release is a pure hardening pass targeting data integrity, concurrency correctness, API security, and code-quality debt.
+v0.13.1 is a hotfix release addressing newly identified edge cases from the 0.13.0 stability audit, prioritizing application performance and upstream API security compliance.
 
 ---
 
 ## Key Fixes
 
-### 🔴 P0 — Critical (Data Loss / Rate Throttling)
+### 🔴 P0 — Critical (Rendering / Upstream APIs)
 
 | # | Area | Impact |
 |---|------|--------|
-| BUG-001 | Aviation Poller | Double rate-limiter halved ADS-B polling throughput |
-| BUG-002 | Historian Service | In-flight data batch silently lost on SIGTERM shutdown |
-| BUG-005 | Analysis API | Blocking LLM call stalled the entire FastAPI event loop |
+| HOTFIX | Map Rendering | Resolved a critical infinite re-render loop in `useInfraData` that caused "Maximum update depth exceeded" crashes. |
+| HOTFIX | Infrastructure | Restored the `/api/repeaters` Proxy by adding `REPEATERBOOK_API_TOKEN` authentication to comply with their new security policy. |
+| HOTFIX | Infrastructure | Implemented a Demand-Driven Redis cache (24h TTL) for repeaters to minimize external API roundtrips and improve UX. |
 
-### 🟠 P1 — High (Crashes / Data Integrity)
-
-| # | Area | Impact |
-|---|------|--------|
-| BUG-003 | Signal handlers (Aviation + Maritime Pollers) | `RuntimeError` on SIGTERM in signal handler context |
-| BUG-004 | Analysis API | `TypeError` crash when `AVG()` returns `NULL` (empty history window) |
-| BUG-009 | Historian Service | Batch silently dropped when DB pool unavailable |
-| BUG-012 | Historian Service | Batch cleared even after a failed DB write — data loss |
-
-### 🟡 P2 — Medium (Security / Correctness)
+### 🟠 P1 — High (Concurrency / Streaming)
 
 | # | Area | Impact |
 |---|------|--------|
-| BUG-006 | Tracks API | Reversed time window accepted silently in replay endpoint |
-| BUG-007 | Tracks API | Zero/negative `limit` and `hours` accepted without validation |
-| BUG-008 | JS8Call Bridge | `allow_credentials=True` + `allow_origins=["*"]` rejected by all browsers (CORS spec violation) |
-| BUG-010 | Orbital Pulse Utils | Division by zero at polar latitudes in ECEF→LLA conversion |
-| BUG-011 | JS8Call Bridge | Deprecated `get_event_loop()` in Python 3.10+ coroutine context |
+| NEW-003 | Analysis API | Migrated the LLM streaming endpoint to `acompletion` and `async for` generators to prevent blocking the FastAPI event loop. |
+| NEW-001 | JS8Call Bridge | Replaced deprecated `asyncio.get_event_loop()` with `get_running_loop()` in the lifespan context manager. |
 
-### ⚪ P3 — Code Quality
+### 🟡 P2/P3 — Medium & Code Quality
 
-| # | Area | Change |
+| # | Area | Impact |
 |---|------|--------|
-| BUG-013 | Frontend (TacticalMap, useEntityWorker) | 5 debug `console.log` calls removed from production hot paths |
-| BUG-014 | JS8Call WebSocket handler | Redundant always-True inner `if` guard removed |
-| BUG-015 | useEntityWorker DR state | Duplicate `drStateRef.current.get()` call consolidated |
-| BUG-016 | JS8Call Bridge | `_message_queue` type annotation corrected to `Optional[asyncio.Queue]` |
-| BUG-017 | API Main | Deprecated `@app.on_event` migrated to `lifespan` context manager |
-| BUG-018 | TAK Worker | Hex byte dump computation removed from decode hot path |
-| BUG-019 | Maritime Poller | Magic number `511` replaced with `AIS_HEADING_NOT_AVAILABLE` constant |
-| BUG-020 | Maritime Poller Utils | AISStream bounding box lat clamped to `[-90, 90]` |
+| NEW-004 | Tracks API | Added lower-bound validation (`limit <= 0`) to the `/api/tracks/replay` endpoint. |
+| NEW-002 | JS8Call Bridge | Removed residual `TAK Stream disconnected` console logs from production. |
+| NEW-005 | TAK Worker | Removed a stale, dead reference to `updateData.raw` in `useEntityWorker` resulting from earlier optimizations. |
 
 ---
 
 ## Files Changed
 
 ```
-backend/api/main.py
 backend/api/routers/analysis.py
+backend/api/routers/repeaters.py
 backend/api/routers/tracks.py
-backend/api/services/historian.py
-backend/ingestion/aviation_poller/main.py
-backend/ingestion/aviation_poller/service.py
-backend/ingestion/maritime_poller/main.py
-backend/ingestion/maritime_poller/service.py
-backend/ingestion/maritime_poller/utils.py
-backend/ingestion/orbital_pulse/utils.py
-frontend/src/components/map/TacticalMap.tsx
 frontend/src/hooks/useEntityWorker.ts
-frontend/src/workers/tak.worker.ts
+frontend/src/hooks/useInfraData.ts
 js8call/server.py
-```
-
----
-
-## Test Results
-
-```
-17 passed in 0.70s — zero regressions
 ```
 
 ---
@@ -89,8 +54,6 @@ js8call/server.py
 
 ```bash
 git pull origin main
-docker compose up -d --build backend-api adsb-poller ais-poller orbital-pulse js8call
-docker compose logs -f backend-api
+# REPEATERBOOK_API_TOKEN must now be set in your .env or docker-compose.yml
+docker compose up -d --build backend-api frontend
 ```
-
-No schema migrations. No new environment variables.

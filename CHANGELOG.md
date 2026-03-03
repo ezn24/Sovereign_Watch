@@ -1,3 +1,16 @@
+## [0.13.1] - 2026-03-02
+
+### Added
+
+- **Repeater Infrastructure Cache:** Implemented a new Demand-Driven Redis cache (24h TTL) in the `/api/repeaters` endpoint to prevent redundant external API calls.
+
+### Fixed
+
+- **Infinite Re-Renders:** Resolved a critical infinite re-render loop (`Maximum update depth exceeded`) in `useInfraData` that was triggered by unstable object references.
+- **Repeater API Authentication:** Fixed a `502 Bad Gateway` error on the RepeaterBook integration by adding support for `REPEATERBOOK_API_TOKEN` bearer authentication to comply with upstream security changes.
+- **Async LLM Blocking (NEW-003):** Migrated the Analysis API's streaming generator to use `acompletion` and `async for`, preventing LLM streaming from blocking the FastAPI event loop.
+- **API Validation & Cleanup (NEW-001, NEW-002, NEW-004, NEW-005):** Added lower-bound validation to replay endpoints, removed deprecated asyncio loop calls, and cleared residual debug logs from production.
+
 ## [0.13.0] - 2026-03-01
 
 ### Fixed
