@@ -1,4 +1,4 @@
-# Sovereign Watch v0.13.1: Distributed Multi-INT Fusion Center
+# Sovereign Watch v0.13.2: Distributed Multi-INT Fusion Center
 
 > **Operational Status**: Phase 2 (Tactical Intelligence & Tracking) - _Active Development_
 
@@ -46,11 +46,14 @@ Sovereign Watch is a self-hosted, distributed intelligence fusion platform desig
 ## ⚠️ Disclaimer & Liability
 
 ### 📡 Source Data and Open Intelligence
-Sovereign Watch ingests telemetry and intelligence from public, open-source networks (e.g., ADS-B, AIS, public API feeds). The positional data, classifications, and intelligence displayed within this platform are strictly derivative of these unencrypted, publicly broadcasted signals. 
+
+Sovereign Watch ingests telemetry and intelligence from public, open-source networks (e.g., ADS-B, AIS, public API feeds). The positional data, classifications, and intelligence displayed within this platform are strictly derivative of these unencrypted, publicly broadcasted signals.
 
 ### 🛡️ Limited Liability
+
 **All data is provided "AS IS" without any warranty of accuracy, reliability, or completeness.**
 The developers and maintainers of Sovereign Watch assume **no responsibility or liability** for:
+
 - The accuracy of real-time or historical tracking information.
 - Decisions or actions taken based on the intelligence presented by this software.
 - Disruptions to the third-party networks providing the upstream data.
@@ -101,43 +104,42 @@ All upstream data is sourced from **public, open-access networks**. No proprieta
 
 Sovereign Watch uses a **multi-source round-robin poller** with automatic failover and exponential backoff.
 
-| Feed | URL | Notes |
-| :--- | :--- | :--- |
-| **adsb.fi** | [opendata.adsb.fi](https://opendata.adsb.fi) | Primary. No key required. |
-| **adsb.lol** | [api.adsb.lol](https://api.adsb.lol) | Primary. No key required. |
+| Feed               | URL                                              | Notes                           |
+| :----------------- | :----------------------------------------------- | :------------------------------ |
+| **adsb.fi**        | [opendata.adsb.fi](https://opendata.adsb.fi)     | Primary. No key required.       |
+| **adsb.lol**       | [api.adsb.lol](https://api.adsb.lol)             | Primary. No key required.       |
 | **airplanes.live** | [api.airplanes.live](https://api.airplanes.live) | Backup. Throttled to 1 req/30s. |
 
 ### 🚢 Maritime (AIS)
 
-| Feed | URL | Notes |
-| :--- | :--- | :--- |
+| Feed             | URL                                  | Notes                                                                  |
+| :--------------- | :----------------------------------- | :--------------------------------------------------------------------- |
 | **AISStream.io** | [aisstream.io](https://aisstream.io) | WebSocket stream, requires `AISSTREAM_API_KEY`. Bounding-box filtered. |
 
 ### 🛰️ Orbital (Satellites)
 
 TLE data is fetched from Celestrak and propagated locally via SGP4. Updated every 6 hours.
 
-| Group | URL | Category |
-| :--- | :--- | :--- |
-| GPS Ops | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops) | `gps` |
-| GLONASS Ops | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=glonass-ops) | `gps` |
-| Galileo | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo) | `gps` |
-| BeiDou | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou) | `gps` |
-| Weather | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=weather) | `weather` |
-| NOAA | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=noaa) | `weather` |
+| Group       | URL                                                                            | Category  |
+| :---------- | :----------------------------------------------------------------------------- | :-------- |
+| GPS Ops     | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops)     | `gps`     |
+| GLONASS Ops | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=glonass-ops) | `gps`     |
+| Galileo     | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo)     | `gps`     |
+| BeiDou      | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=beidou)      | `gps`     |
+| Weather     | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=weather)     | `weather` |
+| NOAA        | [celestrak.org](https://celestrak.org/NORAD/elements/gp.php?GROUP=noaa)        | `weather` |
 
 ### 📻 RF Infrastructure (Repeaters)
 
-| Feed | URL | Notes |
-| :--- | :--- | :--- |
+| Feed             | URL                                                                 | Notes                                                                                                     |
+| :--------------- | :------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------- |
 | **RepeaterBook** | [repeaterbook.com/api](https://www.repeaterbook.com/api/export.php) | API Key Required. (working to get app approved) Proxied server-side to avoid CORS. 24h client-side cache. |
 
 ### 🌊 Undersea Infrastructure (Submarine Cables)
 
-| Feed | URL | Notes |
-| :--- | :--- | :--- |
+| Feed                    | URL                                                                    | Notes                                                                           |
+| :---------------------- | :--------------------------------------------------------------------- | :------------------------------------------------------------------------------ |
 | **Submarine Cable Map** | [submarinecablemap.com/api](https://www.submarinecablemap.com/api/v3/) | No key required. Includes cable routes & landing points. 24h client-side cache. |
-
 
 ## 🛡️ Tactical Design ("Sovereign Glass")
 
@@ -201,16 +203,16 @@ The Tactical Map uses dynamic "thermal" gradients to visualize critical metadata
 
 ## 📂 Directory Structure
 
-| Path                 | Purpose                                             | Git Status  |
-| :------------------- | :-------------------------------------------------- | :---------- |
-| `/AGENTS.md`         | **Master Guide for AI Developers (Read This First)**| **Tracked** |
-| `/.agent`            | Agent memory, skills, and global project rules.     | **Tracked** |
-| `/backend/ingestion` | Python multi-source polling frameworks.             | **Tracked** |
-| `/backend/db`        | Database schema (`init.sql`) and migration scripts. | **Tracked** |
-| `/backend/api`       | Python FastAPI service for Fusion and Analysis.     | **Tracked** |
-| `/js8call`           | JS8Call HF Radio Terminal container and bridge.     | **Tracked** |
-| `/frontend`          | React + Vite application (Tactical Map + HUD).      | **Tracked** |
-| `/docs`              | Architecture plans, research, and progress logs.    | **Tracked** |
+| Path                 | Purpose                                              | Git Status  |
+| :------------------- | :--------------------------------------------------- | :---------- |
+| `/AGENTS.md`         | **Master Guide for AI Developers (Read This First)** | **Tracked** |
+| `/.agent`            | Agent memory, skills, and global project rules.      | **Tracked** |
+| `/backend/ingestion` | Python multi-source polling frameworks.              | **Tracked** |
+| `/backend/db`        | Database schema (`init.sql`) and migration scripts.  | **Tracked** |
+| `/backend/api`       | Python FastAPI service for Fusion and Analysis.      | **Tracked** |
+| `/js8call`           | JS8Call HF Radio Terminal container and bridge.      | **Tracked** |
+| `/frontend`          | React + Vite application (Tactical Map + HUD).       | **Tracked** |
+| `/docs`              | Architecture plans, research, and progress logs.     | **Tracked** |
 
 ## 🤖 AI Agent Protocol
 
@@ -225,7 +227,7 @@ This repository is **Agent-Aware**. If you are an AI assistant contributing to t
 
 ### 🐳 The "Container-First" Rule
 
-**Never** run commands (`npm`, `node`, `python`, `pip`, etc.) directly on the host. ALL interactions and execution must happen through **Docker Compose**. 
+**Never** run commands (`npm`, `node`, `python`, `pip`, etc.) directly on the host. ALL interactions and execution must happen through **Docker Compose**.
 
 - **Starting Services**: `docker compose up -d` (or `docker compose up -d --build <service>` after dependency changes)
 - **Running One-off Tasks**: `docker compose run --rm <service> <command>`
@@ -234,6 +236,7 @@ This repository is **Agent-Aware**. If you are an AI assistant contributing to t
 ### ⚡ Live Updates (HMR)
 
 Both Frontend and Backend services are configured for **Hot Module Replacement**:
+
 - **Frontend**: Save any `.tsx`/`.ts`/`.css` file. Vite automatically syncs changes instantly (polling, 1s interval). **No restart required.**
 - **Backend**: Save any `.py` file. Uvicorn reloads automatically. **No restart required.**
 - **Ingestion/Misc Services**: Sometimes require restarts (`docker compose restart <service>`) upon configuration changes.

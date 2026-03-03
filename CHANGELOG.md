@@ -1,3 +1,10 @@
+## [0.13.2] - 2026-03-02
+
+### Fixed
+
+- **JS8Call Container Runtime:** Fixed a crucial issue preventing the `js8call` container from starting on Windows-based host machines. Added a `.gitattributes` file to enforce `LF` line endings across all shell scripts and Docker files, preventing fatal `\r` (CRLF) errors during execution inside the Linux container.
+- **Database Initialization:** Re-aligned `POSTGRES_PASSWORD` environment defaults to prevent authentication failures when standing up fresh TimescaleDB volumes.
+
 ## [0.13.1] - 2026-03-02
 
 ### Added
@@ -16,7 +23,6 @@
 ### Fixed
 
 - **Stability Audit (20 bugs resolved across 13 files):**
-
   - **BUG-001** — Aviation Poller double rate-limiter: Removed redundant `async with source.limiter` wrapper in `source_loop()`. The inner `_fetch()` already holds the limiter; double-acquisition halved the effective polling rate.
   - **BUG-002** — Historian shutdown data loss: Added batch flush in the `finally` block before consumer teardown. In-flight data was silently discarded on SIGTERM.
   - **BUG-003** — Signal handler `asyncio.create_task()` crash: Changed to `loop.create_task()` in both `aviation_poller/main.py` and `maritime_poller/main.py`. Signal handlers run outside the async context, making `asyncio.create_task()` raise `RuntimeError`.

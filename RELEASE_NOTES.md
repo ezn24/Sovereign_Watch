@@ -1,59 +1,20 @@
-# Release — v0.13.1 — Stability Hotfixes & Repeater Auth
+# Release - v0.13.2 - Container Stability Patch
 
-**Released:** 2026-03-02
-
----
-
-## Overview
-
-v0.13.1 is a hotfix release addressing newly identified edge cases from the 0.13.0 stability audit, prioritizing application performance and upstream API security compliance.
-
----
+This is a fast-follow patch release focusing on Docker container stability for operators standing up Sovereign Watch on Windows host machines. It addresses a critical flaw that prevented the HF intelligence bridge (JS8Call) from starting.
 
 ## Key Fixes
 
-### 🔴 P0 — Critical (Rendering / Upstream APIs)
-
-| # | Area | Impact |
-|---|------|--------|
-| HOTFIX | Map Rendering | Resolved a critical infinite re-render loop in `useInfraData` that caused "Maximum update depth exceeded" crashes. |
-| HOTFIX | Infrastructure | Restored the `/api/repeaters` Proxy by adding `REPEATERBOOK_API_TOKEN` authentication to comply with their new security policy. |
-| HOTFIX | Infrastructure | Implemented a Demand-Driven Redis cache (24h TTL) for repeaters to minimize external API roundtrips and improve UX. |
-
-### 🟠 P1 — High (Concurrency / Streaming)
-
-| # | Area | Impact |
-|---|------|--------|
-| NEW-003 | Analysis API | Migrated the LLM streaming endpoint to `acompletion` and `async for` generators to prevent blocking the FastAPI event loop. |
-| NEW-001 | JS8Call Bridge | Replaced deprecated `asyncio.get_event_loop()` with `get_running_loop()` in the lifespan context manager. |
-
-### 🟡 P2/P3 — Medium & Code Quality
-
-| # | Area | Impact |
-|---|------|--------|
-| NEW-004 | Tracks API | Added lower-bound validation (`limit <= 0`) to the `/api/tracks/replay` endpoint. |
-| NEW-002 | JS8Call Bridge | Removed residual `TAK Stream disconnected` console logs from production. |
-| NEW-005 | TAK Worker | Removed a stale, dead reference to `updateData.raw` in `useEntityWorker` resulting from earlier optimizations. |
-
----
-
-## Files Changed
-
-```
-backend/api/routers/analysis.py
-backend/api/routers/repeaters.py
-backend/api/routers/tracks.py
-frontend/src/hooks/useEntityWorker.ts
-frontend/src/hooks/useInfraData.ts
-js8call/server.py
-```
-
----
+- **Cross-Platform Container Builds:** Resolved an issue where Windows Git configurations would inadvertently check out shell scripts with `CRLF` line endings. This caused fatal "file not found" execution errors when Docker attempted to run `entrypoint.sh` inside the Linux JS8Call container. We have introduced strict `.gitattributes` to enforce `LF` endings for all scripts globally.
+- **Database Auth Synchronization:** Corrected environment variable defaults that caused backend authentication failures during initial TimescaleDB volume creation.
 
 ## Upgrade Instructions
 
+To apply this patch, pull the latest code and rebuild the affected containers:
+
 ```bash
+# Pull latest changes
 git pull origin main
-# REPEATERBOOK_API_TOKEN must now be set in your .env or docker-compose.yml
-docker compose up -d --build backend-api frontend
+
+# Rebuild and restart the platform (specifically JS8Call)
+docker compose up -d --build
 ```
