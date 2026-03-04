@@ -33,7 +33,7 @@ def cleanup_old_data():
         
         # Drop old chunks
         print(f"🗑️ Dropping chunks older than {RETENTION_HOURS} hours...")
-        cursor.execute(f"SELECT drop_chunks('tracks', INTERVAL '{RETENTION_HOURS} hours');")
+        cursor.execute("SELECT drop_chunks('tracks', %s::interval);", (f"{RETENTION_HOURS} hours",))
         
         # Get database size
         cursor.execute("""
