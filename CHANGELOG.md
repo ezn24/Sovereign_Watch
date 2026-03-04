@@ -1,3 +1,29 @@
+## [0.14.0] - 2026-03-03
+
+### Added
+
+- **Orbital Synchronization Suite:**
+  - **Dedicated Orbital Dashboard:** A new high-performance tracking suite for space-based assets, featuring its own TopBar navigation pill.
+  - **3D Globe Visualization:** Integrated a spherical projection mode specifically for orbital situational awareness, providing a global perspective on satellite constellations.
+  - **High-Frequency Propagation:** Reduced the satellite positional update interval from 30s to 5s in the `orbital-pulse` poller for near-real-time accuracy.
+  - **Satellite Inspector:** New side-panel for deep-diving into orbital parameters (inclination, eccentricity, period, NORAD ID) and Celestrak category metadata.
+  - **Orbital Category Filtering:** Dynamic pill-based filtering for GPS, COMMS, WEATHER, and INTEL orbital groups.
+  - **Coverage Footprints:** Real-time 2D coverage visualization for the selected satellite based on its current altitude.
+  - **Terminator Layer:** Real-time day/night shadow overlay across both Tactical and Orbital maps for operational context.
+
+### Changed
+
+- **Tactical UI Alignment:**
+  - Reordered TopBar navigation to "Tactical | Orbital | Radio" to prioritize the two primary map domains.
+  - Aligned Tactical Map zoom controls to the bottom-center for a unified HUD aesthetic.
+  - Consolidated "Ground Tracks" and "History Trails" into a single global state for reduced visual clutter.
+
+### Fixed
+
+- **Orbital Map Stability:**
+  - Restricted global footprint rendering to preventing WebGL context crashes with 10k+ entities.
+  - Fixed a terminator toggle bug where the layer would remain stuck in "ON" mode across view transitions.
+
 ## [0.13.3] - 2026-03-02
 
 ### Fixed
