@@ -7,6 +7,8 @@ GET /api/orbital/passes
 GET /api/orbital/groundtrack/{norad_id}
     Returns the sub-satellite ground track for one orbit.
 """
+import json
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -19,9 +21,13 @@ from utils.sgp4_utils import (
     geodetic_to_ecef,
     ecef_to_topocentric,
 )
+from core.database import db
 import numpy as np
 
+logger = logging.getLogger("SovereignWatch")
 router = APIRouter(prefix="/api/orbital", tags=["orbital"])
+
+PASSES_CACHE_TTL = 300  # 5 minutes
 
 
 # ---------------------------------------------------------------------------
@@ -61,16 +67,33 @@ async def get_passes(
     hours: int = Query(6, ge=1, le=48, description="Prediction window in hours"),
     min_elevation: float = Query(10.0, ge=0.0, le=90.0, description="Minimum AOS elevation (degrees)"),
     norad_ids: Optional[str] = Query(None, description="Comma-separated NORAD IDs to filter"),
+    limit: Optional[int] = Query(None, ge=1, le=500, description="Max passes to return (sorted by AOS)"),
 ):
     """
     Predict upcoming satellite passes for an observer location.
 
     Returns a list of passes sorted by AOS, each including a 10-second
     points[] array suitable for Doppler and polar-plot rendering.
+
+    Results are cached in Redis for 5 minutes keyed by
+    lat:lon:hours:min_elevation:norad_ids:limit.
     """
     pool = request.app.state.db.pool
     if pool is None:
         raise HTTPException(status_code=503, detail="Database unavailable")
+
+    # Build cache key — round lat/lon to 3 dp so nearby requests share the cache
+    cache_key = (
+        f"orbital:passes:{round(lat, 3)}:{round(lon, 3)}"
+        f":{hours}:{min_elevation}:{norad_ids or ''}:{limit or ''}"
+    )
+    if db.redis_client:
+        try:
+            cached = await db.redis_client.get(cache_key)
+            if cached:
+                return json.loads(cached)
+        except Exception as exc:
+            logger.warning("Redis cache read failed for %s: %s", cache_key, exc)
 
     norad_filter = [n.strip() for n in norad_ids.split(",")] if norad_ids else None
     satellites = await _load_satellites(pool, norad_filter)
@@ -180,7 +203,51 @@ async def get_passes(
             })
 
     passes.sort(key=lambda p: p["aos"])
+
+    if limit is not None:
+        passes = passes[:limit]
+
+    if db.redis_client:
+        try:
+            await db.redis_client.setex(cache_key, PASSES_CACHE_TTL, json.dumps(passes))
+        except Exception as exc:
+            logger.warning("Redis cache write failed for %s: %s", cache_key, exc)
+
     return passes
+
+
+@router.get("/stats")
+async def get_stats(request: Request):
+    """
+    Return satellite counts grouped by category.
+    Used by the OrbitalCategoryPills widget to show per-category totals.
+    """
+    pool = request.app.state.db.pool
+    if pool is None:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT LOWER(category) AS category, COUNT(*) AS cnt "
+            "FROM satellites GROUP BY LOWER(category)"
+        )
+
+    counts: dict[str, int] = {}
+    total = 0
+    for row in rows:
+        cat = row["category"] or "other"
+        n = int(row["cnt"])
+        counts[cat] = counts.get(cat, 0) + n
+        total += n
+
+    return {
+        "gps":          counts.get("gps", 0),
+        "weather":      counts.get("weather", 0),
+        "comms":        counts.get("comms", 0),
+        "surveillance": counts.get("surveillance", 0),
+        "other":        counts.get("other", 0),
+        "total":        total,
+    }
 
 
 @router.get("/groundtrack/{norad_id}")

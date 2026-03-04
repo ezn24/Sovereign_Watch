@@ -5,6 +5,8 @@ interface UsePassPredictionsOptions {
   hours?: number;
   minElevation?: number;
   noradIds?: string[];
+  /** When true, no fetch is issued and passes stays empty. */
+  skip?: boolean;
 }
 
 interface UsePassPredictionsResult {
@@ -21,16 +23,13 @@ export function usePassPredictions(
   observerLon: number,
   options: UsePassPredictionsOptions = {},
 ): UsePassPredictionsResult {
-  const { hours = 6, minElevation = 10, noradIds } = options;
+  const { hours = 6, minElevation = 10, noradIds, skip = false } = options;
 
   const [passes, setPasses] = useState<PassResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Trigger counter — increment to force a refetch
   const [triggerCount, setTriggerCount] = useState(0);
-
-  // Track the latest AbortController so we can cancel on unmount / re-trigger
   const abortRef = useRef<AbortController | null>(null);
 
   const refetch = useCallback(() => {
@@ -38,7 +37,12 @@ export function usePassPredictions(
   }, []);
 
   useEffect(() => {
-    // Abort any in-flight request before starting a new one
+    if (skip) {
+      setPasses([]);
+      setLoading(false);
+      return;
+    }
+
     if (abortRef.current) {
       abortRef.current.abort();
     }
@@ -74,7 +78,6 @@ export function usePassPredictions(
         setPasses(data);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
-          // Request was intentionally cancelled — not an error
           return;
         }
         setError(err instanceof Error ? err.message : 'Unknown error fetching passes');
@@ -84,8 +87,6 @@ export function usePassPredictions(
     };
 
     fetchPasses();
-
-    // Re-fetch every 5 minutes
     const timer = setInterval(fetchPasses, POLL_INTERVAL_MS);
 
     return () => {
@@ -93,7 +94,7 @@ export function usePassPredictions(
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [observerLat, observerLon, hours, minElevation, noradIds?.join(','), triggerCount]);
+  }, [skip, observerLat, observerLon, hours, minElevation, noradIds?.join(','), triggerCount]);
 
   return { passes, loading, error, refetch };
 }

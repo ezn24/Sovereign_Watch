@@ -20,6 +20,7 @@ import { useMissionArea } from "../../hooks/useMissionArea";
 import { useMapCamera } from "../../hooks/useMapCamera";
 import { getCompensatedCenter } from "../../utils/map/geoUtils";
 import { useInfraData } from "../../hooks/useInfraData";
+import type { GroundTrackPoint } from "../../layers/OrbitalLayer";
 
 // Pick the map adapter at module init time based on the build-time env var.
 // react-map-gl v8 bakes the GL library into the entry point, so we lazy-load
@@ -288,6 +289,27 @@ export function OrbitalMap({
   }, [filters?.showCables, filters?.showLandingStations, showRepeaters, cablesData, stationsData, onEvent, repeatersRef, repeatersLoading]);
 
   const countsRef = useRef({ air: 0, sea: 0, orbital: 0 });
+
+  // Predicted ground track for the selected satellite
+  const predictedGroundTrackRef = useRef<GroundTrackPoint[]>([]);
+  useEffect(() => {
+    const isSat = !!selectedEntity && (
+      selectedEntity.type === 'a-s-K' || selectedEntity.type.indexOf('K') === 4
+    );
+    const noradId = selectedEntity?.detail?.norad_id;
+    if (!isSat || !noradId || !showHistoryTails) {
+      predictedGroundTrackRef.current = [];
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/orbital/groundtrack/${noradId}?minutes=90&step_seconds=30`)
+      .then(r => r.ok ? r.json() : [])
+      .then((pts: GroundTrackPoint[]) => {
+        if (!cancelled) predictedGroundTrackRef.current = pts;
+      })
+      .catch(() => { if (!cancelled) predictedGroundTrackRef.current = []; });
+    return () => { cancelled = true; };
+  }, [selectedEntity?.uid, showHistoryTails]);
   const currentMissionRef = useRef<{
     lat: number;
     lon: number;
@@ -430,6 +452,7 @@ export function OrbitalMap({
     ownGridRef,
     repeatersRef,
     showRepeaters,
+    predictedGroundTrackRef,
   });
 
   // Map Camera: projection, graticule, 3D terrain/fog
