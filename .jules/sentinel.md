@@ -14,3 +14,8 @@
 **Vulnerability:** Shell Injection
 **Learning:** `js8call/server.py` used `subprocess.Popen(cmd, shell=True)` with dynamically generated command strings containing shell operators (`|`). While `shlex.quote` was used, relying on `shell=True` introduces significant shell injection risks if user inputs or configuration bypass validation or quoting logic.
 **Prevention:** Avoid `shell=True` entirely. Refactor shell pipelines into multiple `subprocess.Popen` calls connected via standard Python I/O piping (e.g., `p2 = subprocess.Popen(..., stdin=p1.stdout)` and closing `p1.stdout` in the parent process) using array-based command arguments.
+
+## 2026-03-04 - Eliminate SQL Injection vulnerability in TimescaleDB cleanup script
+**Vulnerability:** SQL Injection
+**Learning:** `backend/scripts/cleanup_timescale.py` used string interpolation (f-strings) to insert an environment variable (`RETENTION_HOURS`) directly into a SQL query. Even though the variable was previously cast to an integer, it is a critical security vulnerability to build SQL queries with string interpolation, as subsequent changes to the codebase might bypass the type coercion, exposing the application to injection attacks.
+**Prevention:** Never use string interpolation to construct SQL queries. Always use parameterized queries (e.g., passing variables as a tuple to `cursor.execute`) which delegates the safe escaping of variables to the database driver.
