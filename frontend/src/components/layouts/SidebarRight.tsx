@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CoTEntity } from '../../types';
 import { Compass } from '../widgets/Compass';
 import { Crosshair, Map as MapIcon, Network, Radio, Shield, Terminal } from 'lucide-react';
 import { TimeTracked } from './TimeTracked';
 import { PayloadInspector } from '../widgets/PayloadInspector';
+import { useMissionLocation } from '../../hooks/useMissionLocation';
+import { usePassPredictions } from '../../hooks/usePassPredictions';
+import { satAzEl } from '../../utils/map/geoUtils';
 
 export const NAV_STATUS_MAP: Record<number, string> = {
   0: 'Under way using engine',
@@ -30,6 +33,114 @@ export const SHIP_TYPE_MAP: Record<number, string> = {
   80: 'Tanker'
 };
 
+// ---------------------------------------------------------------------------
+// Satellite-specific inspector section (hooks isolated here to avoid
+// violating Rules of Hooks in the main component's conditional branches)
+// ---------------------------------------------------------------------------
+
+function formatCountdown(isoTarget: string, now: number): string {
+  const delta = Math.round((new Date(isoTarget).getTime() - now) / 1000);
+  if (Math.abs(delta) < 5) return 'NOW';
+  const sign = delta < 0 ? 'T+' : 'T-';
+  const abs = Math.abs(delta);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const s = abs % 60;
+  if (h > 0) return `${sign}${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${sign}${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function SatelliteInspectorSection({ entity }: { entity: CoTEntity }) {
+  const { lat: obsLat, lon: obsLon } = useMissionLocation();
+  const [now, setNow] = useState(Date.now());
+
+  const noradIdStr = entity.detail?.norad_id ? String(entity.detail.norad_id) : '';
+  const { passes } = usePassPredictions(obsLat, obsLon, {
+    noradIds: noradIdStr ? [noradIdStr] : [],
+    hours: 6,
+    skip: !noradIdStr,
+  });
+
+  // Tick every second for live az/el and countdown
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Live az/el from current entity position
+  const altKm = (entity.altitude || 0) / 1000;
+  const { az, el, rangeKm } = altKm > 0
+    ? satAzEl(obsLat, obsLon, entity.lat, entity.lon, altKm)
+    : { az: 0, el: -90, rangeKm: 0 };
+
+  // Next upcoming pass
+  const nextPass = passes.find(p => new Date(p.los).getTime() > now);
+
+  const inclination = entity.detail?.inclination_deg != null
+    ? Number(entity.detail.inclination_deg).toFixed(2) + '°'
+    : '---';
+  const eccentricity = entity.detail?.eccentricity != null
+    ? Number(entity.detail.eccentricity).toFixed(5)
+    : '---';
+
+  return (
+    <section className="space-y-1 pt-2">
+      <h3 className="text-[10px] text-white/50 font-bold pb-1">Orbital_Parameters</h3>
+
+      {/* Inclination / Eccentricity */}
+      <div className="grid grid-cols-2 gap-4 text-mono-xs font-medium">
+        <div className="flex justify-between border-b border-white/5 pb-1">
+          <span className="text-white/30">INC:</span>
+          <span className="text-purple-300 tabular-nums">{inclination}</span>
+        </div>
+        <div className="flex justify-between border-b border-white/5 pb-1">
+          <span className="text-white/30">ECC:</span>
+          <span className="text-white/70 tabular-nums">{eccentricity}</span>
+        </div>
+      </div>
+
+      {/* Live Az / El / Range */}
+      {altKm > 0 && (
+        <div className="grid grid-cols-3 gap-2 text-mono-xs font-medium">
+          <div className="flex justify-between border-b border-white/5 pb-1">
+            <span className="text-white/30">AZ:</span>
+            <span className="text-purple-300 tabular-nums">{az.toFixed(1)}°</span>
+          </div>
+          <div className="flex justify-between border-b border-white/5 pb-1">
+            <span className="text-white/30">EL:</span>
+            <span className={`tabular-nums ${el >= 10 ? 'text-hud-green' : 'text-white/50'}`}>{el.toFixed(1)}°</span>
+          </div>
+          <div className="flex justify-between border-b border-white/5 pb-1">
+            <span className="text-white/30">RNG:</span>
+            <span className="text-white/70 tabular-nums">{Math.round(rangeKm).toLocaleString()} km</span>
+          </div>
+        </div>
+      )}
+
+      {/* Next pass countdown */}
+      {nextPass && (
+        <div className="mt-1 p-2 rounded bg-purple-400/5 border border-purple-400/20 space-y-0.5">
+          <span className="text-[8px] text-purple-400/60 font-bold tracking-widest uppercase">Next Pass</span>
+          <div className="grid grid-cols-3 gap-2 text-[10px] font-mono">
+            <div className="flex flex-col">
+              <span className="text-[7px] text-white/30 uppercase">AOS</span>
+              <span className="text-white/80">{formatCountdown(nextPass.aos, now)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[7px] text-white/30 uppercase">TCA</span>
+              <span className="text-purple-300">{nextPass.max_elevation.toFixed(0)}° max</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[7px] text-white/30 uppercase">DUR</span>
+              <span className="text-white/80">{Math.round(nextPass.duration_seconds / 60)}m</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 interface SidebarRightProps {
   entity: CoTEntity | null;
   onClose: () => void;
@@ -41,10 +152,10 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
   onClose,
   onCenterMap
 }) => {
-  const [showInspector, setShowInspector] = React.useState(false);
+  const [showInspector, setShowInspector] = useState(false);
 
   // Reset inspector when entity changes
-  React.useEffect(() => {
+  useEffect(() => {
     setShowInspector(false);
   }, [entity?.uid]);
 
@@ -541,6 +652,18 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
                     <span className="text-white/30 w-16">Intl Des:</span>
                     <span className="text-white/80">{String(entity.detail.intl_des || 'UNKNOWN')}</span>
                   </div>
+                  {entity.detail.inclination_deg != null && (
+                    <div className="flex gap-2">
+                      <span className="text-white/30 w-16">Incl:</span>
+                      <span className="text-purple-300/80">{Number(entity.detail.inclination_deg).toFixed(2)}°</span>
+                    </div>
+                  )}
+                  {entity.detail.eccentricity != null && (
+                    <div className="flex gap-2">
+                      <span className="text-white/30 w-16">Ecc:</span>
+                      <span className="text-white/70">{Number(entity.detail.eccentricity).toFixed(5)}</span>
+                    </div>
+                  )}
                 </div>
               </section>
             ) : isShip && entity.vesselClassification ? (
@@ -672,7 +795,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
 
             {isSat ? (
               <>
-                {/* Row 2: Alt */}
+                {/* Row 2: Alt / Period */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex justify-between border-b border-white/5 pb-1">
                     <span className="text-white/30">ALT:</span>
@@ -687,6 +810,8 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
                     </span>
                   </div>
                 </div>
+                {/* Live az/el, orbital params, next pass countdown */}
+                <SatelliteInspectorSection entity={entity} />
               </>
             ) : isShip ? (
               <>

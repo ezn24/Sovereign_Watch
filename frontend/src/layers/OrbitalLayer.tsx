@@ -45,6 +45,8 @@ const getSatColor = (category?: string, alpha: number = 255): [number, number, n
     return [156, 163, 175, alpha];
 };
 
+export interface GroundTrackPoint { lat: number; lon: number; alt_km: number }
+
 interface OrbitalLayerProps {
     satellites: CoTEntity[];
     selectedEntity: CoTEntity | null;
@@ -54,6 +56,8 @@ interface OrbitalLayerProps {
     showFootprints?: boolean;
     projectionMode?: string; // Nuclear Sync: Appended to IDs to force buffer rebuilds
     zoom?: number;
+    /** Predicted ground track for the selected satellite, fetched from /api/orbital/groundtrack */
+    predictedGroundTrack?: GroundTrackPoint[];
     onEntitySelect: (entity: CoTEntity | null) => void;
     onHover: (entity: CoTEntity | null, x: number, y: number) => void;
 }
@@ -109,7 +113,7 @@ function buildGemFaces(
     return faces;
 }
 
-export function getOrbitalLayers({ satellites, selectedEntity, hoveredEntity, now, showHistoryTails, showFootprints = false, projectionMode, zoom, onEntitySelect, onHover }: OrbitalLayerProps) {
+export function getOrbitalLayers({ satellites, selectedEntity, hoveredEntity, now, showHistoryTails, showFootprints = false, projectionMode, zoom, predictedGroundTrack, onEntitySelect, onHover }: OrbitalLayerProps) {
     const R_EARTH_KM = 6371;
     const sfx = projectionMode ? `-${projectionMode}` : '';
     // Pre-build gem faces for globe mode (avoids IIFE inside array spread)
@@ -189,8 +193,6 @@ export function getOrbitalLayers({ satellites, selectedEntity, hoveredEntity, no
                 getPath: (d: any): any => {
                     const trail: number[][] = d.smoothedTrail || [];
                     if (projectionMode === 'globe') {
-                        // Lift trail to orbital altitude so it arcs through 3D space
-                        // rather than dragging along the ground surface.
                         const alt = d.altitude || 0;
                         return trail.map((pt: number[]) => [pt[0], pt[1], alt]);
                     }
@@ -206,15 +208,40 @@ export function getOrbitalLayers({ satellites, selectedEntity, hoveredEntity, no
                 jointRounded: true,
                 capRounded: true,
                 pickable: false,
-                // wrapLongitude off in globe mode: conflicts with _full3d depth buffer and causes culling
                 wrapLongitude: projectionMode !== 'globe',
-                // Positive depthBias pushes geometry BEHIND the viewer — trail sits behind the diamond (bias 0)
                 parameters: { depthTest: true, depthBias: 50.0 },
                 updateTriggers: {
                     getPath: [now],
                     getColor: [selectedEntity?.uid, hoveredEntity?.uid],
                     getWidth: [selectedEntity?.uid, hoveredEntity?.uid]
                 }
+            })
+        ] : []),
+
+        // 2b. Predicted future ground track for selected satellite
+        ...(showHistoryTails && predictedGroundTrack && predictedGroundTrack.length > 1 && selectedEntity ? [
+            new PathLayer({
+                id: `satellite-predicted-track${sfx}`,
+                data: [predictedGroundTrack],
+                getPath: (pts: GroundTrackPoint[]) => {
+                    if (projectionMode === 'globe') {
+                        const alt = (selectedEntity.altitude || 0);
+                        return pts.map(pt => [pt.lon, pt.lat, alt]);
+                    }
+                    return pts.map(pt => [pt.lon, pt.lat]);
+                },
+                getColor: () => getSatColor(selectedEntity.detail?.category as string, 160),
+                getWidth: 2,
+                widthMinPixels: 1.5,
+                getDashArray: [6, 4],
+                dashJustified: true,
+                extensions: [],
+                jointRounded: false,
+                capRounded: false,
+                pickable: false,
+                wrapLongitude: projectionMode !== 'globe',
+                parameters: { depthTest: true, depthBias: 60.0 },
+                updateTriggers: { getPath: [selectedEntity?.uid, predictedGroundTrack?.length] }
             })
         ] : []),
 

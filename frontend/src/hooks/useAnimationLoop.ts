@@ -1,7 +1,7 @@
 import { useEffect, useRef, MutableRefObject } from "react";
 import { CoTEntity, JS8Station, RepeaterStation } from "../types";
 import { getCompensatedCenter, maidenheadToLatLon } from "../utils/map/geoUtils";
-import { getOrbitalLayers } from "../layers/OrbitalLayer";
+import { getOrbitalLayers, GroundTrackPoint } from "../layers/OrbitalLayer";
 import { buildAOTLayers } from "../layers/buildAOTLayers";
 import { buildTrailLayers } from "../layers/buildTrailLayers";
 import { buildEntityLayers } from "../layers/buildEntityLayers";
@@ -98,6 +98,7 @@ interface UseAnimationLoopOptions {
   ownGridRef?: MutableRefObject<string>;
   repeatersRef?: MutableRefObject<RepeaterStation[]>;
   showRepeaters?: boolean;
+  predictedGroundTrackRef?: MutableRefObject<GroundTrackPoint[]>;
 }
 
 export function useAnimationLoop({
@@ -141,6 +142,7 @@ export function useAnimationLoop({
   ownGridRef,
   repeatersRef,
   showRepeaters,
+  predictedGroundTrackRef,
 }: UseAnimationLoopOptions): void {
   const lastFrameTimeRef = useRef<number>(Date.now());
   const rafRef = useRef<number>();
@@ -745,6 +747,7 @@ export function useAnimationLoop({
           showFootprints: filters?.showFootprints,
           projectionMode: globeMode ? "globe" : "mercator",
           zoom,
+          predictedGroundTrack: predictedGroundTrackRef?.current,
           onEntitySelect,
           onHover: (entity, x, y) => {
             if (entity) {

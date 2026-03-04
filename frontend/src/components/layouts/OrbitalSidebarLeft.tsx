@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Search } from 'lucide-react';
 import { MapFilters, PassResult } from '../../types';
 import { OrbitalCategoryPills } from '../widgets/OrbitalCategoryPills';
 import { PolarPlotWidget } from '../widgets/PolarPlotWidget';
 import { PassPredictorWidget } from '../widgets/PassPredictorWidget';
 import { DopplerWidget } from '../widgets/DopplerWidget';
 import { usePassPredictions } from '../../hooks/usePassPredictions';
-import { getMissionArea } from '../../api/missionArea';
+import { useMissionLocation } from '../../hooks/useMissionLocation';
 
 interface OrbitalSidebarLeftProps {
     filters: MapFilters;
@@ -15,9 +16,6 @@ interface OrbitalSidebarLeftProps {
     trackCount: number;
 }
 
-const DEFAULT_LAT = parseFloat(import.meta.env.VITE_CENTER_LAT || '45.5152');
-const DEFAULT_LON = parseFloat(import.meta.env.VITE_CENTER_LON || '-122.6784');
-
 export const OrbitalSidebarLeft: React.FC<OrbitalSidebarLeftProps> = ({
     filters,
     onFilterChange,
@@ -25,30 +23,23 @@ export const OrbitalSidebarLeft: React.FC<OrbitalSidebarLeftProps> = ({
     setSelectedSatNorad,
     trackCount
 }) => {
-    const [observerLat, setObserverLat] = useState(DEFAULT_LAT);
-    const [observerLon, setObserverLon] = useState(DEFAULT_LON);
+    const { lat: observerLat, lon: observerLon } = useMissionLocation();
+    const [minElevation, setMinElevation] = useState(10);
+    const [searchTerm, setSearchTerm] = useState('');
+    const { passes, loading } = usePassPredictions(observerLat, observerLon, { minElevation });
 
-    // Sync observer location with active mission area on mount
-    useEffect(() => {
-        getMissionArea()
-            .then((mission) => {
-                if (mission?.lat && mission?.lon) {
-                    setObserverLat(mission.lat);
-                    setObserverLon(mission.lon);
-                }
-            })
-            .catch(() => {/* silently fall back to defaults */});
-    }, []);
-
-    const { passes, loading } = usePassPredictions(observerLat, observerLon);
-
-    // Track which pass is selected (by index in the passes array)
     const [selectedPassIndex, setSelectedPassIndex] = useState(0);
-
     const selectedPass: PassResult | undefined = passes[selectedPassIndex];
 
-    // Map PassResult to the shape PassPredictorWidget expects
-    const widgetPasses = passes.map((p) => ({
+    const query = searchTerm.trim().toLowerCase();
+    const filteredPasses = query
+        ? passes.filter(p =>
+            p.name.toLowerCase().includes(query) ||
+            String(p.norad_id).includes(query)
+          )
+        : passes;
+
+    const widgetPasses = filteredPasses.map((p) => ({
         norad_id: parseInt(p.norad_id, 10) || 0,
         name: p.name,
         aos: p.aos,
@@ -60,14 +51,12 @@ export const OrbitalSidebarLeft: React.FC<OrbitalSidebarLeftProps> = ({
         duration_seconds: p.duration_seconds,
     }));
 
-    // Map PassResult.points to DopplerWidget's passPoints shape
     const dopplerPoints = selectedPass?.points.map((pt) => ({
         time: pt.t,
         slant_range_km: pt.slant_range_km,
         elevation: pt.el,
     })) ?? [];
 
-    // Map PassResult.points to PolarPlotWidget's pass.points shape
     const polarPass = selectedPass
         ? {
               points: selectedPass.points.map((pt, i) => ({
@@ -91,11 +80,33 @@ export const OrbitalSidebarLeft: React.FC<OrbitalSidebarLeftProps> = ({
         <div className="flex flex-col h-full gap-2 animate-in fade-in duration-1000">
             <OrbitalCategoryPills filters={filters} onFilterChange={onFilterChange} trackCount={trackCount} />
 
+            {/* NORAD / Name search */}
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-black/30 border border-white/10 backdrop-blur-md">
+                <Search size={11} className="text-white/30 shrink-0" />
+                <input
+                    type="text"
+                    placeholder="Search by name or NORAD ID…"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="flex-1 bg-transparent text-[10px] font-mono text-white/80 placeholder-white/20 outline-none"
+                />
+                {searchTerm && (
+                    <button
+                        onClick={() => setSearchTerm('')}
+                        className="text-white/30 hover:text-white/60 text-[10px] leading-none"
+                    >
+                        ×
+                    </button>
+                )}
+            </div>
+
             <PassPredictorWidget
                 passes={widgetPasses}
                 homeLocation={{ lat: observerLat, lon: observerLon }}
                 onPassClick={handlePassClick}
                 isLoading={loading}
+                minElevation={minElevation}
+                onMinElevationChange={setMinElevation}
             />
 
             {selectedSatNorad && <DopplerWidget passPoints={dopplerPoints} />}
