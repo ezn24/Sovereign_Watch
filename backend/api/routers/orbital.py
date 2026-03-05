@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Request, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException
 from sgp4.api import Satrec, jday
 
 from utils.sgp4_utils import (
@@ -39,7 +39,7 @@ def _jday_from_datetime(dt: datetime):
     return jday(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second + dt.microsecond / 1e6)
 
 
-async def _load_satellites(pool, norad_ids: Optional[list[str]]) -> list[dict]:
+async def _load_satellites(pool, norad_ids: Optional[list[str]], category: Optional[str] = None) -> list[dict]:
     """Fetch TLE rows from the satellites table."""
     async with pool.acquire() as conn:
         if norad_ids:
@@ -47,6 +47,12 @@ async def _load_satellites(pool, norad_ids: Optional[list[str]]) -> list[dict]:
                 "SELECT norad_id, name, category, tle_line1, tle_line2 "
                 "FROM satellites WHERE norad_id = ANY($1::text[])",
                 norad_ids,
+            )
+        elif category:
+            rows = await conn.fetch(
+                "SELECT norad_id, name, category, tle_line1, tle_line2 "
+                "FROM satellites WHERE LOWER(category) = LOWER($1)",
+                category,
             )
         else:
             rows = await conn.fetch(
@@ -61,12 +67,12 @@ async def _load_satellites(pool, norad_ids: Optional[list[str]]) -> list[dict]:
 
 @router.get("/passes")
 async def get_passes(
-    request: Request,
     lat: float = Query(..., description="Observer latitude (degrees)"),
     lon: float = Query(..., description="Observer longitude (degrees)"),
     hours: int = Query(6, ge=1, le=48, description="Prediction window in hours"),
     min_elevation: float = Query(10.0, ge=0.0, le=90.0, description="Minimum AOS elevation (degrees)"),
     norad_ids: Optional[str] = Query(None, description="Comma-separated NORAD IDs to filter"),
+    category: Optional[str] = Query(None, description="Satellite category to filter (e.g. gps, weather, surveillance)"),
     limit: Optional[int] = Query(None, ge=1, le=500, description="Max passes to return (sorted by AOS)"),
 ):
     """
@@ -78,14 +84,14 @@ async def get_passes(
     Results are cached in Redis for 5 minutes keyed by
     lat:lon:hours:min_elevation:norad_ids:limit.
     """
-    pool = request.app.state.db.pool
+    pool = db.pool
     if pool is None:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     # Build cache key — round lat/lon to 3 dp so nearby requests share the cache
     cache_key = (
         f"orbital:passes:{round(lat, 3)}:{round(lon, 3)}"
-        f":{hours}:{min_elevation}:{norad_ids or ''}:{limit or ''}"
+        f":{hours}:{min_elevation}:{norad_ids or ''}:{category or ''}:{limit or ''}"
     )
     if db.redis_client:
         try:
@@ -95,11 +101,29 @@ async def get_passes(
         except Exception as exc:
             logger.warning("Redis cache read failed for %s: %s", cache_key, exc)
 
+    # Safety guard: the 'comms' category includes Starlink, OneWeb, Iridium, and
+    # amateur constellations — up to 10k satellites in a single query.  Computing
+    # SGP4 passes for that many sats in one request will saturate the server and
+    # OOM the process.  Category-level queries are allowed for smaller populations
+    # (gps, weather, intel) but we hard-reject comms unless a specific NORAD ID
+    # list is also supplied.
+    PASS_HEAVY_CATEGORIES = {"comms"}
+    if category and category.lower() in PASS_HEAVY_CATEGORIES and not norad_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Pass prediction for category '{category}' is not supported without "
+                "specifying individual norad_ids. The comms constellation is too large "
+                "for a full category scan. Select a specific satellite instead."
+            ),
+        )
+
     norad_filter = [n.strip() for n in norad_ids.split(",")] if norad_ids else None
-    satellites = await _load_satellites(pool, norad_filter)
+    satellites = await _load_satellites(pool, norad_filter, category)
 
     if not satellites:
         return []
+
 
     obs_ecef = geodetic_to_ecef(lat, lon)
     now = datetime.now(timezone.utc)
@@ -217,12 +241,12 @@ async def get_passes(
 
 
 @router.get("/stats")
-async def get_stats(request: Request):
+async def get_stats():
     """
     Return satellite counts grouped by category.
     Used by the OrbitalCategoryPills widget to show per-category totals.
     """
-    pool = request.app.state.db.pool
+    pool = db.pool
     if pool is None:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
@@ -232,28 +256,31 @@ async def get_stats(request: Request):
             "FROM satellites GROUP BY LOWER(category)"
         )
 
+    # Known primary categories stored in the satellites table
+    PRIMARY_CATS = {"gps", "weather", "comms", "intel"}
     counts: dict[str, int] = {}
     total = 0
     for row in rows:
         cat = row["category"] or "other"
         n = int(row["cnt"])
-        counts[cat] = counts.get(cat, 0) + n
+        # Bucket everything not in the primary set into "other"
+        bucket = cat if cat in PRIMARY_CATS else "other"
+        counts[bucket] = counts.get(bucket, 0) + n
         total += n
 
     return {
-        "gps":          counts.get("gps", 0),
-        "weather":      counts.get("weather", 0),
-        "comms":        counts.get("comms", 0),
-        "surveillance": counts.get("surveillance", 0),
-        "other":        counts.get("other", 0),
-        "total":        total,
+        "gps":    counts.get("gps", 0),
+        "weather": counts.get("weather", 0),
+        "comms":  counts.get("comms", 0),
+        "intel":  counts.get("intel", 0),
+        "other":  counts.get("other", 0),
+        "total":  total,
     }
 
 
 @router.get("/groundtrack/{norad_id}")
 async def get_groundtrack(
     norad_id: str,
-    request: Request,
     minutes: int = Query(90, ge=1, le=1440, description="Propagation window in minutes"),
     step_seconds: int = Query(30, ge=5, le=300, description="Time step in seconds"),
 ):
@@ -262,7 +289,7 @@ async def get_groundtrack(
 
     Response: array of {t, lat, lon, alt_km}.
     """
-    pool = request.app.state.db.pool
+    pool = db.pool
     if pool is None:
         raise HTTPException(status_code=503, detail="Database unavailable")
 

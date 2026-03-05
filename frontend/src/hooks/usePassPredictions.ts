@@ -5,6 +5,7 @@ interface UsePassPredictionsOptions {
   hours?: number;
   minElevation?: number;
   noradIds?: string[];
+  category?: string;
   /** When true, no fetch is issued and passes stays empty. */
   skip?: boolean;
 }
@@ -23,7 +24,7 @@ export function usePassPredictions(
   observerLon: number,
   options: UsePassPredictionsOptions = {},
 ): UsePassPredictionsResult {
-  const { hours = 6, minElevation = 10, noradIds, skip = false } = options;
+  const { hours = 6, minElevation = 10, noradIds, category, skip = false } = options;
 
   const [passes, setPasses] = useState<PassResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,6 +66,9 @@ export function usePassPredictions(
         if (noradIds && noradIds.length > 0) {
           params.set('norad_ids', noradIds.join(','));
         }
+        if (category) {
+          params.set('category', category);
+        }
 
         const response = await fetch(`/api/orbital/passes?${params.toString()}`, {
           signal: controller.signal,
@@ -94,7 +98,7 @@ export function usePassPredictions(
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [skip, observerLat, observerLon, hours, minElevation, noradIds?.join(','), triggerCount]);
+  }, [skip, observerLat, observerLon, hours, minElevation, noradIds?.join(','), category, triggerCount]);
 
   return { passes, loading, error, refetch };
 }

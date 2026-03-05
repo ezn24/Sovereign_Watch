@@ -14,6 +14,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { CoTEntity, JS8Station, MissionProps, RepeaterStation } from "../../types";
 import { MapTooltip } from "./MapTooltip";
+import { MapContextMenu } from "./MapContextMenu";
+import { SaveLocationForm } from "./SaveLocationForm";
 import { useEntityWorker } from "../../hooks/useEntityWorker";
 import { useAnimationLoop } from "../../hooks/useAnimationLoop";
 import { useMissionArea } from "../../hooks/useMissionArea";
@@ -87,6 +89,8 @@ interface TacticalMapProps {
   repeatersRef?: MutableRefObject<RepeaterStation[]>;
   showRepeaters?: boolean;
   repeatersLoading?: boolean;
+  /** Called once the entity worker is ready, passing the live satellitesRef map. */
+  onSatellitesRefReady?: (ref: MutableRefObject<Map<string, CoTEntity>>) => void;
 }
 
 export function OrbitalMap({
@@ -111,6 +115,7 @@ export function OrbitalMap({
   repeatersRef,
   showRepeaters,
   repeatersLoading,
+  onSatellitesRefReady,
 }: TacticalMapProps) {
   // Fetch infra data (Submarine cables & landing stations)
   const { cablesData, stationsData } = useInfraData();
@@ -121,6 +126,9 @@ export function OrbitalMap({
     x: number;
     y: number;
   } | null>(null);
+
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [contextMenuCoords, setContextMenuCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   const [hoveredInfra, setHoveredInfraState] = useState<any>(null);
   const handleHoveredInfra = useCallback((info: any) => {
@@ -316,6 +324,24 @@ export function OrbitalMap({
     radius_nm: number;
   } | null>(null);
 
+  // Observer ring ref — passed to useAnimationLoop to render the AOI horizon on the orbital map.
+  // radiusKm is derived from the mission's radius_nm (1 nm = 1.852 km).
+  const observerRef = useRef<{ lat: number; lon: number; radiusKm: number } | null>(null);
+
+  // Keep observerRef in sync whenever the mission area changes.
+  useEffect(() => {
+    const mission = currentMissionRef.current;
+    if (mission) {
+      observerRef.current = {
+        lat: mission.lat,
+        lon: mission.lon,
+        radiusKm: mission.radius_nm * 1.852,
+      };
+    } else {
+      observerRef.current = null;
+    }
+  });
+
   // Velocity Vector Toggle - use ref for reactivity in animation loop
   const velocityVectorsRef = useRef(showVelocityVectors ?? false);
   const historyTailsRef = useRef(showHistoryTails ?? true); // Default to true as per user preference
@@ -370,11 +396,28 @@ export function OrbitalMap({
   const { entitiesRef, satellitesRef, knownUidsRef, drStateRef, visualStateRef, prevCourseRef } =
     useEntityWorker({ onEvent, currentMissionRef });
 
+  // Expose the live satellitesRef to parent (App) so it can resolve NORAD IDs to real entities.
+  // Use a ref+effect so this only fires once after mount, not on every render.
+  const satRefExposedRef = useRef(false);
+  useEffect(() => {
+    if (!satRefExposedRef.current && onSatellitesRefReady) {
+      satRefExposedRef.current = true;
+      onSatellitesRefReady(satellitesRef);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Mission Area: mission state, AOT geometry, entity clearing, save form
-  // currentMission/savedMissions/saveMission/deleteMission/handleSwitchMission/handlePresetSelect
-  // are consumed internally by useMissionArea (passed to onMissionPropsReady) — not needed here.
   const {
     aotShapes,
+    handleSetFocus,
+    handleReturnHome,
+    showSaveForm,
+    setShowSaveForm,
+    saveFormCoords,
+    setSaveFormCoords,
+    handleSaveFormSubmit,
+    handleSaveFormCancel,
   } = useMissionArea({
     mapRef,
     currentMissionRef,
@@ -453,6 +496,7 @@ export function OrbitalMap({
     repeatersRef,
     showRepeaters,
     predictedGroundTrackRef,
+    observerRef,
   });
 
   // Map Camera: projection, graticule, 3D terrain/fog
@@ -471,6 +515,20 @@ export function OrbitalMap({
   const handleOverlayLoaded = useCallback((overlay: MapboxOverlay) => {
     overlayRef.current = overlay;
   }, []);
+
+  // Right-click context menu handlers
+  const handleContextMenu = useCallback((e: any) => {
+    e.preventDefault();
+    const { lngLat, point } = e;
+    setContextMenuPos({ x: point.x, y: point.y });
+    setContextMenuCoords({ lat: lngLat.lat, lon: lngLat.lng });
+  }, []);
+
+  const handleSaveLocation = useCallback((lat: number, lon: number) => {
+    setSaveFormCoords({ lat, lon });
+    setShowSaveForm(true);
+    setContextMenuPos(null);
+  }, [setSaveFormCoords, setShowSaveForm]);
 
   const handleMapLoad = useCallback(
     (evt?: any) => {
@@ -586,6 +644,11 @@ export function OrbitalMap({
             userSelect: "none",
             WebkitUserSelect: "none",
           }}
+          onContextMenu={handleContextMenu}
+          onClick={() => {
+            setContextMenuPos(null);
+            setContextMenuCoords(null);
+          }}
           antialias={true}
           projection={globeMode ? { type: 'globe' } : { type: 'mercator' }}
           dragRotate={!globeMode}
@@ -666,6 +729,26 @@ export function OrbitalMap({
         </div>
 
       </div>
+
+      <MapContextMenu
+        position={contextMenuPos}
+        coordinates={contextMenuCoords}
+        onSetFocus={handleSetFocus}
+        onSaveLocation={handleSaveLocation}
+        onReturnHome={handleReturnHome}
+        onClose={() => {
+          setContextMenuPos(null);
+          setContextMenuCoords(null);
+        }}
+      />
+
+      {showSaveForm && (
+        <SaveLocationForm
+          coordinates={saveFormCoords}
+          onSave={handleSaveFormSubmit}
+          onCancel={handleSaveFormCancel}
+        />
+      )}
 
       {hoveredEntity && hoverPosition && (
         <MapTooltip entity={hoveredEntity} position={hoverPosition} />

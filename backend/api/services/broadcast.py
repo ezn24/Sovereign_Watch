@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import json
-from typing import Set
+from typing import Dict
 from fastapi import WebSocket, WebSocketDisconnect
 from aiokafka import AIOKafkaConsumer
 from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
@@ -12,29 +12,45 @@ from services.tak import transform_to_proto
 
 logger = logging.getLogger("SovereignWatch.Broadcast")
 
+# Max messages queued per client before we start dropping (oldest dropped first).
+# At ~37s orbital cycles emitting 11k messages, 256 gives ~23ms grace before dropping.
+_CLIENT_QUEUE_SIZE = 256
+
+
 class BroadcastManager:
     def __init__(self):
-        self.active_connections: Set[WebSocket] = set()
+        # ws → (queue, worker_task)
+        self._clients: Dict[WebSocket, tuple[asyncio.Queue, asyncio.Task]] = {}
         self.consumer: AIOKafkaConsumer | None = None
         self.consumer_task: asyncio.Task | None = None
         self.running = False
 
+    @property
+    def active_connections(self):
+        return set(self._clients.keys())
+
     async def connect(self, websocket: WebSocket):
-        """Register a new WebSocket client."""
-        # Caller must await websocket.accept()
-        self.active_connections.add(websocket)
-        logger.info(f"Client connected. Total clients: {len(self.active_connections)}")
+        """Register a new WebSocket client with its own send queue."""
+        q: asyncio.Queue = asyncio.Queue(maxsize=_CLIENT_QUEUE_SIZE)
+        task = asyncio.create_task(self._client_worker(websocket, q))
+        self._clients[websocket] = (q, task)
+        logger.info(f"Client connected. Total clients: {len(self._clients)}")
 
     async def disconnect(self, websocket: WebSocket):
-        """Unregister a WebSocket client."""
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
+        """Unregister a WebSocket client and cancel its worker."""
+        entry = self._clients.pop(websocket, None)
+        if entry:
+            q, task = entry
+            task.cancel()
             try:
-                # Ensure it's closed (idempotent)
+                await task
+            except asyncio.CancelledError:
+                pass
+            try:
                 await websocket.close()
             except Exception:
                 pass
-            logger.info(f"Client disconnected. Total clients: {len(self.active_connections)}")
+            logger.info(f"Client disconnected. Total clients: {len(self._clients)}")
 
     async def start(self):
         """Start the Kafka consumer and broadcast loop."""
@@ -42,18 +58,15 @@ class BroadcastManager:
             return
 
         self.running = True
-        # Initialize Kafka Consumer
-        # Using group_id=None for broadcast mode (all instances get all messages)
         try:
             self.consumer = AIOKafkaConsumer(
                 "adsb_raw", "ais_raw", "orbital_raw",
                 bootstrap_servers=settings.KAFKA_BROKERS,
-                group_id=None,
-                auto_offset_reset="latest"
+                group_id=None,  # broadcast mode — every instance gets all messages
+                auto_offset_reset="latest",
             )
             await self.consumer.start()
             logger.info("Broadcast Kafka Consumer started")
-
             self.consumer_task = asyncio.create_task(self._consume())
         except Exception as e:
             logger.error(f"Failed to start Broadcast Consumer: {e}")
@@ -76,14 +89,11 @@ class BroadcastManager:
             self.consumer = None
             logger.info("Broadcast Kafka Consumer stopped")
 
-        # Close all active connections
-        for ws in list(self.active_connections):
+        for ws in list(self._clients.keys()):
             await self.disconnect(ws)
 
-        self.active_connections.clear()
-
     async def _consume(self):
-        """Internal loop to consume from Kafka and broadcast."""
+        """Consume from Kafka and enqueue to each client — never blocked by slow clients."""
         if not self.consumer:
             logger.error("Consumer not initialized!")
             return
@@ -94,58 +104,65 @@ class BroadcastManager:
                     break
 
                 try:
-                    # 1. Transform ONCE
-                    data = json.loads(msg.value.decode('utf-8'))
+                    data = json.loads(msg.value.decode("utf-8"))
                     tak_bytes = transform_to_proto(data)
-
-                    # 2. Broadcast to ALL
-                    if not self.active_connections:
-                        continue
-
-                    # Use asyncio.gather to broadcast concurrently
-                    # Use return_exceptions=True to prevent one failure from stopping others (though _safe_send catches exceptions)
-                    tasks = [
-                        self._safe_send(ws, tak_bytes)
-                        for ws in self.active_connections
-                    ]
-                    if tasks:
-                        await asyncio.gather(*tasks)
-
                 except Exception as e:
-                    logger.error(f"Error processing message: {e}")
+                    logger.error(f"Error transforming message: {e}")
                     continue
+
+                if not self._clients:
+                    continue
+
+                # Enqueue to every client. If their queue is full, drop the oldest
+                # message so we never block the consume loop.
+                for ws, (q, _) in list(self._clients.items()):
+                    if q.full():
+                        try:
+                            q.get_nowait()  # drop oldest
+                        except asyncio.QueueEmpty:
+                            pass
+                    try:
+                        q.put_nowait(tak_bytes)
+                    except asyncio.QueueFull:
+                        pass  # race-condition safety
 
         except Exception as e:
             logger.critical(f"Broadcast loop failed: {e}", exc_info=True)
             self.running = False
-            # Close connections to force client reconnect
-            # We schedule stop() because we can't await it easily here if it cancels this task?
-            # Actually stop() cancels this task. If we call stop() from within the task,
-            # we cancel ourselves. That's fine.
-            # But safer to just let the loop exit and maybe trigger a restart or cleanup.
-            # Let's just clear connections.
-            for ws in list(self.active_connections):
+            for ws in list(self._clients.keys()):
                 try:
-                    await ws.close(code=1011) # Internal Error
+                    await ws.close(code=1011)
                 except Exception:
                     pass
-            self.active_connections.clear()
+            self._clients.clear()
 
-    async def _safe_send(self, ws: WebSocket, data: bytes):
-        """Send data to a client, handling disconnection errors and timeouts."""
+    async def _client_worker(self, ws: WebSocket, q: asyncio.Queue):
+        """Background task per client: dequeue and send, with a generous timeout."""
         try:
-            # Enforce timeout (e.g. 0.5s) to prevent slow clients from stalling the broadcast
-            # If a client can't accept a message in 500ms, they are too slow for real-time.
-            await asyncio.wait_for(ws.send_bytes(data), timeout=0.5)
-        except asyncio.TimeoutError:
-            logger.warning("Client slow (timeout), disconnecting.")
-            await self.disconnect(ws)
-        except (WebSocketDisconnect, ConnectionClosedOK, ConnectionClosedError, ClientDisconnected):
-            # Normal disconnection
-            await self.disconnect(ws)
-        except Exception as e:
-            logger.error(f"Error sending to client: {e}")
-            await self.disconnect(ws)
+            while True:
+                tak_bytes = await q.get()
+                try:
+                    await asyncio.wait_for(ws.send_bytes(tak_bytes), timeout=3.0)
+                except asyncio.TimeoutError:
+                    logger.warning("Client send timed out — disconnecting")
+                    break
+                except (WebSocketDisconnect, ConnectionClosedOK, ConnectionClosedError, ClientDisconnected):
+                    break
+                except Exception as e:
+                    logger.error(f"Client send error: {e}")
+                    break
+        except asyncio.CancelledError:
+            pass
+        finally:
+            # Ensure we remove ourselves if the worker exits for any reason
+            entry = self._clients.pop(ws, None)
+            if entry:
+                try:
+                    await ws.close()
+                except Exception:
+                    pass
+                logger.info(f"Client worker exited. Total clients: {len(self._clients)}")
+
 
 # Global Instance
 broadcast_service = BroadcastManager()

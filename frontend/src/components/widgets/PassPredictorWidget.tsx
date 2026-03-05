@@ -20,6 +20,8 @@ interface PassPredictorWidgetProps {
   isLoading?: boolean;
   minElevation?: number;
   onMinElevationChange?: (deg: number) => void;
+  /** Custom message shown when passes is empty and not loading */
+  emptyMessage?: string;
 }
 
 const MIN_EL_OPTIONS = [0, 5, 10, 15, 20, 30];
@@ -40,8 +42,8 @@ function exportCsv(passes: Pass[]) {
   const header = 'norad_id,name,aos,tca,los,max_elevation_deg,aos_azimuth_deg,los_azimuth_deg,duration_sec';
   const rows = passes.map(p =>
     [p.norad_id, `"${p.name}"`, p.aos, p.tca, p.los,
-      p.max_elevation.toFixed(1), p.aos_azimuth.toFixed(1),
-      p.los_azimuth.toFixed(1), p.duration_seconds].join(',')
+    p.max_elevation.toFixed(1), p.aos_azimuth.toFixed(1),
+    p.los_azimuth.toFixed(1), p.duration_seconds].join(',')
   );
   const csv = [header, ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -54,7 +56,7 @@ function exportCsv(passes: Pass[]) {
 }
 
 export const PassPredictorWidget: React.FC<PassPredictorWidgetProps> = ({
-  passes, homeLocation, onPassClick, isLoading, minElevation = 10, onMinElevationChange,
+  passes, homeLocation, onPassClick, isLoading, minElevation = 10, onMinElevationChange, emptyMessage,
 }) => {
   const [now, setNow] = useState(Date.now());
   const [showElMenu, setShowElMenu] = useState(false);
@@ -65,7 +67,7 @@ export const PassPredictorWidget: React.FC<PassPredictorWidgetProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col mt-2 bg-black/30 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] rounded border border-white/10 overflow-hidden flex-1">
+    <div className="flex flex-col mt-2 bg-black/60 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] rounded border border-white/15 overflow-hidden flex-1">
       <div className="flex justify-between items-center bg-white/5 border-b border-white/10 px-3 py-2 gap-2">
         <span className="text-[10px] font-bold tracking-[0.2em] text-purple-400/70 uppercase shrink-0">UPCOMING PASSES</span>
 
@@ -120,8 +122,10 @@ export const PassPredictorWidget: React.FC<PassPredictorWidgetProps> = ({
           <span className="text-[8px] text-purple-400/50 font-mono tracking-widest uppercase">PREDICTING TRAJECTORIES...</span>
         </div>
       ) : passes.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center p-4">
-          <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase">No upcoming passes</span>
+        <div className="flex-1 flex items-center justify-center p-4 text-center">
+          <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase">
+            {emptyMessage ?? 'No upcoming passes'}
+          </span>
         </div>
       ) : (
         <div className="flex flex-col gap-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-purple-400/20">
@@ -137,11 +141,10 @@ export const PassPredictorWidget: React.FC<PassPredictorWidgetProps> = ({
               <div
                 key={`${pass.norad_id}-${i}`}
                 onClick={() => onPassClick?.(pass.norad_id)}
-                className={`flex items-center justify-between p-1.5 rounded cursor-pointer transition-colors border-l-2 ${
-                  inProgress
-                    ? 'bg-purple-400/10 border-purple-400 animate-pulse'
-                    : 'hover:bg-white/5 border-transparent hover:border-purple-400'
-                }`}
+                className={`flex items-center justify-between p-1.5 rounded cursor-pointer transition-colors border-l-2 ${inProgress
+                  ? 'bg-purple-400/10 border-purple-400 animate-pulse'
+                  : 'hover:bg-white/5 border-transparent hover:border-purple-400'
+                  }`}
               >
                 <div className="flex flex-col min-w-[45px]">
                   <span className={`text-[10px] font-mono ${inProgress ? 'text-purple-300' : 'text-white/70'}`}>

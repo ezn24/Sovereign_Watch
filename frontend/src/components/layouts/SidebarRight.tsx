@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CoTEntity } from '../../types';
 import { Compass } from '../widgets/Compass';
+import { PolarPlotWidget } from '../widgets/PolarPlotWidget';
 import { Crosshair, Map as MapIcon, Network, Radio, Shield, Terminal } from 'lucide-react';
 import { TimeTracked } from './TimeTracked';
 import { PayloadInspector } from '../widgets/PayloadInspector';
@@ -54,7 +55,12 @@ function SatelliteInspectorSection({ entity }: { entity: CoTEntity }) {
   const { lat: obsLat, lon: obsLon } = useMissionLocation();
   const [now, setNow] = useState(Date.now());
 
-  const noradIdStr = entity.detail?.norad_id ? String(entity.detail.norad_id) : '';
+  // Prefer detail.norad_id; fall back to parsing from uid string e.g. "SAT-40044"
+  const noradIdStr =
+    entity.detail?.norad_id
+      ? String(entity.detail.norad_id)
+      : (entity.uid?.replace?.(/^SAT-/i, '') ?? '');
+
   const { passes } = usePassPredictions(obsLat, obsLon, {
     noradIds: noradIdStr ? [noradIdStr] : [],
     hours: 6,
@@ -82,6 +88,20 @@ function SatelliteInspectorSection({ entity }: { entity: CoTEntity }) {
   const eccentricity = entity.detail?.eccentricity != null
     ? Number(entity.detail.eccentricity).toFixed(5)
     : '---';
+
+  // Build polar pass shape from next pass points
+  const polarPass = nextPass && nextPass.points?.length > 0
+    ? {
+      points: nextPass.points.map((pt, i) => ({
+        azimuth: pt.az,
+        elevation: pt.el,
+        time: pt.t,
+        isAos: i === 0,
+        isTca: pt.t === nextPass.tca,
+        isLos: i === nextPass.points.length - 1,
+      })),
+    }
+    : undefined;
 
   return (
     <section className="space-y-1 pt-2">
@@ -137,6 +157,11 @@ function SatelliteInspectorSection({ entity }: { entity: CoTEntity }) {
           </div>
         </div>
       )}
+
+      {/* Pass Geometry polar plot — fills remaining sidebar space */}
+      <div className="mt-1 flex-1 min-h-0 border border-white/10 rounded overflow-hidden" style={{ minHeight: 200 }}>
+        <PolarPlotWidget pass={polarPass} />
+      </div>
     </section>
   );
 }
@@ -591,13 +616,13 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
   return (
     <div className="pointer-events-auto flex flex-col h-auto max-h-full overflow-hidden animate-in slide-in-from-right duration-500 font-mono">
       {/* 1. Target Identity Header */}
-      <div className={`p-3 border border-b-0 ${accentBorder} ${accentBg} backdrop-blur-md rounded-t-sm relative overflow-hidden`}>
+      <div className={`p-3 border border-b-0 ${accentBorder} ${accentBg} backdrop-blur-md rounded-t-sm relative`}>
         {/* Glass Reflection Shine */}
 
 
-        <div className="relative z-10 flex justify-between items-start">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-1">
+        <div className="relative z-10 flex justify-between items-start gap-2">
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Shield size={14} className={accentColor} />
               <span className="text-[10px] font-bold tracking-[.3em] text-white/40">IDENTIFIED_TARGET</span>
               {entity.classification && !isShip && (
@@ -646,11 +671,11 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
                 <div className="flex flex-col gap-0.5 text-[10px] text-white/60">
                   <div className="flex gap-2">
                     <span className="text-white/30 w-16">NORAD ID:</span>
-                    <span className="text-white/80">{String(entity.detail.norad_id || 'UNKNOWN')}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-white/30 w-16">Intl Des:</span>
-                    <span className="text-white/80">{String(entity.detail.intl_des || 'UNKNOWN')}</span>
+                    <span className="text-white/80">
+                      {entity.detail.norad_id
+                        ? String(entity.detail.norad_id)
+                        : entity.uid?.replace?.(/^SAT-/i, '') || '—'}
+                    </span>
                   </div>
                   {entity.detail.inclination_deg != null && (
                     <div className="flex gap-2">
@@ -726,14 +751,16 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
           <div className="bg-black/40 px-2 py-1 rounded border border-white/10 flex flex-col flex-1 shadow-inner">
             <span className="text-[8px] text-white/30 uppercase font-bold tracking-tight">REGISTRATION</span>
             <span className="text-mono-xs font-bold truncate text-white">
-              {entity.classification?.registration || 'N/A'}
+              {isSat
+                ? String(entity.detail?.category || 'ORBITAL').toUpperCase()
+                : entity.classification?.registration || 'N/A'}
             </span>
           </div>
         </div>
 
-        {/* Actions Bar */}
-        <div className="flex gap-2">
-          {!isSat && (
+        {/* Actions Bar — not applicable for satellites */}
+        {!isSat && (
+          <div className="flex gap-2">
             <button
               onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
@@ -744,12 +771,12 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
               <Crosshair size={12} />
               CENTER_VIEW
             </button>
-          )}
-          <button className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-b from-white/10 to-transparent hover:from-white/20 hover:to-white/5 border border-white/10 py-1.5 rounded text-[10px] font-bold tracking-widest text-white/70 transition-all active:scale-[0.98]">
-            <MapIcon size={12} />
-            TRACK_LOG
-          </button>
-        </div>
+            <button className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-b from-white/10 to-transparent hover:from-white/20 hover:to-white/5 border border-white/10 py-1.5 rounded text-[10px] font-bold tracking-widest text-white/70 transition-all active:scale-[0.98]">
+              <MapIcon size={12} />
+              TRACK_LOG
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. Main Data Body */}
@@ -882,9 +909,9 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
             )}
           </div>
 
-          {/* Linked Compass Widget */}
+          {/* Compass (air/ship) or Pass Geometry polar plot (satellite) */}
           <div className="pt-1 flex justify-center opacity-80 scale-100">
-            <Compass heading={entity.course} size={180} accentColor={accentBase} />
+            {!isSat && <Compass heading={entity.course} size={180} accentColor={accentBase} />}
           </div>
         </section>
 

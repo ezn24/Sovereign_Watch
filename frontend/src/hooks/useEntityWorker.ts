@@ -118,6 +118,9 @@ export function useEntityWorker({
           const inclination_deg =
             entity.detail?.inclination_deg ??
             (entity.detail?.classification as any)?.inclination_deg;
+          const eccentricity =
+            entity.detail?.eccentricity ??
+            (entity.detail?.classification as any)?.eccentricity;
 
           // Minimal trail for satellite if needed, but we don't need PVB here for MVP
           // We can just rely on the 30s updates and let it snap.
@@ -159,6 +162,7 @@ export function useEntityWorker({
               category,
               period_min,
               inclination_deg,
+              eccentricity,
             },
             lastSeen: Date.now(),
             time: entity.time,

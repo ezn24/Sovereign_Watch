@@ -20,7 +20,7 @@ export const DopplerWidget: React.FC<DopplerWidgetProps> = ({ referenceFreqMhz =
     const results = [];
 
     for (let i = 1; i < passPoints.length; i++) {
-      const p1 = passPoints[i-1];
+      const p1 = passPoints[i - 1];
       const p2 = passPoints[i];
 
       const t1 = new Date(p1.time).getTime();
@@ -80,7 +80,7 @@ export const DopplerWidget: React.FC<DopplerWidgetProps> = ({ referenceFreqMhz =
   }
 
   return (
-    <div className="flex flex-col rounded border border-white/10 bg-black/30 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden">
+    <div className="flex flex-col rounded border border-white/15 bg-black/60 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] overflow-hidden">
       <div className="flex items-center justify-between bg-white/5 border-b border-white/10 px-3 py-2">
         <span className="text-[10px] font-bold tracking-[0.2em] text-purple-400/70 uppercase">DOPPLER SHIFT</span>
         <div className="flex items-center gap-1">
@@ -130,13 +130,13 @@ export const DopplerWidget: React.FC<DopplerWidgetProps> = ({ referenceFreqMhz =
               <text x={width - padding.right - 2} y={height - 5} fill="#ef4444" opacity="0.6" fontSize="7" fontFamily="monospace" textAnchor="end">LOS</text>
             </>
           ) : (
-             <text x={width/2} y={height/2} fill="#ffffff" opacity="0.2" fontSize="8" textAnchor="middle" fontFamily="monospace">NO DATA</text>
+            <text x={width / 2} y={height / 2} fill="#ffffff" opacity="0.2" fontSize="8" textAnchor="middle" fontFamily="monospace">NO DATA</text>
           )}
 
           {/* Y Axis Labels */}
-          <text x={padding.left - 4} y={padding.top + 5} fill="#ffffff" opacity="0.3" fontSize="7" textAnchor="end" fontFamily="monospace">+{Math.round(maxAbsShift/1000)}k</text>
+          <text x={padding.left - 4} y={padding.top + 5} fill="#ffffff" opacity="0.3" fontSize="7" textAnchor="end" fontFamily="monospace">+{Math.round(maxAbsShift / 1000)}k</text>
           <text x={padding.left - 4} y={yZero + 2} fill="#ffffff" opacity="0.3" fontSize="7" textAnchor="end" fontFamily="monospace">0</text>
-          <text x={padding.left - 4} y={height - padding.bottom} fill="#ffffff" opacity="0.3" fontSize="7" textAnchor="end" fontFamily="monospace">-{Math.round(maxAbsShift/1000)}k</text>
+          <text x={padding.left - 4} y={height - padding.bottom} fill="#ffffff" opacity="0.3" fontSize="7" textAnchor="end" fontFamily="monospace">-{Math.round(maxAbsShift / 1000)}k</text>
         </svg>
       </div>
     </div>

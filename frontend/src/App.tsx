@@ -24,25 +24,40 @@ function App() {
   const [orbitalViewMode, setOrbitalViewMode] = useState<'2D' | '3D'>('2D');
   const selectedSatNorad = selectedEntity?.uid ? parseInt(selectedEntity.uid.replace(/\D/g, ''), 10) || null : null;
 
+  // Live satellite entity map exposed from OrbitalMap's entity worker.
+  // Keyed as "SAT-<NORAD_ID>" — same as the CoT UID used by the backend.
+  const orbitalSatellitesRef = useRef<import('react').MutableRefObject<Map<string, import('./types').CoTEntity>> | null>(null);
+
   const handleSetSelectedSatNorad = useCallback((noradId: number | null) => {
     if (noradId) {
-      setSelectedEntity({
-        uid: String(noradId),
-        type: 'a-s-K',
-        callsign: `NORAD ${noradId}`,
-        lat: 0,
-        lon: 0,
-        altitude: 0,
-        course: 0,
-        speed: 0,
-        lastSeen: Date.now(),
-        trail: [],
-        uidHash: 0,
-      } as CoTEntity);
+      // Try to resolve the live entity so the sidebar shows real position/velocity/detail.
+      const liveKey = `SAT-${noradId}`;
+      const liveEntity = orbitalSatellitesRef.current?.current.get(liveKey);
+
+      if (liveEntity) {
+        setSelectedEntity(liveEntity);
+      } else {
+        // Entity not yet in the live map (first selection before first CoT tick).
+        // Use a minimal stub — the sidebar will still show NORAD ID + pass geometry.
+        setSelectedEntity({
+          uid: liveKey,
+          type: 'a-s-K',
+          callsign: `NORAD ${noradId}`,
+          lat: 0,
+          lon: 0,
+          altitude: 0,
+          course: 0,
+          speed: 0,
+          lastSeen: Date.now(),
+          trail: [],
+          uidHash: 0,
+        } as import('./types').CoTEntity);
+      }
     } else {
       setSelectedEntity(null);
     }
   }, []);
+
   const health = useSystemHealth();
   const {
     stationsRef: js8StationsRef,
@@ -58,7 +73,7 @@ function App() {
   // Map Actions (Search, FlyTo)
   const [mapActions, setMapActions] = useState<import('./types').MapActions | null>(null);
 
-  // Filter state with persistence
+  // Filter state with persistence (tactical map only)
   const [filters, setFilters] = useState(() => {
     const defaultFilters = {
       showAir: true,
@@ -103,6 +118,21 @@ function App() {
     }
     return defaultFilters;
   });
+
+  // Isolated orbital satellite category filter state — never persisted to
+  // mapFilters, so it never bleeds into the tactical map filter state.
+  const [orbitalSatFilters, setOrbitalSatFilters] = useState({
+    showSatGPS: true,
+    showSatWeather: true,
+    showSatComms: true,
+    showSatSurveillance: true,
+    showSatOther: true,
+  });
+
+  const handleOrbitalFilterChange = useCallback((key: string, value: unknown) => {
+    setOrbitalSatFilters(prev => ({ ...prev, [key]: value }));
+  }, []);
+
 
   // Velocity Vector Toggle
   const [showVelocityVectors, setShowVelocityVectors] = useState(() => {
@@ -192,10 +222,12 @@ function App() {
   const [replayMode, setReplayMode] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Orbital Filters setup
+  // Orbital Filters — satellite-only view, uses isolated cat filter state
   const orbitalFilters: import('./types').MapFilters = useMemo(() => {
     return {
       ...filters,
+      // Overwrite sat category toggles with the isolated orbital state
+      ...orbitalSatFilters,
       showAir: false,
       showSea: false,
       showHelicopter: false,
@@ -222,7 +254,8 @@ function App() {
       showCables: false,
       showLandingStations: false,
     };
-  }, [filters, showTerminator]);
+  }, [filters, orbitalSatFilters, showTerminator]);
+
   const [replayTime, setReplayTime] = useState<number>(Date.now());
   const [replayRange, setReplayRange] = useState({ start: Date.now() - 3600000, end: Date.now() });
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -471,8 +504,8 @@ function App() {
           />
         ) : viewMode === 'ORBITAL' ? (
           <OrbitalSidebarLeft
-            filters={filters}
-            onFilterChange={handleFilterChange}
+            filters={orbitalSatFilters}
+            onFilterChange={handleOrbitalFilterChange}
             selectedSatNorad={selectedSatNorad}
             setSelectedSatNorad={handleSetSelectedSatNorad}
             trackCount={trackCounts.orbital}
@@ -580,12 +613,13 @@ function App() {
           replayEntities={new Map()}
           followMode={false}
           onFollowModeChange={() => { }}
-          onEntityLiveUpdate={() => { }}
+          onEntityLiveUpdate={handleEntityLiveUpdate}
           js8StationsRef={{ current: new Map() } as any}
           ownGridRef={{ current: '' }}
           repeatersRef={{ current: [] }}
           showRepeaters={false}
           repeatersLoading={false}
+          onSatellitesRefReady={(ref) => { orbitalSatellitesRef.current = ref; }}
         />
       ) : (
         <div className="w-full h-full pt-14 overflow-hidden bg-slate-950">

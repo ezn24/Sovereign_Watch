@@ -99,6 +99,8 @@ interface UseAnimationLoopOptions {
   repeatersRef?: MutableRefObject<RepeaterStation[]>;
   showRepeaters?: boolean;
   predictedGroundTrackRef?: MutableRefObject<GroundTrackPoint[]>;
+  /** Observer position for the orbital AOI ring. radiusKm is the pass-prediction horizon. */
+  observerRef?: MutableRefObject<{ lat: number; lon: number; radiusKm: number } | null>;
 }
 
 export function useAnimationLoop({
@@ -143,6 +145,7 @@ export function useAnimationLoop({
   repeatersRef,
   showRepeaters,
   predictedGroundTrackRef,
+  observerRef,
 }: UseAnimationLoopOptions): void {
   const lastFrameTimeRef = useRef<number>(Date.now());
   const rafRef = useRef<number>();
@@ -761,7 +764,7 @@ export function useAnimationLoop({
         }),
 
         // 0. AOT Boundaries
-        ...buildAOTLayers(aotShapes, filters, globeMode),
+        ...buildAOTLayers(aotShapes, filters, globeMode, observerRef?.current),
 
         // 1. Repeater infrastructure (rendered below entity icons for context)
         ...repeaterLayers,
