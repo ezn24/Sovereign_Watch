@@ -28,6 +28,14 @@ async def lifespan(app: FastAPI):
     global historian_task_handle
     # --- Startup ---
     await db.connect()
+    try:
+        if db.pool:
+            async with db.pool.acquire() as conn:
+                await conn.execute("ALTER EXTENSION timescaledb UPDATE;")
+                logger.info("TimescaleDB extension check/update completed")
+    except Exception as e:
+        logger.warning(f"Failed to auto-update TimescaleDB extension: {e}")
+
     historian_task_handle = asyncio.create_task(historian_task())
     await broadcast_service.start()
     logger.info("Database, Redis, Historian, and Broadcast Service started")
