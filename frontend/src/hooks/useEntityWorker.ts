@@ -175,6 +175,29 @@ export function useEntityWorker({
             uidHash: existing ? existing.uidHash : uidToHash(entity.uid),
           };
 
+          // PVB State Update for Satellites
+          const now = Date.now();
+          const existingDr = drStateRef.current.get(entity.uid);
+          const visual = visualStateRef.current.get(entity.uid);
+          const blendLat = visual ? visual.lat : newLat;
+          const blendLon = visual ? visual.lon : newLon;
+          
+          const lastServerTime = existingDr ? existingDr.serverTime : now - 5000;
+          const timeSinceLast = Math.max(now - lastServerTime, 4000); // Nominal 5s
+
+          drStateRef.current.set(entity.uid, {
+            serverLat: newLat,
+            serverLon: newLon,
+            serverSpeed: entity.detail?.track?.speed || 0,
+            serverCourseRad: ((entity.detail?.track?.course || 0) * Math.PI) / 180,
+            serverTime: now,
+            blendLat,
+            blendLon,
+            blendSpeed: existingDr ? existingDr.serverSpeed : (entity.detail?.track?.speed || 0),
+            blendCourseRad: existingDr ? existingDr.serverCourseRad : ((entity.detail?.track?.course || 0) * Math.PI) / 180,
+            expectedInterval: timeSinceLast,
+          });
+
           satellitesRef.current.set(entity.uid, newSat);
 
           if (isNew) {

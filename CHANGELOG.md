@@ -1,3 +1,15 @@
+## [0.17.2] - 2026-03-04
+
+### Added
+
+- **PVB Satellite Rendering:** Satellites now use Projective Velocity Blending (PVB) for smooth, 60fps rendering in the Orbital map, replacing the previous 5-second snapping updates.
+- **Orbital History Tails & Gap Bridges:** Real-time trails are now seamlessly grafted onto the PVB satellite models. A new "Gap Bridge" rendering layer connects the delayed 3D orbital track directly to the live 60fps icon for a fluid UI experience.
+- **Right Sidebar Safeguards:** Passing `selectedEntity` conditionally into the `MainHud` right slot prevents the `SidebarRight` transparent container from blocking user mouse events on the underlying tactical map when closed.
+
+### Fixed
+
+- **Gap Bridge Elevation Logic:** The `Gap Bridge` component in `OrbitalLayer` now correctly uses `d.altitude` to position the line segments in 3D space, instead of drawing the orbital trails on the physical ground.
+
 ## [0.17.1] - 2026-03-04
 
 ### Added

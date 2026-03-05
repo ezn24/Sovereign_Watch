@@ -649,54 +649,134 @@ export function useAnimationLoop({
 
       // 4. Update Layers
 
-      const allSats: CoTEntity[] = Array.from(
-        satellitesRef.current.values() as any,
-      );
-      const filteredSatellites = allSats.filter((sat) => {
-        if (!filters?.showSatellites) return false;
+      const filteredSatellites: CoTEntity[] = [];
+      for (const [uid, sat] of satellitesRef.current.entries()) {
+        if (!filters?.showSatellites) continue;
         
         const constellation = sat.detail?.constellation as string | undefined;
-        if (constellation && filters?.[`showConstellation_${constellation}`] === false) return false;
+        if (constellation && filters?.[`showConstellation_${constellation}`] === false) continue;
 
         const cat = (sat.detail?.category as string)?.toLowerCase() || "";
-        // Match against user-facing category names from the orbital pulse service.
-        // Note: 'active' is a Celestrak *group* name, NOT a category filter keyword.
+        let show = false;
         if (
           cat.includes("gps") ||
           cat.includes("gnss") ||
           cat.includes("galileo") ||
           cat.includes("beidou") ||
           cat.includes("glonass")
-        )
-          return filters.showSatGPS !== false;
-        if (
+        ) {
+          show = filters.showSatGPS !== false;
+        } else if (
           cat.includes("weather") ||
           cat.includes("noaa") ||
           cat.includes("meteosat") ||
           cat.includes("fengYun")
-        )
-          return filters.showSatWeather !== false;
-        if (
+        ) {
+          show = filters.showSatWeather !== false;
+        } else if (
           cat.includes("comms") ||
           cat.includes("communications") ||
           cat.includes("starlink") ||
           cat.includes("iridium") ||
           cat.includes("oneweb") ||
           cat.includes("intelsat")
-        )
-          return filters.showSatComms !== false;
-        if (
+        ) {
+          show = filters.showSatComms !== false;
+        } else if (
           cat.includes("surveillance") ||
           cat.includes("military") ||
           cat.includes("isr") ||
           cat.includes("intel") ||
           cat.includes("earth observation") ||
           cat.includes("imaging")
-        )
-          return filters.showSatSurveillance !== false;
-        // Everything else (debris, active unclassified, etc.) falls to 'Other'
-        return filters.showSatOther !== false;
-      });
+        ) {
+          show = filters.showSatSurveillance !== false;
+        } else {
+          show = filters.showSatOther !== false;
+        }
+
+        if (!show) continue;
+
+        // Apply PVB for satellite
+        const dr = drStateRef.current.get(uid);
+        let targetLat = sat.lat;
+        let targetLon = sat.lon;
+
+        if (dr) {
+          const timeSinceUpdate = now - dr.serverTime;
+          const alpha = Math.min(
+            Math.max(timeSinceUpdate / dr.expectedInterval, 0),
+            1,
+          );
+          const dtSec = timeSinceUpdate / 1000;
+
+          // 1. Server Projection
+          const R = 6371000;
+          const distServer = dr.serverSpeed * dtSec;
+          const dLatServer = ((distServer * Math.cos(dr.serverCourseRad)) / R) * (180 / Math.PI);
+          const dLonServer = ((distServer * Math.sin(dr.serverCourseRad)) / (R * Math.cos((dr.serverLat * Math.PI) / 180))) * (180 / Math.PI);
+          const serverProjLat = dr.serverLat + dLatServer;
+          const serverProjLon = dr.serverLon + dLonServer;
+
+          // 2. Client Projection
+          const blendSpeed = dr.blendSpeed + (dr.serverSpeed - dr.blendSpeed) * alpha;
+
+          let dAngle = dr.serverCourseRad - dr.blendCourseRad;
+          while (dAngle <= -Math.PI) dAngle += 2 * Math.PI;
+          while (dAngle > Math.PI) dAngle -= 2 * Math.PI;
+          const blendCourse = dr.blendCourseRad + dAngle * alpha;
+
+          const distClient = blendSpeed * dtSec;
+          const dLatClient = ((distClient * Math.cos(blendCourse)) / R) * (180 / Math.PI);
+          const dLonClient = ((distClient * Math.sin(blendCourse)) / (R * Math.cos((dr.blendLat * Math.PI) / 180))) * (180 / Math.PI);
+          const clientProjLat = dr.blendLat + dLatClient;
+          const clientProjLon = dr.blendLon + dLonClient;
+
+          // 3. Final Target
+          targetLat = clientProjLat + (serverProjLat - clientProjLat) * alpha;
+          targetLon = clientProjLon + (serverProjLon - clientProjLon) * alpha;
+        }
+
+        let visual = visualStateRef.current.get(uid);
+        if (!visual) {
+          visual = { lat: targetLat, lon: targetLon, alt: sat.altitude };
+          visualStateRef.current.set(uid, visual);
+        } else {
+          const BASE_ALPHA = 0.25;
+          const smoothDt = Math.min(dt, 33);
+          const smoothFactor = 1 - Math.pow(1 - BASE_ALPHA, smoothDt / 16.67);
+          visual.lat = visual.lat + (targetLat - visual.lat) * smoothFactor;
+          visual.lon = visual.lon + (targetLon - visual.lon) * smoothFactor;
+          visual.alt = visual.alt + (sat.altitude - visual.alt) * smoothFactor;
+        }
+
+        if (Math.abs(visual.lat - targetLat) < 0.000001 && Math.abs(visual.lon - targetLon) < 0.000001) {
+          visual.lat = targetLat;
+          visual.lon = targetLon;
+        }
+
+        visualStateRef.current.set(uid, visual);
+
+        filteredSatellites.push({
+          ...sat,
+          lon: visual.lon,
+          lat: visual.lat,
+          altitude: visual.alt,
+          course: dr ? ((dr.blendCourseRad * 180) / Math.PI + 360) % 360 : sat.course,
+        });
+
+        // Live Sidebar Update
+        if (selectedEntity?.uid === uid) {
+          const liveSatCount = {
+              ...sat,
+              lat: visual.lat,
+              lon: visual.lon,
+              altitude: visual.alt,
+              course: dr ? ((dr.blendCourseRad * 180) / Math.PI + 360) % 360 : sat.course
+          };
+          onEntityLiveUpdate?.(liveSatCount);
+        }
+      }
 
       const zoom = mapRef.current?.getMap()?.getZoom() ?? 0;
 
@@ -748,7 +828,7 @@ export function useAnimationLoop({
       );
 
       const layers = [
-        getTerminatorLayer(!!filters.showTerminator),
+        getTerminatorLayer(!!filters?.showTerminator),
         ...getOrbitalLayers({
           satellites: filteredSatellites,
           selectedEntity: currentSelected,

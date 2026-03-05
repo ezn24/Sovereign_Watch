@@ -215,6 +215,46 @@ export function getOrbitalLayers({ satellites, selectedEntity, hoveredEntity, no
                     getColor: [selectedEntity?.uid, hoveredEntity?.uid],
                     getWidth: [selectedEntity?.uid, hoveredEntity?.uid]
                 }
+            }),
+            new PathLayer({
+                id: `satellite-gap-bridge${sfx}`,
+                data: satellites.filter(d => {
+                    if (!d.smoothedTrail || d.smoothedTrail.length === 0) return false;
+                    const last = d.smoothedTrail[d.smoothedTrail.length - 1];
+                    const dist = Math.sqrt(Math.pow(last[0] - d.lon, 2) + Math.pow(last[1] - d.lat, 2));
+                    // Check physical degree distance since it's much faster than haversine per frame
+                    return dist > 0.05; 
+                }).map(d => {
+                    const last = d.smoothedTrail![d.smoothedTrail!.length - 1];
+                    const alt = d.altitude || 0;
+
+                    return {
+                        path: [
+                            [last[0], last[1], alt], 
+                            [d.lon, d.lat, alt]
+                        ],
+                        entity: d
+                    };
+                }),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                getPath: (d: any) => d.path,
+                getColor: (d: any) => {
+                    const isSelected = d.entity.uid === selectedEntity?.uid || d.entity.uid === hoveredEntity?.uid;
+                    if (isSelected) return getSatColor(d.entity.detail?.category as string, 200);
+                    return getSatColor(d.entity.detail?.category as string, 120);
+                },
+                getWidth: (d: any) => (d.entity.uid === selectedEntity?.uid || d.entity.uid === hoveredEntity?.uid) ? 4.5 : 3.5,
+                widthMinPixels: 2.5,
+                jointRounded: true,
+                capRounded: true,
+                pickable: false,
+                wrapLongitude: projectionMode !== 'globe',
+                parameters: { depthTest: true, depthBias: 50.0 },
+                updateTriggers: {
+                    getPath: [now],
+                    getColor: [selectedEntity?.uid, hoveredEntity?.uid],
+                    getWidth: [selectedEntity?.uid, hoveredEntity?.uid]
+                }
             })
         ] : []),
 

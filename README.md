@@ -1,4 +1,4 @@
-# Sovereign Watch v0.17.1: Distributed Multi-INT Fusion Center
+# Sovereign Watch v0.17.2: Distributed Multi-INT Fusion Center
 
 > **Operational Status**: Phase 2 (Tactical Intelligence & Tracking) - _Active Development_
 
@@ -6,7 +6,13 @@ Sovereign Watch is a self-hosted, distributed intelligence fusion platform desig
 
 ---
 
-![Sovereign Watch](assets/images/SovereignWatch.png)
+### Tactical Map View
+
+![Sovereign Watch - Tactical Map](assets/images/SovereignWatch.png)
+
+### Orbital Map View
+
+![Sovereign Watch - Orbital Map](assets/images/SovereignWatch-2.png)
 
 ---
 
@@ -143,6 +149,7 @@ TLE data is fetched from Celestrak and propagated locally via SGP4. Updated ever
 
 ## 🛡️ Tactical Design ("Sovereign Glass")
 
+- **Dual Operating Modes**: Instantly pivot between the **Tactical Map** (Aviation, Maritime, Infrastructure) and the **Orbital Map** (Satellites) to maintain focus on the relevant domain.
 - **Chevron-First Architecture**: Unified directional trackers for all assets; no legacy dot markers.
 - **Hybrid 3D Engine**: Seamlessly switches between **Mapbox 3D** (Terrain/Satellite) and **CARTO Dark Matter** (Vector/Local) based on configuration.
 - **High-Fidelity HUD**: Integrated global TopBar with synchronized temporal references (UTC), real-time entity tracking sidebars, and active intelligence feeds.
@@ -193,7 +200,7 @@ The Tactical Map uses dynamic "thermal" gradients to visualize critical metadata
 ## 🔍 Core Capabilities
 
 - **Deep Vessel Classification**: Real-time parsing of Maritime ShipStaticData to classify tankers, cargo, military, SAR, and passenger vessels with absolute precision.
-- **Orbital Pulse Tracking**: End-to-end satellite tracking using Celestrak TLE ingestion and live SGP4 propagation (accuracy updated every 30s) to visualize LEO/MEO/GEO assets.
+- **Orbital Pulse Tracking**: End-to-end satellite tracking using Celestrak TLE ingestion and live SGP4 propagation. Features smooth 60fps Projective Velocity Blending (PVB) and Gap Bridge trails to dynamically visualize LEO/MEO/GEO assets in real-time.
 - **Undersea Infrastructure Awareness**: Global visualization of the submarine cable network and strategic landing stations. Provides real-time access to cable ownership, length, and operational status, integrated directly into the tactical map for multi-INT fusion.
 - **RF Infrastructure Awareness**: Comprehensive mapping of amateur radio repeater networks across the theater, providing operators with immediate access to vital communication relays, operational frequencies, and signal coverage radii.
 - **JS8Call Signal Intelligence**: Integrated HF digital mode (JS8) radio bridge and interactive HUD terminal for real-time tactical communications and station tracking.

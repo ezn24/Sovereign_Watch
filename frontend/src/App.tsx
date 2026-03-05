@@ -517,34 +517,36 @@ function App() {
         ) : null
       }
       rightSidebar={
-        viewMode === 'TACTICAL' ? (
-          <SidebarRight
-            entity={selectedEntity}
-            onClose={() => {
-              setSelectedEntity(null);
-              setFollowMode(false); // Stop following on close
-            }}
-            onCenterMap={() => {
-              setFollowMode(true);
-              if (selectedEntity && mapActions) {
-                mapActions.flyTo(selectedEntity.lat, selectedEntity.lon);
-              }
-            }}
-          />
-        ) : viewMode === 'ORBITAL' ? (
-          <SidebarRight
-            entity={selectedEntity}
-            onClose={() => {
-              setSelectedEntity(null);
-              setFollowMode(false);
-            }}
-            onCenterMap={() => {
-              setFollowMode(true);
-              if (selectedEntity && mapActions) {
-                mapActions.flyTo(selectedEntity.lat, selectedEntity.lon);
-              }
-            }}
-          />
+        selectedEntity ? (
+          viewMode === 'TACTICAL' ? (
+            <SidebarRight
+              entity={selectedEntity}
+              onClose={() => {
+                setSelectedEntity(null);
+                setFollowMode(false); // Stop following on close
+              }}
+              onCenterMap={() => {
+                setFollowMode(true);
+                if (selectedEntity && mapActions) {
+                  mapActions.flyTo(selectedEntity.lat, selectedEntity.lon);
+                }
+              }}
+            />
+          ) : viewMode === 'ORBITAL' ? (
+            <SidebarRight
+              entity={selectedEntity}
+              onClose={() => {
+                setSelectedEntity(null);
+                setFollowMode(false);
+              }}
+              onCenterMap={() => {
+                setFollowMode(true);
+                if (selectedEntity && mapActions) {
+                  mapActions.flyTo(selectedEntity.lat, selectedEntity.lon);
+                }
+              }}
+            />
+          ) : null
         ) : null
       }
     >
