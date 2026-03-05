@@ -121,6 +121,8 @@ export function getOrbitalLayers({ satellites, selectedEntity, hoveredEntity, no
         ? buildGemFaces(satellites, selectedEntity?.uid, zoom)
         : [];
 
+    const selectedSat = selectedEntity ? satellites.find(s => s.uid === selectedEntity.uid) : null;
+
     return [
         // 1. Footprint Circle — skipped in Globe mode (flat projection artifact)
         ...(projectionMode !== 'globe' ? [new ScatterplotLayer({
@@ -360,10 +362,10 @@ export function getOrbitalLayers({ satellites, selectedEntity, hoveredEntity, no
 
 
         // 5. Glow / Highlight ring for selected satellite
-        ...(selectedEntity && satellites.find(s => s.uid === selectedEntity.uid) ? [
+        ...(selectedSat ? [
             new ScatterplotLayer({
-                id: `satellite-selection-ring-${selectedEntity.uid}`,
-                data: [satellites.find(s => s.uid === selectedEntity.uid)!],
+                id: `satellite-selection-ring-${selectedEntity!.uid}`,
+                data: [selectedSat],
                 getPosition: (d: CoTEntity) => [d.lon, d.lat, d.altitude || 0],
                 getRadius: () => {
                     const cycle = (now % 2000) / 2000;
