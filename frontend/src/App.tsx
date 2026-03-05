@@ -14,6 +14,8 @@ import { useJS8Stations } from './hooks/useJS8Stations'
 import { useRepeaters } from './hooks/useRepeaters'
 import { processReplayData } from './utils/replayUtils'
 
+const NOOP = () => {};
+
 function App() {
 
   const [trackCounts, setTrackCounts] = useState({ air: 0, sea: 0, orbital: 0 });
@@ -106,6 +108,7 @@ function App() {
       showCables: false,
       showLandingStations: false,
       cableOpacity: 0.6,
+      showConstellation_Starlink: false,
     };
     const saved = localStorage.getItem('mapFilters');
     if (saved) {
@@ -127,6 +130,7 @@ function App() {
     showSatComms: true,
     showSatSurveillance: true,
     showSatOther: true,
+    showConstellation_Starlink: false,
   });
 
   const handleOrbitalFilterChange = useCallback((key: string, value: unknown) => {
@@ -603,16 +607,16 @@ function App() {
           selectedEntity={selectedEntity}
           // The rest are dummy/no-ops for the layout shell
           onCountsUpdate={setTrackCounts as any}
-          onEvent={() => { }}
-          onMissionPropsReady={() => { }}
-          onMapActionsReady={() => { }}
+          onEvent={NOOP}
+          onMissionPropsReady={NOOP}
+          onMapActionsReady={NOOP}
           showVelocityVectors={false}
           showHistoryTails={showHistoryTails}
           onToggleGlobe={() => setOrbitalViewMode(orbitalViewMode === '3D' ? '2D' : '3D')}
           replayMode={false}
           replayEntities={new Map()}
           followMode={false}
-          onFollowModeChange={() => { }}
+          onFollowModeChange={NOOP}
           onEntityLiveUpdate={handleEntityLiveUpdate}
           js8StationsRef={{ current: new Map() } as any}
           ownGridRef={{ current: '' }}

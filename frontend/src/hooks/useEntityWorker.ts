@@ -112,6 +112,9 @@ export function useEntityWorker({
           const category =
             entity.detail?.category ??
             (entity.detail?.classification as any)?.category;
+          const constellation = 
+            entity.detail?.constellation ??
+            (entity.detail?.classification as any)?.constellation;
           const period_min =
             entity.detail?.period_min ??
             (entity.detail?.classification as any)?.period_min;
@@ -160,6 +163,7 @@ export function useEntityWorker({
               ...entity.detail,
               norad_id,
               category,
+              constellation,
               period_min,
               inclination_deg,
               eccentricity,

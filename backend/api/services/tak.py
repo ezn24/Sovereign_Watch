@@ -63,6 +63,11 @@ def transform_to_proto(data: dict) -> bytes:
     src_contact = src_detail.get("contact", {})
     cot.detail.contact.callsign = str(src_contact.get("callsign", cot.uid))
 
+    if "category" in src_detail and src_detail["category"] is not None:
+        cot.detail.category = str(src_detail["category"])
+    if "constellation" in src_detail and src_detail["constellation"] is not None:
+        cot.detail.constellation = str(src_detail["constellation"])
+
     # Classification
     src_class = src_detail.get("classification", {})
     if src_class:
@@ -78,6 +83,7 @@ def transform_to_proto(data: dict) -> bytes:
         cls.description = str(src_class.get("description", ""))
         cls.squawk = str(src_class.get("squawk", ""))
         cls.emergency = str(src_class.get("emergency", ""))
+        cls.constellation = str(src_class.get("constellation", ""))
 
     # Vessel Classification
     src_vessel = src_detail.get("vesselClassification", {})

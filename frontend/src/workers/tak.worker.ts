@@ -84,7 +84,7 @@ self.onmessage = async (e: MessageEvent) => {
                 }
 
             } catch (parseErr) {
-                // console.warn("TAK Parse Error:", parseErr);
+                console.error("TAK Parse Error:", parseErr);
             }
         }
     }

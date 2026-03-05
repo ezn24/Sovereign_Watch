@@ -585,6 +585,10 @@ export function useAnimationLoop({
         if (!filters?.showSatellites) continue;
 
         const cat = (sat.detail?.category as string)?.toLowerCase() || "";
+        const constellation = sat.detail?.constellation as string | undefined;
+
+        if (constellation && filters?.[`showConstellation_${constellation}`] === false) continue;
+
         if (
           cat.includes("gps") ||
           cat.includes("gnss") ||
@@ -650,6 +654,10 @@ export function useAnimationLoop({
       );
       const filteredSatellites = allSats.filter((sat) => {
         if (!filters?.showSatellites) return false;
+        
+        const constellation = sat.detail?.constellation as string | undefined;
+        if (constellation && filters?.[`showConstellation_${constellation}`] === false) return false;
+
         const cat = (sat.detail?.category as string)?.toLowerCase() || "";
         // Match against user-facing category names from the orbital pulse service.
         // Note: 'active' is a Celestrak *group* name, NOT a category filter keyword.

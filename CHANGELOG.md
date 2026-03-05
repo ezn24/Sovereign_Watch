@@ -1,3 +1,16 @@
+## [0.17.1] - 2026-03-04
+
+### Added
+
+- **Collapsible Subcategories:** Added stateful chevron toggles to the orbital category pills to collapse and expand constellation lists, saving vertical HUD space.
+- **Default Filters:** The Starlink constellation is now disabled by default on fresh loads to prevent overwhelming the browser with 9,000+ entities instantly.
+- **Category Pill Refinement:** Removed top-level category counts from the orbital pills to prevent text collision, keeping the UI clean and readable.
+
+### Fixed
+
+- **Constellation Filtering Schema:** Restored the missing `constellation` and `category` fields to the `tak.proto` Protobuf schema, re-enabling selective constellation filtering in the frontend worker and `useAnimationLoop`.
+- **Backend Serialization:** Updated the `sovereign-orbital-pulse` and TAK serialization services to correctly map and transmit the restored fields over WebSocket.
+
 ## [0.17.0] - 2026-03-04
 
 ### Added
@@ -19,7 +32,6 @@
 - **`OrbitalMap`:** Maintains an `observerRef` derived from `currentMissionRef`, kept in sync each render cycle.
 
 ## [0.16.0] - 2026-03-04
-
 
 ### Added
 
