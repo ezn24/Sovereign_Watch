@@ -91,8 +91,8 @@ git add frontend/package.json README.md CHANGELOG.md RELEASE_NOTES.md
 # 2. Commit
 git commit -m "chore(release): vX.Y.Z - Release Name
 
-# 3. Tag
-git tag vX.Y.Z
+# 3. Tag (Annotated required for --follow-tags)
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
 
 # 4. Push — use --follow-tags to push only the new tag,
 # NOT --tags which also tries to re-push old tags (causes harmless
