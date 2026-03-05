@@ -1,62 +1,53 @@
-# Release - v0.16.0 - Orbital Inspector & Prediction Suite
+# Release - v0.17.0 - Orbital Situational Awareness Expansion
 
-## High-Level Summary
+## Summary
 
-v0.16.0 delivers a complete overhaul of the Orbital map's satellite intelligence capabilities. Operators can now lock onto any orbital asset and instantly see its live azimuth, elevation, and slant range from the mission area, along with a next-pass countdown showing exactly when the satellite will be overhead. The pass prediction list gains live T-minus countdowns per row, a minimum elevation filter to cut clutter, and one-click CSV export for mission planning. Category pills now show accurate live counts from the database, a search input lets operators find any satellite by name or NORAD ID in under a keystroke, and the predicted ground track renders as a dashed forward-orbit line when history trails are on. A Redis caching layer brings pass prediction response times from seconds to milliseconds on repeat queries.
+v0.17.0 advances the Orbital Dashboard with three meaningful operator improvements: a live **Observer AOI Horizon Ring** on the orbital map that shows exactly where pass predictions are calculated from, full **right-click Mission Control** on the orbital map (matching the tactical map's context menu), and a critical **COMMS constellation pass prediction safety guard** that prevents the SGP4 pass prediction server from being flooded when the Starlink/OneWeb/Iridium layer is enabled. This release also resolves a persistent visual bug where the TYPE_TAG and REGISTRATION badges in the right sidebar were being clipped behind the Position Telemetry section.
+
+---
 
 ## Key Features
 
-- **Live Satellite Inspector** — Selecting any orbital asset in `SidebarRight` now shows live az/el/slant-range (1 Hz), orbital inclination and eccentricity, and a next-pass AOS countdown with max elevation and duration.
-- **Pass Countdown Column** — Every row in the pass list counts down to AOS (`T-HH:MM:SS`). In-progress passes pulse purple and switch to a LOS countdown.
-- **Min Elevation Dropdown** — Filter passes to 0°/5°/10°/15°/20°/30° minimum horizon angle directly in the pass widget header.
-- **CSV Export** — Download all predicted passes to `passes_YYYY-MM-DD.csv` with a single click.
-- **Category Counts** — Category pills show live per-category satellite counts pulled from the database (`GPS (127)`, `WEATHER (42)`, etc.).
-- **NORAD / Name Search** — Instant client-side search filtering the pass list by name or NORAD ID substring.
-- **Predicted Ground Track** — Forward-orbit path rendered as a dashed `PathLayer` for the selected satellite when history trails are enabled.
-- **Redis Pass Cache** — Pass predictions cached 5 minutes in Redis, keyed by observer position, time window, elevation filter, and NORAD filter set.
+### 🛸 Observer AOI Horizon Ring (Orbital Map)
+A soft purple geodesic ring now renders on the orbital map centered on your active mission location, with a radius matching your configured mission area. A small dot marks the precise observer position used for all SGP4 pass calculations. The ring updates automatically when you change your mission area — giving operators an immediate visual reference for which ground footprint pass predictions are computed from.
+
+### 🖱️ Right-Click Mission Control (Orbital Map)
+Right-clicking anywhere on the orbital map now opens the full Mission Control context menu, identical to the tactical map:
+- **Set Mission Focus** — relocates the observer position and immediately updates the AOI ring
+- **Save Location** — bookmark any clicked coordinate using the save-location form
+- **Return Home** — snap back to the configured home mission area
+
+### 🛡️ COMMS Layer Pass Prediction Guard
+Enabling the COMMS satellite filter (Starlink, OneWeb, Iridium, amateur constellations — 8-10k satellites) previously sent a category-wide SGP4 pass prediction request to the backend, saturating the server and bricking egress. This is now gated at two levels:
+- **Frontend**: pass prediction is skipped for the `comms` category; the Pass Predictor widget shows a clear operator-facing notice
+- **Backend**: `/api/orbital/passes?category=comms` without explicit `norad_ids` returns `HTTP 400` immediately
+
+Per-satellite on-demand prediction (clicking an individual sat) continues to work normally.
+
+---
+
+## Bug Fixes
+
+- **Sidebar Header Clipping** — The TYPE_TAG and REGISTRATION badge row in `SidebarRight` was hidden behind other content due to `overflow-hidden` on the header div. Removed; all badges are now fully visible.
+- **Phantom Actions Bar** — The TRACK_LOG button and its flex container are now hidden for satellite entities, preventing empty spacing from rendering in the orbital sidebar.
+
+---
 
 ## Technical Details
 
-### New Dependencies
-No new runtime dependencies added.
+- `buildAOTLayers.ts`: New optional `observer` param, imports `ScatterplotLayer`, and includes `geodesicCircle()` helper for 128-vertex ring generation
+- `useAnimationLoop.ts`: New `observerRef` option threads the observer position into the layer build pipeline
+- `OrbitalMap.tsx`: Maintains `observerRef` from `currentMissionRef`; imports `MapContextMenu` and `SaveLocationForm`; right-click state management mirrors `TacticalMap.tsx`
+- `orbital.py`: Server-side `PASS_HEAVY_CATEGORIES` guard added before DB query
 
-### New Backend Endpoints
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/orbital/stats` | Returns satellite counts grouped by category from the `satellites` table. |
-| `GET /api/orbital/passes?limit=N` | Existing endpoint gains `limit` param (max 500) and Redis caching. |
-
-### New / Modified Frontend
-| File | Change |
-|------|--------|
-| `frontend/src/hooks/useMissionLocation.ts` | New shared hook for observer lat/lon resolution. |
-| `frontend/src/utils/map/geoUtils.ts` | New `satAzEl()` function — spherical ECEF/ENZ az/el/range math. |
-| `frontend/src/layers/OrbitalLayer.tsx` | Exports `GroundTrackPoint`; renders predicted track PathLayer. |
-| `frontend/src/hooks/useAnimationLoop.ts` | Threads `predictedGroundTrackRef` to `getOrbitalLayers`. |
-| `frontend/src/hooks/usePassPredictions.ts` | Adds `skip` option to suppress fetches for non-satellite entities. |
-
-### Removed
-- `frontend/src/components/layouts/OrbitalDashboard.tsx` — 130 lines of dead code confirmed unused.
-
-### Breaking Changes
-None.
-
-### Performance Notes
-- Pass prediction for a typical 10-satellite query over 6 hours: ~800 ms cold, ~5 ms Redis hit.
-- Ground track fetch (90 min, 30 s step): ~120 ms; result not cached (low cost, no Redis key needed).
+---
 
 ## Upgrade Instructions
 
 ```bash
-# Pull latest changes
 git pull origin main
-
-# Rebuild and restart
-docker compose build frontend backend-api
-docker compose up -d frontend backend-api
-
-# Verify Redis is running (required for pass cache, degrades gracefully if absent)
-docker compose ps redis
+docker compose build frontend sovereign-backend
+docker compose up -d
 ```
 
-No database migrations required — no schema changes in this release.
+No database migrations required. No new environment variables.

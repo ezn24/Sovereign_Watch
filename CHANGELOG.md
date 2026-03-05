@@ -1,4 +1,25 @@
+## [0.17.0] - 2026-03-04
+
+### Added
+
+- **Orbital Map: Observer AOI Horizon Ring:** `buildAOTLayers` now renders a soft purple geodesic circle centered on the active mission lat/lon, with radius matching the configured mission area in nautical miles. A small purple dot marks the precise observer position. Works in both mercator and globe projections. The ring updates automatically when the mission area changes.
+- **Orbital Map: Right-Click Mission Control:** Right-clicking the orbital map now opens the full `MapContextMenu` (matching the tactical map), exposing **Set Mission Focus**, **Save Location**, and **Return Home** actions. Includes `SaveLocationForm` for bookmarking clicked coordinates. Changing focus also updates the observer AOI ring immediately.
+- **Pass Prediction: COMMS Layer Safety Guard (Frontend):** `OrbitalSidebarLeft` now skips the category-level pass prediction request when the active filter is `comms`. The `PassPredictorWidget` displays a clear informational message explaining that individual satellite selection is required for comms pass prediction.
+- **Pass Prediction: COMMS Layer Safety Guard (Backend):** `GET /api/orbital/passes` returns `HTTP 400` when `category=comms` is requested without explicit `norad_ids`. Prevents accidental or buggy clients from triggering an 8-10k-satellite SGP4 scan that would OOM the server.
+
+### Fixed
+
+- **SidebarRight Header Clipping:** Removed `overflow-hidden` from the main header `div` in `SidebarRight`. The TYPE_TAG and REGISTRATION badge row was being clipped behind the Position Telemetry section. The header now expands naturally to contain all content.
+- **SidebarRight Actions Bar (Satellite Entities):** The TRACK_LOG button and its parent actions bar `div` are now conditionally hidden when viewing satellite entities, preventing phantom spacing and irrelevant controls from appearing in the orbital sidebar.
+
+### Changed
+
+- **`buildAOTLayers`:** Accepts an optional `observer` argument `{ lat, lon, radiusKm }` for the orbital horizon ring. The `ScatterplotLayer` import added alongside the existing `PathLayer`.
+- **`useAnimationLoop`:** Added optional `observerRef` parameter (`MutableRefObject<{ lat, lon, radiusKm } | null>`) threaded through to `buildAOTLayers`.
+- **`OrbitalMap`:** Maintains an `observerRef` derived from `currentMissionRef`, kept in sync each render cycle.
+
 ## [0.16.0] - 2026-03-04
+
 
 ### Added
 
