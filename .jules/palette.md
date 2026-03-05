@@ -4,3 +4,7 @@
 ## 2024-03-22 - Added ARIA labels and focus styles to close buttons
 **Learning:** Icon-only close buttons in the sidebar lacked accessibility attributes and focus indicators, making them difficult for screen reader users to understand and keyboard users to navigate. Applying the `focus-visible:ring-1 focus-visible:ring-hud-green outline-none` classes ensures consistent, high-visibility keyboard focus matching the tactical theme.
 **Action:** Always add `aria-label` and `title` to icon-only buttons, and use `focus-visible` utility classes to provide clear keyboard focus states without disrupting pointer interactions.
+
+## 2025-03-05 - Interactive List Items Hiding Actions
+**Learning:** Found a pattern where interactive lists (like the saved missions list in `MissionNavigator.tsx`) use `div` elements with `onClick` handlers and hide supplementary actions (like delete) behind CSS `group-hover`. This is inaccessible to keyboard navigation and screen readers because `div`s aren't natively focusable, and hover states don't trigger on keyboard focus by default.
+**Action:** Always refactor interactive list items to use semantic `<button>` elements. Ensure secondary actions within a list item have an explicit `aria-label` and use `focus-visible:opacity-100` alongside `group-hover:opacity-100` so that keyboard users can discover and access them when tabbing through the interface.
