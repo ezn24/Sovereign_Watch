@@ -81,8 +81,10 @@ export function buildTrailLayers(
   }
 
   // 2. Selected Entity Highlight Trail
-  if (currentSelected && interpolated.find((e) => e.uid === currentSelected.uid)) {
-    const entity = interpolated.find((e) => e.uid === currentSelected.uid)!;
+  const selectedEntity = currentSelected ? interpolated.find((e) => e.uid === currentSelected.uid) : null;
+
+  if (selectedEntity) {
+    const entity = selectedEntity;
     if (entity.smoothedTrail && entity.smoothedTrail.length >= 2) {
       const trailPath = entity.smoothedTrail;
 
