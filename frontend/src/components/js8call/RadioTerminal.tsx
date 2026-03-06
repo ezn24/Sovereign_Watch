@@ -46,7 +46,7 @@ import KiwiNodeBrowser from './KiwiNodeBrowser';
 const WS_URL =
   typeof import.meta !== 'undefined' && import.meta.env?.VITE_JS8_WS_URL
     ? import.meta.env.VITE_JS8_WS_URL
-    : 'ws://localhost:8080/ws/js8';
+    : 'ws://localhost/js8/ws/js8';
 
 const KIWI_DEFAULT_HOST =
   typeof import.meta !== 'undefined' && import.meta.env?.VITE_KIWI_HOST
@@ -109,11 +109,11 @@ function StationCard({ station, isNew }: { station: Station; isNew: boolean }) {
   return (
     <div
       className={`
-        flex items-center justify-between p-2 rounded
-        border transition-all duration-300
+        flex items-center justify-between p-2 rounded-lg
+        border backdrop-blur-sm transition-all duration-300
         ${isNew
-          ? 'border-indigo-500/60 bg-indigo-950/40'
-          : 'border-transparent hover:border-slate-700 hover:bg-slate-800'}
+          ? 'border-indigo-500/40 bg-indigo-950/40 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+          : 'border-white/5 bg-black/20 hover:border-white/10 hover:bg-black/40'}
       `}
     >
       <div>
@@ -163,7 +163,7 @@ function LogEntry({ entry }: { entry: LogEntryItem }) {
 
   if (isSystem) {
     return (
-      <div className="flex items-start gap-3 p-2 rounded bg-slate-900/50 text-slate-400 italic">
+      <div className="flex items-start gap-3 p-2.5 rounded-lg bg-black/30 backdrop-blur-sm border border-white/5 text-slate-400 italic">
         <div className="flex items-center gap-1.5 w-24 shrink-0 text-slate-600">
           <Clock className="w-3 h-3" />
           <span className="text-[10px]">{entry.timestamp}</span>
@@ -175,8 +175,10 @@ function LogEntry({ entry }: { entry: LogEntryItem }) {
 
   return (
     <div className={`
-      group flex items-start gap-3 p-2 rounded transition-colors
-      ${isLocal ? 'bg-indigo-950/30 hover:bg-indigo-950/50' : 'hover:bg-slate-900/80'}
+      group flex items-start gap-3 p-2.5 rounded-lg border backdrop-blur-sm transition-all duration-200
+      ${isLocal 
+        ? 'bg-indigo-950/20 border-indigo-500/20 hover:bg-indigo-950/40 shadow-[0_0_10px_rgba(99,102,241,0.05)]' 
+        : 'bg-black/20 border-white/5 hover:bg-black/40 hover:border-white/10'}
     `}>
       {/* Timestamp */}
       <div className="flex items-center gap-1.5 w-24 shrink-0 text-slate-500">
@@ -247,6 +249,9 @@ export default function RadioTerminal() {
   const [kiwiConnecting, setKiwiConnecting] = useState(false);
 
   const [kiwiPanelOpen, setKiwiPanelOpen] = useState(false);
+
+  const [isEditingFreq, setIsEditingFreq] = useState(false);
+  const [tempFreq, setTempFreq] = useState('');
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const wsRef = useRef<WebSocket | null>(null);
@@ -427,6 +432,7 @@ export default function RadioTerminal() {
 
       if (type === 'ERROR') {
         appendSystem(`ERROR: ${payload.message}`);
+        setKiwiConnecting(false);
       }
     };
   }, [appendSystem]);
@@ -474,6 +480,23 @@ export default function RadioTerminal() {
     wsRef.current?.send(JSON.stringify({ action: 'DISCONNECT_KIWI' }));
   }, [connected]);
 
+  const handleFreqSubmit = useCallback(() => {
+    setIsEditingFreq(false);
+    if (!activeKiwiConfig || !connected) return;
+    const newFreq = parseInt(tempFreq, 10);
+    if (!isNaN(newFreq) && newFreq !== activeKiwiConfig.freq) {
+      setKiwiConnecting(true);
+      setKiwiConfig(prev => ({ ...prev, freq: newFreq }));
+      wsRef.current?.send(JSON.stringify({
+        action: 'SET_KIWI',
+        host: activeKiwiConfig.host,
+        port: activeKiwiConfig.port,
+        freq: newFreq,
+        mode: activeKiwiConfig.mode,
+      }));
+    }
+  }, [activeKiwiConfig, tempFreq, connected]);
+
   // Connect to a node picked from the browser — keeps current freq/mode
   const handleNodeConnect = useCallback((node: KiwiNode) => {
     if (!connected || kiwiConnecting) return;
@@ -498,10 +521,13 @@ export default function RadioTerminal() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 text-slate-200 font-mono text-sm selection:bg-indigo-500/30 overflow-hidden">
+    <div className="flex flex-col h-full bg-slate-950/80 text-slate-200 font-mono text-sm selection:bg-indigo-500/30 overflow-hidden relative">
+      
+      {/* Subtle background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
 
       {/* ── HEADER ── */}
-      <header className="flex items-center justify-between px-4 h-14 bg-slate-900 border-b border-slate-800 shrink-0">
+      <header className="flex items-center justify-between px-5 h-16 bg-black/40 backdrop-blur-md border-b border-white/10 shrink-0 z-10 shadow-lg relative">
         {/* Left: brand */}
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-indigo-500/10 rounded-md border border-indigo-500/20">
@@ -521,10 +547,10 @@ export default function RadioTerminal() {
               onClick={() => setKiwiPanelOpen(v => !v)}
               disabled={!connected}
               className={`
-                flex items-center gap-1.5 px-3 py-1.5 rounded border font-mono text-xs transition-colors duration-150
+                flex items-center gap-2 px-3.5 py-1.5 rounded-md border text-xs transition-all duration-200 backdrop-blur-sm shadow-sm
                 ${kiwiConnected
-                  ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/20'
-                  : 'bg-slate-800 border-slate-700 text-slate-500 hover:bg-slate-700 hover:text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed'}
+                  ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 hover:border-indigo-500/50 hover:shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+                  : 'bg-black/30 border-white/10 text-slate-400 hover:bg-black/50 hover:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed'}
               `}
             >
               <Server className="w-3.5 h-3.5 shrink-0" />
@@ -564,11 +590,38 @@ export default function RadioTerminal() {
           <div className="w-px h-6 bg-slate-800 shrink-0" />
 
           {/* JS8Call frequency / station */}
-          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-2.5 py-1.5 rounded">
-            <Signal className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-            <span className="font-semibold text-emerald-400 font-mono">
-              {activeKiwiConfig ? `${activeKiwiConfig.freq} kHz` : '--'}
-            </span>
+          <div 
+            className="flex items-center gap-2.5 bg-black/40 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded-md cursor-pointer hover:border-indigo-500/40 hover:bg-black/60 transition-all shadow-inner"
+            title="Click to change frequency"
+            onClick={() => {
+              if (activeKiwiConfig && !isEditingFreq) {
+                setTempFreq(activeKiwiConfig.freq.toString());
+                setIsEditingFreq(true);
+              }
+            }}
+          >
+            <Signal className="w-4 h-4 text-emerald-400 shrink-0 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]" />
+            {isEditingFreq ? (
+              <div className="flex items-center gap-1.5 font-mono text-emerald-400 font-semibold max-w-[120px]">
+                <input
+                  type="number"
+                  className="bg-black/50 border-b border-emerald-500 text-emerald-300 w-16 outline-none appearance-none font-mono font-semibold px-1 rounded-sm focus:bg-black/70 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  value={tempFreq}
+                  autoFocus
+                  onChange={(e) => setTempFreq(e.target.value)}
+                  onBlur={handleFreqSubmit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleFreqSubmit();
+                    if (e.key === 'Escape') setIsEditingFreq(false);
+                  }}
+                />
+                <span className="text-emerald-500/70">kHz</span>
+              </div>
+            ) : (
+              <span className="font-semibold text-emerald-400 font-mono tracking-wide drop-shadow-[0_0_2px_rgba(52,211,153,0.3)]">
+                {activeKiwiConfig ? `${activeKiwiConfig.freq} kHz` : '--'}
+              </span>
+            )}
           </div>
           <div className="text-slate-400">
             <span className="text-slate-600">CALL </span>
@@ -581,16 +634,18 @@ export default function RadioTerminal() {
         </div>
 
         {/* Right: connection state */}
-        <div className="flex items-center gap-3 text-xs">
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded border ${connected
-            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-            : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+        <div className="flex items-center gap-3 text-xs font-semibold tracking-wide">
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md border backdrop-blur-sm shadow-sm transition-all duration-300 ${connected
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.15)]'
+            : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
             }`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+            <div className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400 animate-pulse shadow-[0_0_5px_currentColor]' : 'bg-rose-500'}`} />
             {connected ? 'BRIDGE' : 'OFFLINE'}
           </div>
-          <div className={`flex items-center gap-1.5 text-xs ${js8Connected ? 'text-cyan-400' : 'text-slate-600'}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${js8Connected ? 'bg-cyan-400' : 'bg-slate-700'}`} />
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md border backdrop-blur-sm transition-all duration-300 ${js8Connected 
+            ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.15)]' 
+            : 'bg-black/30 border-white/5 text-slate-500'}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${js8Connected ? 'bg-cyan-400 shadow-[0_0_5px_currentColor]' : 'bg-slate-600'}`} />
             {js8Connected ? 'JS8CALL' : 'NO RADIO'}
           </div>
         </div>
@@ -618,12 +673,14 @@ export default function RadioTerminal() {
         </main>
 
         {/* HEARD STATIONS – right sidebar */}
-        <aside className="w-72 bg-slate-900/50 border-l border-slate-800 hidden md:flex flex-col shrink-0">
-          <div className="p-3 border-b border-slate-800 bg-slate-900">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Activity className="w-4 h-4" />
+        <aside className="w-72 bg-black/30 backdrop-blur-md border-l border-white/10 hidden md:flex flex-col shrink-0 relative z-10 shadow-[-5px_0_15px_rgba(0,0,0,0.2)]">
+          <div className="p-3 border-b border-white/10 bg-black/40 shadow-sm relative">
+            {/* Subtle glow on top of sidebar */}
+            <div className="absolute top-0 right-0 w-32 h-1 bg-indigo-500/30 blur-md pointer-events-none" />
+            <h2 className="text-xs font-bold text-indigo-300/80 uppercase tracking-widest flex items-center gap-2 drop-shadow-[0_0_2px_rgba(99,102,241,0.2)]">
+              <Activity className="w-4 h-4 text-indigo-400" />
               Heard Stations
-              <span className="ml-auto text-slate-600 font-normal">{sortedStations.length}</span>
+              <span className="ml-auto text-indigo-200/50 font-mono font-normal">[{sortedStations.length}]</span>
             </h2>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
@@ -645,10 +702,13 @@ export default function RadioTerminal() {
       </div>
 
       {/* ── TRANSMIT PANEL ── */}
-      <footer className="shrink-0 bg-slate-900 border-t border-slate-800">
+      <footer className="shrink-0 bg-black/50 backdrop-blur-xl border-t border-white/10 z-20 relative">
+        {/* Subtle glow underneath footer */}
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-indigo-500/5 blur-xl pointer-events-none" />
+        
         {/* TX form */}
-        <form onSubmit={handleSend} className="flex items-center gap-2 px-4 py-2.5">
-          <span className="text-slate-600 text-xs">TO</span>
+        <form onSubmit={handleSend} className="flex items-center gap-3 px-5 py-3 relative z-10">
+          <span className="text-slate-500 font-semibold text-xs tracking-wider">TO</span>
           <input
             type="text"
             value={txTarget}
@@ -657,41 +717,45 @@ export default function RadioTerminal() {
             maxLength={20}
             disabled={!connected}
             className="
-              bg-slate-950 border border-slate-700 rounded px-2 py-1.5
-              font-mono text-xs text-cyan-300 w-28
-              focus:outline-none focus:border-indigo-500
-              disabled:opacity-40 uppercase tracking-wider
+              bg-black/40 border border-white/10 rounded-md px-3 py-2 w-32
+              font-mono text-xs font-bold text-indigo-300 uppercase tracking-wider
+              focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30
+              disabled:opacity-40 transition-all shadow-inner
             "
           />
-          <input
-            type="text"
-            value={txMessage}
-            onChange={(e) => setTxMessage(e.target.value.toUpperCase())}
-            placeholder={connected ? 'TYPE MESSAGE AND PRESS ENTER…' : 'NOT CONNECTED'}
-            maxLength={160}
-            disabled={!connected || txPending}
-            autoComplete="off"
-            spellCheck={false}
-            className="
-              flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-1.5
-              font-mono text-xs text-slate-100
-              focus:outline-none focus:border-indigo-500
-              disabled:opacity-40 disabled:cursor-not-allowed
-              uppercase
-            "
-          />
-          <span className={`text-[10px] font-mono w-10 text-right ${txMessage.length > 140 ? 'text-red-400' : 'text-slate-600'}`}>
-            {txMessage.length}/160
-          </span>
+          <div className="flex-1 flex items-center gap-3">
+            <input
+              type="text"
+              value={txMessage}
+              onChange={(e) => setTxMessage(e.target.value.toUpperCase())}
+              placeholder={connected ? 'TYPE MESSAGE AND PRESS ENTER…' : 'NOT CONNECTED'}
+              maxLength={160}
+              disabled={!connected || txPending}
+              autoComplete="off"
+              spellCheck={false}
+              className="
+                flex-1 bg-black/40 border border-white/10 rounded-md px-4 py-2
+                font-mono text-sm text-slate-100 uppercase
+                focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30
+                disabled:opacity-40 disabled:cursor-not-allowed
+                transition-all shadow-inner placeholder:text-slate-600
+              "
+            />
+            <span className={`text-[10px] font-mono w-12 text-right ${txMessage.length > 140 ? 'text-red-400 font-bold' : 'text-slate-500'}`}>
+              {txMessage.length}/160
+            </span>
+          </div>
           <button
             type="submit"
             disabled={!connected || !txMessage.trim() || txPending}
             className="
-              px-4 py-1.5 rounded font-mono text-xs font-bold uppercase tracking-widest
-              transition-colors duration-150
-              bg-indigo-600 text-white hover:bg-indigo-500
-              disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed
-              focus:outline-none focus:ring-2 focus:ring-indigo-500
+              px-6 py-2 rounded-md font-mono text-xs font-bold uppercase tracking-widest
+              transition-all duration-200 shadow-[0_0_10px_rgba(79,70,229,0.2)] border
+              bg-indigo-600 hover:bg-indigo-500 hover:shadow-[0_0_15px_rgba(79,70,229,0.4)]
+              border-indigo-400/30 text-white
+              disabled:bg-black/40 disabled:text-slate-500 disabled:border-white/5
+              disabled:cursor-not-allowed disabled:shadow-none
+              focus:outline-none focus:ring-2 focus:ring-indigo-500/50
             "
           >
             {txPending ? 'TX…' : 'SEND'}

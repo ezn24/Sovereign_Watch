@@ -59,9 +59,9 @@ export const JS8Widget: React.FC<JS8WidgetProps> = ({
   };
 
   return (
-    <div className="bg-black/40 border border-tactical-border rounded-sm backdrop-blur-md font-mono overflow-hidden shadow-2xl">
+    <div className="font-mono overflow-hidden bg-black/40 backdrop-blur-md border border-white/10 rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-white/5">
+      <div className="flex items-center justify-between px-3 py-2 bg-white/5 border-b border-white/10">
         <button
           onClick={() => setCollapsed((v) => !v)}
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"

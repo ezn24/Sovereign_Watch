@@ -19,9 +19,9 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
   const orbitalPercent = total > 0 ? (orbitalCount / total) * 100 : 0;
 
   return (
-    <div className="flex flex-col rounded-sm border border-tactical-border bg-black/40 backdrop-blur-md shadow-inner overflow-hidden">
+    <div className="flex flex-col overflow-hidden bg-black/40 backdrop-blur-md border border-white/10 rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
       {/* System Status Header with Layers toggle */}
-      <div className="flex items-center justify-between border-b border-tactical-border bg-white/5 px-3 py-2 cursor-pointer hover:bg-white/10 transition-colors"
+      <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-3 py-2 cursor-pointer hover:bg-white/10 transition-colors"
         onClick={() => setShowLayers(!showLayers)}>
         <div className="flex flex-col">
           <span className="text-[9px] text-white/40 font-bold tracking-widest uppercase">Map Layers</span>
@@ -76,7 +76,7 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
       </div>
 
       {showLayers && filters && onFilterChange && (
-        <div className="p-2 space-y-2 border-b border-tactical-border bg-black/60">
+        <div className="p-2 space-y-2 border-b border-white/10 bg-black/60">
           {/* RF Infrastructure Toggle Detail */}
           <div
             className={`flex items-center justify-between p-2 rounded border transition-colors cursor-pointer group ${filters.showRepeaters
@@ -222,7 +222,7 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
       </div>
 
       {/* System Footer Info (Compact) */}
-      <div className="flex items-center justify-between border-t border-tactical-border bg-white/5 px-3 py-1.5 opacity-50">
+      <div className="flex items-center justify-between border-t border-white/10 bg-white/5 px-3 py-1.5 opacity-50">
         <div className="flex items-center gap-1.5">
           <Database size={9} className="text-hud-green" />
           <span className="text-[8px] font-mono text-white/60">DB: CONNECTED</span>

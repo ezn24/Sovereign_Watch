@@ -1,9 +1,26 @@
-# Release - v0.17.2 - Real-Time Orbital Kinematics
+# Release - v0.18.0 - Glass & Signals
 
-Sovereign Watch v0.17.2 introduces a major rendering engine upgrade for the Orbital Dashboard, bringing our space domain awareness to parity with the tactical aviation layer.
+## High-Level Summary
 
-- **Projective Velocity Blending (PVB)**: Satellites no longer "snap" to a new location every 5 seconds. The UI now applies physics-based kinematics between SGP4 updates, granting observers buttery-smooth 60fps orbital motion.
-- **Seamless Gap Bridges**: History tails (ground tracks) are now perfectly attached to their respective fast-moving satellites using a dynamic 3D segment layer.
-- **Improved Interactions**: Fixed a Z-index conflict where the right panel's empty container intercepted map clicks, ensuring total map interactability when no entity is selected.
+This release marks a significant convergence of aesthetic refinement and architectural stability. The "Sovereign Glass" design system has been fully restored and polished, while the signal intelligence (SIGINT) backend has been re-engineered for industrial-grade reliability. Operators will experience a more responsive, visually cohesive tactical environment with enhanced reach via the new KiwiSDR integration.
 
-_(No special upgrade commands required, standard `docker compose up -d --build frontend` applies)._
+## Key Features
+
+- **Sovereign Glass UI Restoration**: Reverted to individual glass containers with refined 12px shadows for improved tactical depth.
+- **Enhanced Signal Intelligence**: Replaced legacy bridge with a native AsyncIO UDP bridge for JS8Call, eliminating startup crashes on Windows.
+- **KiwiSDR Public Directory Integration**: Automatic proximity-based discovery of global SDR nodes using Haversine distance.
+- **Tactical Legend Evolution**: Redesigned Altitude and Maritime legends matching the Mission Navigator's visual language.
+- **Nginx Unified Entry Point**: All services now route through an optimized reverse proxy on port 80.
+
+## Technical Details
+
+- **Backend**: Migrated JS8Call bridge to `asyncio.DatagramProtocol`.
+- **Frontend**: Restructured sidebar widgets for HMR stability and performance.
+- **Infrastructure**: Consolidated container ports; all internal traffic now uses Docker overlay networks exclusively.
+
+## Upgrade Instructions
+
+```bash
+docker compose down
+docker compose up -d --build
+```

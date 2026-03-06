@@ -32,10 +32,6 @@ services:
       - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
       - --advertise-pandaproxy-addr internal://sovereign-redpanda:8082,external://localhost:28082
       - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
-    ports:
-      - "28081:18081"
-      - "28082:18082"
-      - "29092:19092"
     volumes:
       - redpanda-data:/var/lib/redpanda/data
     networks:
@@ -46,18 +42,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redpanda-console:
-    image: docker.redpanda.com/redpandadata/console:latest
-    container_name: sovereign-redpanda-console
-    environment:
-      KAFKA_BROKERS: "sovereign-redpanda:9092"
-    ports:
-      - "8080:8080"
-    networks:
-      - backend-net
-    depends_on:
-      redpanda:
-        condition: service_healthy
 
   # --- Ingestion: Maritime AIS (via Python Poller with Dynamic Area Management) ---
   ais-poller:
@@ -128,8 +112,6 @@ services:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: sovereign_watch
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/home/postgres/pgdata/data
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -146,8 +128,6 @@ services:
     image: redis:alpine
     container_name: sovereign-redis
     command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -171,8 +151,7 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - REPEATERBOOK_API_TOKEN=${REPEATERBOOK_API_TOKEN}
-    ports:
-      - "8000:8000"
+      - ALLOWED_ORIGINS=http://localhost
     volumes:
       - ./backend/api:/app
     networks:
@@ -204,13 +183,9 @@ services:
       - JS8CALL_PORT=2442
       # FastAPI bridge port (exposed below)
       - BRIDGE_PORT=8080
-    ports:
-      - "8082:8080" # FastAPI WebSocket bridge (host:8082 → container:8080)
+      - ALLOWED_ORIGINS=http://localhost
     networks:
       - backend-net
-    # IPC=host is not required; PulseAudio runs as a user daemon inside the container.
-    # SYS_ADMIN is not needed – we use a user-space PulseAudio null sink.
-    # Note: /dev/snd is intentionally NOT bind-mounted; audio is 100% virtual.
     cap_add: []
     restart: unless-stopped
     healthcheck:
@@ -226,20 +201,36 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: sovereign-frontend
-    ports:
-      - "3000:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules # Prevent host from overwriting container node_modules
     networks:
       - frontend-net
-      - backend-net # To access API directly from server side if needed (SSR) or proxy
+      - backend-net
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost
       - VITE_ENABLE_MAPBOX=${VITE_ENABLE_MAPBOX:-true}
       - VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
       - VITE_CENTER_LAT=${CENTER_LAT:-45.5152}
       - VITE_CENTER_LON=${CENTER_LON:--122.6784}
       - VITE_COVERAGE_RADIUS_NM=${COVERAGE_RADIUS_NM:-150}
       - VITE_ENABLE_3D_TERRAIN=${VITE_ENABLE_3D_TERRAIN:-false}
-      - VITE_JS8_WS_URL=ws://localhost:8082/ws/js8
+      - VITE_JS8_WS_URL=ws://localhost/js8/ws/js8
+      - VITE_JS8_BASE_URL=http://localhost/js8
+
+  # --- Nginx Reverse Proxy (single entry point) ---
+  nginx:
+    image: nginx:alpine
+    container_name: sovereign-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - frontend-net
+      - backend-net
+    depends_on:
+      - frontend
+      - backend-api
+      - js8call
+    restart: unless-stopped

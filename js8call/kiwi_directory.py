@@ -22,8 +22,8 @@ logger = logging.getLogger("js8bridge.kiwi_dir")
 # ---------------------------------------------------------------------------
 
 DIRECTORY_URLS = [
-    "https://kiwisdr.com/public/?db=1",
-    "https://rx.skywavelinux.com/kiwisdr_com.js",  # fallback mirror
+    "http://rx.linkfanel.net/kiwisdr_com.js",      # active mirror
+    "https://rx.skywavelinux.com/kiwisdr_com.js",  # alternative mirror
 ]
 CACHE_TTL = 3600        # seconds (1 hour)
 FETCH_TIMEOUT = 15      # seconds per HTTP request
@@ -85,11 +85,15 @@ def _parse_directory(raw: str) -> list[KiwiNode]:
     unquoted keys and trailing commas. We normalise it before parsing.
     """
     text = raw.strip()
+    # Strip line comments (e.g., '// KiwiSDR.com receiver list')
+    text = re.sub(r'(?m)^\s*//.*$', '', text).strip()
     # Strip JS variable assignment: `var rx_list = [...]` or JSONP wrapper
     text = re.sub(r'^var\s+\w+\s*=\s*', '', text).rstrip(';').strip()
-    # Quote unquoted object keys: { key: → { "key":
-    text = re.sub(r'(?<=[{,])\s*([a-zA-Z_]\w*)\s*:', r' "\1":', text)
-    # Remove trailing commas before closing brackets
+
+    # Clean garbage after 'bands' comma on specific corrupted lines (e.g. line 4134)
+    text = re.sub(r'("bands"\s*:\s*"[^"]+"\s*),.*$', r'\1,', text, flags=re.MULTILINE)
+
+    # Remove trailing commas before closing brackets to fix JSON errors
     text = re.sub(r',\s*([}\]])', r'\1', text)
 
     try:
@@ -124,20 +128,33 @@ def _extract_node(entry: dict) -> Optional[KiwiNode]:
     """Extract a KiwiNode from a directory entry dict. Returns None if incomplete."""
     try:
         host = (entry.get("host") or entry.get("hostname") or "").strip()
+        port = int(entry.get("port", 8073))
+
+        if not host and "url" in entry:
+            m = re.match(r'https?://([^/:]+)(?::(\d+))?', entry.get("url", ""))
+            if m:
+                host = m.group(1).strip()
+                if m.group(2):
+                    port = int(m.group(2))
+
         if not host:
             return None
         # Sanitise: only allow valid hostname characters
         if not re.fullmatch(r'[a-zA-Z0-9._-]+', host):
             return None
 
-        port = int(entry.get("port", 8073))
-
-        # GPS coordinates — may be nested as {lat, lon} under 'gpsd' or at top level
+        # GPS coordinates — may be nested as {lat, lon} under 'gpsd' or at top level String "(51.3, -2.9)"
         gps = entry.get("gpsd") or entry.get("gps") or {}
+        lat, lon = 0.0, 0.0
         if isinstance(gps, dict):
             lat = float(gps.get("lat", 0))
             lon = float(gps.get("lon", 0))
-        else:
+        elif isinstance(gps, str):
+            m = re.match(r'\(([-\d.]+),\s*([-\d.]+)\)', gps)
+            if m:
+                lat, lon = float(m.group(1)), float(m.group(2))
+
+        if lat == 0.0 and lon == 0.0:
             lat = float(entry.get("lat", 0))
             lon = float(entry.get("lon", 0))
 
@@ -173,10 +190,10 @@ def _regex_fallback(raw: str) -> list[KiwiNode]:
     nodes: list[KiwiNode] = []
     for block in re.finditer(r'\{[^{}]+\}', raw):
         chunk = block.group()
-        host_m = re.search(r'"(?:host|hostname)"\s*:\s*"([^"]+)"', chunk)
-        lat_m  = re.search(r'"lat"\s*:\s*([-\d.]+)', chunk)
-        lon_m  = re.search(r'"lon"\s*:\s*([-\d.]+)', chunk)
-        port_m = re.search(r'"port"\s*:\s*(\d+)', chunk)
+        host_m = re.search(r'"?(?:host|hostname)"?\s*:\s*"([^"]+)"', chunk)
+        lat_m  = re.search(r'"?lat"?\s*:\s*([-\d.]+)', chunk)
+        lon_m  = re.search(r'"?lon"?\s*:\s*([-\d.]+)', chunk)
+        port_m = re.search(r'"?port"?\s*:\s*(\d+)', chunk)
         if host_m and lat_m and lon_m:
             try:
                 nodes.append(KiwiNode(

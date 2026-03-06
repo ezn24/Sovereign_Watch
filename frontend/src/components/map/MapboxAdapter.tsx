@@ -1,5 +1,5 @@
 import { forwardRef, useRef, useEffect } from 'react';
-import { Map, useControl, MapRef } from 'react-map-gl/mapbox';
+import { Map, useControl, MapRef, AttributionControl } from 'react-map-gl/mapbox';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { MapAdapterProps } from './mapAdapterTypes';
 
@@ -76,11 +76,13 @@ const MapboxAdapter = forwardRef<MapRef, MapAdapterProps & { mapboxAccessToken?:
             onClick={onClick}
             antialias={true}
             projection={globeMode ? 'globe' : 'mercator'}
+            attributionControl={false}
             // Apply Standard Style config at init time to eliminate visual flash
             config={{
                 basemap: BASEMAP_CONFIG
             }}
         >
+            <AttributionControl compact={true} position="bottom-right" />
             {(() => {
                 const { key: deckKey, ...restDeckProps } = (deckProps as any);
                 return <DeckGLOverlay key={deckKey} {...restDeckProps} />;

@@ -28,10 +28,10 @@ export const MissionNavigator: React.FC<MissionNavigatorProps> = ({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="bg-black/40 backdrop-blur-md border border-hud-green/20 rounded shadow-lg">
+    <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)] overflow-hidden">
       {/* Header */}
       <button
-        className="w-full text-left px-3 py-2 bg-gradient-to-b from-hud-green/10 to-transparent border-b border-hud-green/20 cursor-pointer focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
+        className="w-full text-left px-3 py-2 bg-white/5 border-b border-white/10 cursor-pointer focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
         onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}
         aria-controls="mission-navigator-content"

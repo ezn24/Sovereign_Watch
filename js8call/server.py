@@ -47,6 +47,13 @@ import uvicorn
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("js8bridge")
+
 # Native KiwiSDR client modules (Phase 2 / Phase 1)
 try:
     from kiwi_client import KiwiClient
@@ -62,11 +69,7 @@ except ImportError as _ie:
 # pyjs8call has been removed and replaced with a native AsyncIO DatagramProtocol 
 # to mitigate the Qt headless socket thread crash bug on the TCP API.
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
-logger = logging.getLogger("js8bridge")
+# (logger and logging already initialized above)
 
 # ---------------------------------------------------------------------------
 # Configuration (read from environment; Dockerfile sets sensible defaults)

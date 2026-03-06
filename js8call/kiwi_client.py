@@ -178,7 +178,12 @@ class KiwiClient:
 
     @property
     def is_connected(self) -> bool:
-        return self._ws is not None and not self._ws.closed
+        if self._ws is None:
+            return False
+        state = getattr(self._ws, "state", None)
+        if state is not None:
+            return state.name == "OPEN"
+        return not getattr(self._ws, "closed", True)
 
     @property
     def config(self) -> dict:
@@ -243,7 +248,7 @@ class KiwiClient:
         try:
             while True:
                 await asyncio.sleep(KEEPALIVE_INTERVAL)
-                if self._ws and not self._ws.closed:
+                if self.is_connected:
                     await self._ws.send("SET keepalive")
         except asyncio.CancelledError:
             raise

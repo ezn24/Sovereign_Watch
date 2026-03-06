@@ -1,4 +1,5 @@
 import React from 'react';
+import { Crosshair } from 'lucide-react';
 
 interface AltitudeLegendProps {
     visible: boolean;
@@ -23,12 +24,19 @@ export const AltitudeLegend: React.FC<AltitudeLegendProps> = ({ visible }) => {
     )`;
 
     return (
-        <div className="absolute left-[405px] top-[72px] z-10 w-[90px] pointer-events-none select-none flex flex-col gap-1 items-start bg-black/40 backdrop-blur-sm p-2 rounded border border-white/10 animate-in fade-in slide-in-from-top-4 duration-500">
-            <span className="text-[9px] font-bold tracking-[0.2em] text-white/50 uppercase ml-0.5 mb-1">ALTITUDE</span>
-            <div className="flex gap-2 h-48">
+        <div className="absolute left-[395px] top-[97px] z-10 w-[110px] pointer-events-none select-none flex flex-col bg-black/40 backdrop-blur-md border border-white/10 rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)] overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+            {/* Header */}
+            <div className="px-3 py-2 bg-white/5 border-b border-white/10 flex items-center gap-2">
+                <Crosshair size={12} className="text-hud-green/60" />
+                <span className="text-[10px] text-hud-green/80 uppercase font-bold tracking-wider">
+                    Altitude
+                </span>
+            </div>
+
+            <div className="p-3 flex gap-2 h-48 items-start">
                 {/* Gradient Bar */}
                 <div 
-                    className="w-2 h-full rounded-full shadow-inner border border-white/10"
+                    className="w-2 h-full rounded-full shadow-inner border border-white/10 shrink-0"
                     style={{ background: gradient, backgroundRepeat: 'no-repeat' }}
                 />
 

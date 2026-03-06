@@ -1,6 +1,12 @@
 -- Enable Extensions
 CREATE EXTENSION IF NOT EXISTS timescaledb;
-ALTER EXTENSION timescaledb UPDATE;
+DO $$
+BEGIN
+    ALTER EXTENSION timescaledb UPDATE;
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Could not update timescaledb extension during init (%), will be retried at backend startup.', SQLERRM;
+END;
+$$;
 CREATE EXTENSION IF NOT EXISTS postgis;
 -- vectorscale might need to be created as 'vector' first if vectorscale depends on it, 
 -- but usually timescaledb-ha images have them. 

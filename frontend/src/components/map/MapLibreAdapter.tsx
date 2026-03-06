@@ -1,5 +1,5 @@
 import { forwardRef, useRef, useEffect } from 'react';
-import { Map, useControl, MapRef } from 'react-map-gl/maplibre';
+import { Map, useControl, MapRef, AttributionControl } from 'react-map-gl/maplibre';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { MapAdapterProps } from './mapAdapterTypes';
 
@@ -60,7 +60,9 @@ const MapLibreAdapter = forwardRef<MapRef, MapAdapterProps>((props, ref) => {
             onClick={onClick}
             antialias={true}
             projection={globeMode ? { type: 'globe' } : { type: 'mercator' }}
+            attributionControl={false}
         >
+            <AttributionControl compact={true} position="bottom-right" />
             {(() => {
                 const { key: deckKey, ...restDeckProps } = (deckProps as any);
                 return <DeckGLOverlay key={deckKey} {...restDeckProps} />;

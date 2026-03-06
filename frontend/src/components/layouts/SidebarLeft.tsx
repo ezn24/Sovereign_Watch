@@ -43,7 +43,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
   sendMessage = () => { },
 }) => {
   return (
-    <div className="flex flex-col h-full gap-4 animate-in fade-in duration-1000">
+    <div className="flex flex-col h-full p-4 gap-4 animate-in fade-in duration-1000 overflow-y-auto overflow-x-hidden">
       {/* Search Widget */}
       {mapActions && (
         <SearchWidget
@@ -63,14 +63,16 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
         />
       )}
 
-      {/* 2. System Intelligence Feed */}
-      <IntelFeed
-        events={events}
-        onEntitySelect={onEntitySelect}
-        mapActions={mapActions}
-        filters={filters}
-        onFilterChange={onFilterChange}
-      />
+      {/* 2. System Intelligence Feed - Takes remaining space */}
+      <div className="flex-1 min-h-[300px] overflow-hidden flex flex-col">
+        <IntelFeed
+          events={events}
+          onEntitySelect={onEntitySelect}
+          mapActions={mapActions}
+          filters={filters}
+          onFilterChange={onFilterChange}
+        />
+      </div>
 
       {/* 3. JS8Call / HF Radio */}
       <JS8Widget

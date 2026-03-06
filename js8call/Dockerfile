@@ -168,7 +168,8 @@ RUN pip3 install --no-cache-dir \
     fastapi \
     "uvicorn[standard]" \
     pyjs8call \
-    websockets
+    websockets \
+    aiohttp
 
 # -----------------------------------------------------------------------------
 # PulseAudio configuration: disable hardware detection
@@ -215,6 +216,8 @@ RUN printf '# Sovereign Watch – PulseAudio daemon settings for headless contai
 # -----------------------------------------------------------------------------
 WORKDIR /app
 COPY server.py /app/server.py
+COPY kiwi_client.py /app/kiwi_client.py
+COPY kiwi_directory.py /app/kiwi_directory.py
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

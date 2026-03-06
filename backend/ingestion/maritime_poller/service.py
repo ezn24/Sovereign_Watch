@@ -157,10 +157,18 @@ class MaritimePollerService:
         logger.info(f"🌊 Connecting to AISStream.io with bbox: {bbox}")
 
         try:
-            self.ws = await websockets.connect("wss://stream.aisstream.io/v0/stream")
+            self.ws = await websockets.connect(
+                "wss://stream.aisstream.io/v0/stream",
+                open_timeout=30,
+                ping_interval=20,
+                ping_timeout=20
+            )
             await self.ws.send(json.dumps(subscription_message))
             logger.info("✅ AISStream.io connection established")
             return True
+        except asyncio.TimeoutError:
+            logger.error("❌ AISStream.io connection timed out during handshake")
+            return False
         except Exception as e:
             logger.error(f"❌ Failed to connect to AISStream.io: {e}")
             return False

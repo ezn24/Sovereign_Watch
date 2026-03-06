@@ -25,7 +25,7 @@ export const LayerFilters: React.FC<LayerFiltersProps> = ({ filters, onFilterCha
   const [satExpanded, setSatExpanded] = useState(false);
 
   return (
-    <div className="flex flex-col rounded-sm border border-tactical-border bg-black/40 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden relative">
+    <div className="flex flex-col overflow-hidden relative bg-black/40 backdrop-blur-md border border-white/10 rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
       <div className="flex flex-col gap-2 p-3">
         {/* Aircraft Filter Group */}
         <div className="flex flex-col gap-1">

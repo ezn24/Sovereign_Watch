@@ -1,3 +1,34 @@
+## [0.18.0] - 2026-03-06
+
+### Added
+
+- **Nginx Reverse Proxy:** All services now route through a single nginx entry point on **port 80**. The `sovereign-nginx` container proxies `/api/` to the backend, `/ws/js8` to the JS8Call WebSocket bridge, and `/` to the Vite frontend. No other container exposes host ports.
+- **KiwiSDR Public Directory Search:** Integrated a new `KiwiDirectory` module in the `js8call` service to fetch and parse the global KiwiSDR receiver list. Features proximity-sorting using Haversine distance and frequency-based filtering to select the optimal SDR node for tactical operations.
+
+### Changed
+
+- **Port Consolidation:** Removed host port mappings from `frontend` (3700), `backend-api` (8000), `js8call` (8082), `timescaledb` (5432), `redis` (6379), and `redpanda` (28081/28082/29092). All inter-service communication routed exclusively over Docker internal networks.
+- **Vite Configuration:** Removed the `/api` proxy block (nginx now handles API routing). Set `hmr.clientPort: 80` so Vite HMR WebSocket tunnels correctly through nginx. Set `allowedHosts: true` to allow proxied requests from nginx.
+- **Frontend Port:** Vite dev server moved from port 3000 → 3700.
+- **Sidebar Glassmorphism Restoration**: Reverted to individual glass containers for each sidebar widget (`Search`, `Mission Navigator`, `Intel Feed`, `JS8`, `Layer Filters`, `System Status`) to restore visual separation and tactical depth.
+- **Shadow Refinement**: Toned down the global drop shadow blur from `30px` to `12px` across all glass widgets for a cleaner, high-end aesthetic.
+- **Search Widget Enhancement**: Boosted text prominence in the search input using `text-cyan-300`, increased placeholder opacity, and added a subtle cyan outer glow on focus for better interactivity.
+- **Tactical Legend Restyling**: Redesigned the `Altitude` and `Maritime` map legends to match the **Mission Navigator** widget's visual language, featuring a header/body structure, `hud-green` tactical typography, and dedicated `Crosshair`/`Anchor` icons.
+- **Legend Alignment**: Precisely aligned the map legends to the vertical gutter right of the tactical sidebar to optimize map real estate.
+- **JS8Call Backend Architecture:** Replaced the legacy `pyjs8call` bridge with a native **AsyncIO DatagramProtocol** (UDP) implementation to permanently resolve the Qt headless socket thread crash bug on Windows-based hosts.
+- **Radio Terminal Styling**: Refined frequency input fields and terminal sidebars with glassmorphism principles.
+
+### Fixed
+
+- **Database Initialization (`init.sql`):** Wrapped `ALTER EXTENSION timescaledb UPDATE` and `CREATE EXTENSION ai` in `DO $$ ... EXCEPTION ... $$` blocks to prevent fatal errors from aborting the init script on fresh volumes. The `ai` extension is unavailable in `timescale/timescaledb-ha:pg16` and the `ALTER EXTENSION` call requires a fresh session context.
+- **Idempotent DB Policies:** Added `if_not_exists => true` to `add_compression_policy` and `add_retention_policy` calls in `init.sql` to prevent errors on repeated initializations.
+- **JS8Call Bridge Startup:** Fixed a `NameError` in `js8call/server.py` caused by the `logger` variable being used before initialization inside the `kiwi_client` import exception handler. Moved `logging.basicConfig` and `logger` declaration above the `try/except` block.
+- **CORS (Backend & JS8Call):** Updated `ALLOWED_ORIGINS` to `http://localhost` for both `backend-api` and `js8call` services. With nginx as the single entry point, all browser requests originate from one host — eliminating cross-origin errors.
+
+### Removed
+
+- **Redpanda Console:** Removed the `sovereign-redpanda-console` service. It was a development debugging tool that served no runtime function and conflicts with the single-port architecture. Can be re-added temporarily via `docker compose run` when Kafka topic inspection is needed.
+
 ## [0.17.2] - 2026-03-04
 
 ### Added

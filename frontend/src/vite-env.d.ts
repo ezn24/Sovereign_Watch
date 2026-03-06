@@ -9,6 +9,10 @@ interface ImportMetaEnv {
   readonly VITE_COVERAGE_RADIUS_NM: string;
   readonly VITE_ENABLE_3D_TERRAIN: string;
   readonly VITE_JS8_WS_URL: string;
+  readonly VITE_JS8_BASE_URL: string;
+  readonly VITE_KIWI_HOST: string;
+  readonly VITE_KIWI_PORT: string;
+  readonly VITE_KIWI_FREQ: string;
 }
 
 interface ImportMeta {

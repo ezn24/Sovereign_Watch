@@ -94,8 +94,8 @@ export const IntelFeed = ({ events, onEntitySelect, mapActions, filters, onFilte
     }, [onEntitySelect, mapActions]);
 
     return (
-        <div className="flex flex-1 flex-col min-h-0 rounded-sm border border-tactical-border bg-black/40 backdrop-blur-md shadow-inner overflow-hidden">
-            <div className="flex items-center justify-between border-b border-tactical-border bg-white/5 px-3 py-2">
+        <div className="flex flex-1 flex-col min-h-0 overflow-hidden bg-black/40 backdrop-blur-md border border-white/10 rounded-sm shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-3 py-2">
                 <h3 className="text-mono-xs font-bold uppercase tracking-[0.2em] text-hud-green/70 flex items-center gap-2 mr-auto">
                     <Radio size={12} className="animate-pulse text-hud-green" />
                     Intelligence Stream
@@ -147,7 +147,7 @@ export const IntelFeed = ({ events, onEntitySelect, mapActions, filters, onFilte
             </div>
 
             {showFilters && filters && onFilterChange && (
-                <div className="border-b border-tactical-border bg-black/60 p-3 max-h-[50vh] overflow-y-auto">
+                <div className="border-b border-white/10 bg-black/60 p-3 max-h-[50vh] overflow-y-auto">
                     <LayerFilters filters={filters} onFilterChange={onFilterChange} />
                 </div>
             )}
