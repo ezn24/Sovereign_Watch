@@ -141,17 +141,17 @@ The frontend is the "Single Pane of Glass" for the analyst.
 | **Audit-01**   | Code Review             | Security  | **DONE** (v0.13.0). 20 bugs resolved across frontend and backend.                             |
 | **FE-28**      | Satellite Dashboard Shell | Frontend | **DONE** (v0.18.0). `OrbitalDashboard` view mode, `OrbitalSidebarLeft`, ORBITAL pill in TopBar. |
 | **FE-29**      | Terminator Layer (Day/Night) | Frontend | **DONE** (v0.18.0). `TerminatorLayer.tsx` renders solar terminator using `suncalc`. |
-| **FE-30**      | Satellite Telemetry Widgets | Frontend | **DONE** (v0.18.0). `DopplerWidget.tsx`, `PolarPlotWidget.tsx`, `PassPredictorWidget.tsx` — UI shells complete. ⚠️ Backend wiring incomplete — see GAP-01. |
+| **FE-30**      | Satellite Telemetry Widgets | Frontend | **DONE** (v0.18.0). `DopplerWidget.tsx`, `PolarPlotWidget.tsx`, `PassPredictorWidget.tsx` — fully wired to live pass prediction API. |
 | **FE-31**      | Orbital Category Pills | Frontend | **DONE** (v0.18.0). `OrbitalCategoryPills.tsx`: GPS/COMMS/WEATHER/ISR/LEO/SAR filter pills. |
 | **Ingest-03a** | Celestrak Expanded Groups | Data Eng | **DONE** (v0.18.0). 20 ingestion categories, `tle_line1`/`tle_line2`/`eccentricity` in payload. |
 | **Infra-03**   | KiwiSDR Radio Integration | Frontend/Backend | **DONE** (v0.18.0, PR #74). `JS8Widget.tsx`, KiwiSDR TCP bridge, bearing layer visualization. |
 | **Security-01** | DoS Prevention        | Backend  | **DONE** (v0.17.x, PR #73). Input length limits, rate limiting hardening. |
+| **Backend-06** | Orbital Pass Prediction API | Backend + Frontend | **DONE** (v0.18.x). `satellites` table, Historian TLE upsert, `routers/orbital.py` (`/api/orbital/passes`, `/api/orbital/groundtrack`), `sgp4_utils.py`, `usePassPredictions` hook, fully wired to `PassPredictorWidget`/`DopplerWidget`/`PolarPlotWidget`. |
 
 ### Next Priority (P0–P1)
 
 | ID             | Task Name               | Component | Description                                                                                                                                                             |
 | :------------- | :---------------------- | :-------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **GAP-01**     | **Orbital Pass Prediction API** | Backend + Frontend | **(P0 — CRITICAL)**. `PassPredictorWidget`, `DopplerWidget`, and `PolarPlotWidget` UI shells are complete but non-functional. Backend API not implemented. Requires: (1) `satellites` DB table, (2) Historian TLE upsert, (3) `routers/orbital.py` with `/api/orbital/passes`, (4) `usePassPredictions` hook, (5) wire into `OrbitalSidebarLeft`. Full plan: `docs/tasks/2026-03-04-orbital-pass-prediction-overhaul.md`. |
 | **Fix-01**     | **CoT Tracking**        | Frontend  | **(P1)**. Validate Cursor-on-Target event tracking end-to-end after v0.13.0 refactors. |
 | **FE-22**      | Drone Tactical Layer    | Frontend  | **(P1)**. `DroneLayer.tsx` with rotor icon, drone_class color coding, military/commercial/civil sub-filters. Classifier already complete (Ingest-07a). Pure frontend gap. |
 | **FE-27**      | Repeater Mode Sub-Filters | Frontend | **(P1)**. Expandable REPEATERS section with FM/P25/DMR/D-Star/Fusion/Open sub-toggles. Data already in RepeaterBook API — frontend-only change to `LayerFilters.tsx`. |
@@ -200,7 +200,7 @@ The frontend is the "Single Pane of Glass" for the analyst.
 
 See `docs/GAP_ANALYSIS_2026-03-06.md` for a full automated code review against this roadmap, including:
 - Completed features not previously tracked (FE-28 through Infra-03a)
-- Critical partial implementations (GAP-01: Orbital Pass Prediction)
+- Confirmed completed features that planning docs described as pending (orbital pass prediction fully shipped)
 - Prioritized next steps and health assessment by domain
 
 ---

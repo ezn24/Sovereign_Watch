@@ -36,33 +36,11 @@ The following features were implemented after the last roadmap update and are mi
 
 ---
 
-## 2. Partially Implemented Features (Critical Gaps)
+## 2. Partially Implemented Features
 
-These features are visually present in the UI but have broken or missing backend wiring:
+> **Correction note:** An earlier draft of this document incorrectly flagged Orbital Pass Prediction (GAP-01) as a critical gap. Post-review verification confirms all components are fully implemented and operational — `satellites` table, Historian TLE upsert, `routers/orbital.py`, `sgp4_utils.py`, and `usePassPredictions.ts` all exist, and the feature is confirmed working in production (upcoming passes, Doppler shift, and polar plot all load). The `docs/tasks/2026-03-04-orbital-pass-prediction-overhaul.md` file is a planning artifact for work that has since been completed.
 
-### GAP-01: Orbital Pass Prediction API (CRITICAL)
-
-**Symptoms:** `PassPredictorWidget`, `DopplerWidget`, and `PolarPlotWidget` all render empty or static data.
-
-**Root cause (documented in `docs/tasks/2026-03-04-orbital-pass-prediction-overhaul.md`):**
-- The `satellites` table does **not exist** in `backend/db/init.sql`
-- The Historian does **not upsert** TLE data from `orbital_raw` Kafka messages
-- `GET /api/orbital/passes` endpoint is **not implemented** (route file `backend/api/routers/orbital.py` missing)
-- `usePassPredictions` hook is **not connected** to a real API — `PassPredictorWidget` renders empty pass list
-
-**Impact:** The entire Orbital Dashboard satellite-tracking intelligence layer is non-functional for pass prediction, Doppler, and polar plot features.
-
-**Required work (6-phase plan documented in task file):**
-1. Add `satellites` table to `backend/db/init.sql`
-2. Add TLE upsert to `backend/api/services/historian.py`
-3. Create `backend/api/routers/orbital.py` with `/api/orbital/passes` + `/api/orbital/groundtrack/{norad_id}`
-4. Create `backend/api/utils/sgp4_utils.py` with TEME/ECEF/topocentric helpers
-5. Create `frontend/src/hooks/usePassPredictions.ts` polling hook
-6. Wire hook into `OrbitalSidebarLeft.tsx` → `PassPredictorWidget`, `DopplerWidget`, `PolarPlotWidget`
-
----
-
-### GAP-02: Repeater Sub-Filter UI (FE-27)
+### GAP-01 (Renumbered): Repeater Sub-Filter UI (FE-27)
 
 **Symptoms:** `LayerFilters.tsx` has a REPEATERS toggle but **no mode sub-filters** (FM / P25 / DMR / D-Star / Fusion / Open).
 
@@ -70,7 +48,7 @@ These features are visually present in the UI but have broken or missing backend
 
 ---
 
-### GAP-03: CoT Tracking Restoration (Fix-01)
+### GAP-02: CoT Tracking Restoration (Fix-01)
 
 **Symptoms:** Cursor-on-Target protocol event tracking has not been verified after the v0.13.0 code audit refactors.
 
@@ -140,12 +118,7 @@ Full RF infrastructure expansion and UX features. None of these have any code:
 
 ### Immediate (Sprint 1)
 
-1. **GAP-01 — Orbital Pass Prediction API** *(highest impact)*
-   - The satellite dashboard UI is complete but entirely non-functional for pass prediction.
-   - Implement the 6-phase plan in `docs/tasks/2026-03-04-orbital-pass-prediction-overhaul.md`.
-   - Estimated: 4–6 backend files, 3 frontend files, no new dependencies.
-
-2. **FE-22 — Drone Tactical Layer**
+1. **FE-22 — Drone Tactical Layer**
    - Classification is already done. This is a pure frontend gap.
    - Create `DroneLayer.tsx` with rotor icon, drone_class color coding, and sub-filters in `LayerFilters.tsx`.
 
@@ -155,7 +128,7 @@ Full RF infrastructure expansion and UX features. None of these have any code:
 
 ### Near-Term (Sprint 2)
 
-4. **Fix-01 — CoT Tracking Validation**
+3. **Fix-01 — CoT Tracking Validation**
    - Run end-to-end validation with a CoT client to confirm event tracking still works after v0.13.0 refactors.
 
 5. **FE-25a — NOAA Weather Radio Layer**
@@ -179,7 +152,7 @@ Full RF infrastructure expansion and UX features. None of these have any code:
 |:-------|:-------|:------|
 | **Aviation (ADS-B)** | ✅ Fully Operational | Multi-source, arbitration, drone classification |
 | **Maritime (AIS)** | ✅ Fully Operational | WebSocket, 11 vessel categories, DAM |
-| **Orbital (Satellites)** | ⚠️ Partially Operational | Live tracking works; pass prediction UI non-functional |
+| **Orbital (Satellites)** | ✅ Fully Operational | Live tracking, pass prediction, Doppler, polar plot all working |
 | **Submarine Cables** | ✅ Fully Operational | GeoJson + landing stations |
 | **RF Repeaters** | ⚠️ Missing Sub-Filters | Data available, UI filter missing |
 | **JS8Call / KiwiSDR** | ✅ Fully Operational | Merged v0.18.x |
