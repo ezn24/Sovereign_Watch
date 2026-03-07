@@ -13,7 +13,7 @@
 
   <p align="center">
     <em>A self-hosted, edge-to-cloud intelligence platform for high-velocity telemetry (ADS-B, AIS, Orbital) and OSINT fusion.</em><br/>
-    <em>It enforces data sovereignty by running entirely on local hardware, utilizing a "Pulse" architecture and "Tiered AI" cognition.</em>
+    <em>It enforces data sovereignty by running on local hardware, utilizing a "Pulse" architecture and "Tiered AI" cognition.</em>
   </p>
 </div>
 
