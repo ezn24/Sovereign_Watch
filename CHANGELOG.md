@@ -1,4 +1,21 @@
+## [0.20.0] - 2026-03-07
+
+### Added
+
+- **AI Engine Widget**: New `AIEngineWidget` component in the TopBar exposing a live model-selection dropdown, letting operators switch between AI backends (GPT-4o, Gemini, Claude, etc.) at runtime without restarting any service.
+- **ADSB Military & Drone Alerts**: The alert engine now fires **one-time** tactical alerts when a military aircraft or drone/UAS first appears in the AOR — matching the existing maritime military vessel alert behavior and completing alert parity across all three tracked domains.
+
+### Fixed
+
+- **Orbital Parameters in Right Sidebar (Period & Inclination)**: Corrected camelCase property access after protobuf compilation. `period_min` → `periodMin` and `inclination_deg` → `inclinationDeg` were being read with snake_case names, causing PERIOD and INC to always show "---" in the entity inspector. Now displays live values correctly.
+- **Protobuf Schema Sync**: Added `period_min`, `inclination_deg`, and `eccentricity` fields to both `backend/api/proto/tak.proto` and `frontend/public/tak.proto`, and updated `tak_pb2.py` and `tak.py` serialization to populate them from the orbital data stream.
+- **AIS Poller Reconnection Churn**: The maritime AIS poller was reconnecting to AISStream.io on every Redis mission-area pub/sub message, causing a cascade of connection timeouts whenever the user rapidly clicked radius presets (30 nm → 100 nm → 150 nm). Fixed with two defenses:
+  - **Minimum-change threshold** — ignores updates where lat/lon changes < 0.05° and radius changes < 1 nm, filtering out floating-point drift and same-value re-selections.
+  - **5-second debounce** — rapid preset clicks now collapse into a single reconnect once the user stops interacting.
+- **AIS Vessel Registration Display**: Extended the right sidebar to surface AIS-specific vessel registration fields (IMO, callsign, flag, draught, destination) when inspecting a maritime contact.
+
 ## [0.19.0] - 2026-03-07
+
 
 ### Added
 
