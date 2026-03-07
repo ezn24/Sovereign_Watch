@@ -36,7 +36,7 @@ The maritime AIS poller no longer floods AISStream.io with rapid reconnection at
 | `frontend/src/components/widgets/AIEngineWidget.tsx` | New widget — runtime AI model selector |
 | `frontend/src/components/layouts/TopBar.tsx` | Integrated `AIEngineWidget` into top bar |
 | `frontend/src/hooks/useEntityWorker.ts` | ADSB military/drone one-time alert logic; `periodMin`/`inclinationDeg` fix |
-| `frontend/src/components/layouts/SidebarRight.tsx` | `periodMin`/`inclinationDeg` property access fix |
+| `frontend/src/components/layouts/SidebarRight.tsx` | `periodMin`/`inclinationDeg` fix; compact orbital info line; NORAD ID in registration badge |
 | `backend/api/proto/tak.proto` | Added `period_min`, `inclination_deg`, `eccentricity` fields |
 | `frontend/public/tak.proto` | Synced with backend proto |
 | `backend/api/proto/tak_pb2.py` | Regenerated compiled proto |

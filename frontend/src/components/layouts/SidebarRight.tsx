@@ -646,33 +646,25 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
             {/* Vessel Info Box */}
             {/* Satellite Info Box */}
             {isSat && entity.detail ? (
-              <section className="border-l-2 border-l-white/20 pl-3 py-1 mb-2 space-y-0.5">
-                <h3 className="text-mono-sm font-bold text-white/90">
-                  {String(entity.detail.category || 'ORBITAL ASSET').toUpperCase()}
-                </h3>
-                <div className="flex flex-col gap-0.5 text-[10px] text-white/60">
-                  <div className="flex gap-2">
-                    <span className="text-white/30 w-16">NORAD ID:</span>
-                    <span className="text-white/80">
-                      {entity.detail.norad_id
-                        ? String(entity.detail.norad_id)
-                        : entity.uid?.replace?.(/^SAT-/i, '') || '—'}
-                    </span>
-                  </div>
-                  {entity.detail.inclination_deg != null && (
-                    <div className="flex gap-2">
-                      <span className="text-white/30 w-16">Incl:</span>
-                      <span className="text-purple-300/80">{Number(entity.detail.inclination_deg).toFixed(2)}°</span>
-                    </div>
-                  )}
-                  {entity.detail.eccentricity != null && (
-                    <div className="flex gap-2">
-                      <span className="text-white/30 w-16">Ecc:</span>
-                      <span className="text-white/70">{Number(entity.detail.eccentricity).toFixed(5)}</span>
-                    </div>
-                  )}
+              <section className="border-l-2 border-l-white/20 pl-3 py-1 mb-2">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <h3 className="text-mono-sm font-bold text-white/90 shrink-0">
+                    {String(entity.detail.category || 'ORBITAL ASSET').toUpperCase()}
+                  </h3>
+                  <span className="text-[10px] text-white/40 font-mono">
+                    #{entity.detail.norad_id
+                      ? String(entity.detail.norad_id)
+                      : entity.uid?.replace?.(/^SAT-/i, '') || '—'}
+                    {entity.detail.inclinationDeg != null && (
+                      <> · <span className="text-purple-300/80">{Number(entity.detail.inclinationDeg).toFixed(1)}°</span></>
+                    )}
+                    {entity.detail.eccentricity != null && (
+                      <> · <span className="text-white/50">e={Number(entity.detail.eccentricity).toFixed(4)}</span></>
+                    )}
+                  </span>
                 </div>
               </section>
+
             ) : isShip && entity.vesselClassification ? (
               <section className="border-l-2 border-l-white/20 pl-3 py-1 mb-2 space-y-0.5">
                 <h3 className="text-mono-sm font-bold text-white/90">
@@ -734,7 +726,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
             <span className="text-[8px] text-white/30 uppercase font-bold tracking-tight">REGISTRATION</span>
             <span className="text-mono-xs font-bold truncate text-white">
               {isSat
-                ? String(entity.detail?.category || 'ORBITAL').toUpperCase()
+                ? `NORAD ${entity.detail?.norad_id ?? entity.uid?.replace?.(/^SAT-/i, '') ?? '—'}`
                 : (isShip && entity.vesselClassification?.imo)
                   ? `IMO ${entity.vesselClassification.imo}`
                   : entity.classification?.registration || 'N/A'}

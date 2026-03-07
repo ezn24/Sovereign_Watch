@@ -13,6 +13,8 @@
   - **Minimum-change threshold** — ignores updates where lat/lon changes < 0.05° and radius changes < 1 nm, filtering out floating-point drift and same-value re-selections.
   - **5-second debounce** — rapid preset clicks now collapse into a single reconnect once the user stops interacting.
 - **AIS Vessel Registration Display**: Extended the right sidebar to surface AIS-specific vessel registration fields (IMO, callsign, flag, draught, destination) when inspecting a maritime contact.
+- **Orbital Registration Badge**: The REGISTRATION field in the entity info bar now shows the NORAD catalog number (e.g. "NORAD 52794") for orbital targets instead of the orbital category type string (e.g. "GPS").
+- **Orbital Sidebar Compacted**: Collapsed the 3-row NORAD ID / Inclination / Eccentricity block into a single inline line beneath the callsign, saving significant vertical space in the inspector panel.
 
 ## [0.19.0] - 2026-03-07
 
