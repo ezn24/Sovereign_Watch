@@ -1099,7 +1099,7 @@ async def get_kiwi_nodes(freq: float = None, limit: int = 10, radius_km: float =
     if _kiwi_directory is None:
         return []
     target_freq = float(freq) if freq is not None else float(KIWI_FREQ)
-    limit = max(1, min(limit, 50))
+    limit = max(1, min(limit, 10000))
     my_lat, my_lon = maidenhead_to_latlon(MY_GRID)
     nodes = _kiwi_directory.get_nodes(target_freq, my_lat, my_lon, limit=limit, max_distance_km=radius_km)
     return [n.to_dict() for n in nodes]

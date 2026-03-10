@@ -26,8 +26,7 @@ import {
   Server,
   X,
 } from "lucide-react";
-import { Map, Marker, Popup } from "react-map-gl/maplibre";
-import { Source, Layer } from "react-map-gl";
+import { Map, Marker, Popup, Source, Layer, NavigationControl } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { KiwiNode } from "../../types";
 import { useKiwiNodes } from "../../hooks/useKiwiNodes";
@@ -157,20 +156,27 @@ export default function KiwiNodeBrowser({
   operatorGrid,
 }: Props) {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
-  const [radiusInput, setRadiusInput] = useState<string>("");
+  const [radiusMode, setRadiusMode] = useState<"mission" | "regional" | "global">("mission");
   const [showManual, setShowManual] = useState(false);
   const [selectedNode, setSelectedNode] = useState<KiwiNode | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const radiusKm = useMemo(() => {
-    const n = parseFloat(radiusInput);
-    return isFinite(n) && n > 0 ? n : undefined;
-  }, [radiusInput]);
+    if (radiusMode === "regional") return 2000;
+    return undefined;
+  }, [radiusMode]);
+
+  const nodeLimit = useMemo(() => {
+    if (radiusMode === "global") return 10000;
+    if (radiusMode === "regional") return 500;
+    return 50; // mission
+  }, [radiusMode]);
 
   const { nodes, loading, error, refetch } = useKiwiNodes(
     currentFreqKhz,
     isOpen,
     radiusKm,
+    nodeLimit
   );
 
   const [operatorLat, operatorLon] = useMemo(
@@ -268,25 +274,40 @@ export default function KiwiNodeBrowser({
       {/* ── Radius filter bar ── */}
       <div className="flex items-center gap-2 px-4 py-2 bg-slate-950/60 border-b border-slate-800">
         <span className="text-[10px] text-slate-500 uppercase tracking-wider">
-          Radius
+          Coverage
         </span>
-        <input
-          type="number"
-          min={1}
-          value={radiusInput}
-          onChange={(e) => setRadiusInput(e.target.value)}
-          placeholder="all distances"
-          className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 font-mono text-xs text-slate-300 w-32 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600"
-        />
-        <span className="text-[10px] text-slate-500">km</span>
-        {radiusInput && (
+        <div className="flex bg-slate-900 rounded p-0.5 border border-slate-800">
           <button
-            onClick={() => setRadiusInput("")}
-            className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors"
+            onClick={() => setRadiusMode("mission")}
+            className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
+              radiusMode === "mission" 
+                ? "bg-indigo-500/20 text-indigo-400" 
+                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            }`}
           >
-            clear
+            Mission Area
           </button>
-        )}
+          <button
+            onClick={() => setRadiusMode("regional")}
+            className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
+              radiusMode === "regional" 
+                ? "bg-indigo-500/20 text-indigo-400" 
+                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            }`}
+          >
+            Regional
+          </button>
+          <button
+            onClick={() => setRadiusMode("global")}
+            className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors ${
+              radiusMode === "global" 
+                ? "bg-indigo-500/20 text-indigo-400" 
+                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+            }`}
+          >
+            Global
+          </button>
+        </div>
       </div>
 
       {/* ── Active connection status bar ── */}
@@ -512,6 +533,7 @@ export default function KiwiNodeBrowser({
                 offset={12}
                 onClose={() => setSelectedNode(null)}
                 closeButton={false}
+                className="kiwi-node-popup" // Add this class to target in CSS
               >
                 <div className="bg-slate-900 border border-slate-700 rounded-md p-2 text-xs min-w-[180px]">
                   <div className="font-mono text-slate-200 truncate mb-1">
@@ -561,6 +583,7 @@ export default function KiwiNodeBrowser({
                 </div>
               </Popup>
             )}
+            <NavigationControl position="bottom-right" />
           </Map>
         </div>
       )}

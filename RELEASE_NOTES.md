@@ -1,23 +1,20 @@
-# Release - v0.22.0 - Radio Frequency Overhaul
+# Release - v0.22.1 - KiwiSDR Node Constraints
 
 ## High-Level Summary
 
-This release introduces a major architectural and visual overhaul of the **Radio Frequency (RF) Infrastructure** layer. Operators can now monitor multiple RF services simultaneously across an expanded 2,000 NM range. The update features a new **AOR Boundary Ring** for precise range visualization and a refined **Amber-Yellow UI theme** that standardizes RF controls across the HUD.
+This patch release resolves limitations within the KiwiSDR mapping feature, ensuring that operators can configure and view the complete global network of available receivers. It also adds and themes MapLibre zoom controls for improved tactical map navigation.
 
 ## Key Features
 
-- **Multi-Service Ingestion**: Concurrent tracking for Amateur Radio (Ham), NOAA Weather Radio (NWR), and Public Safety (RadioReference) networks.
-- **Tactical Range Ring**: A high-visibility, dashed amber ring on the map now represents the selected survey radius.
-- **Condensed UI Layout**: RF service toggles are now unified into a single horizontal row with high-contrast glowing indicators.
-- **Advanced Clustering**: RF map clusters now respect service types, ensuring distinct visual grouping even at global zoom levels.
-- **Expanded Polling Range**: Survey boundaries extended from 500 NM up to 2,000 NM with backend performance optimizations.
+- **Global Node Sync**: Increased the internal API limit to 10,000, allowing the "Global" filter to correctly pull and render all cached KiwiSDR receivers on the globe.
+- **Dynamic Radius Logic**: Hardcoded constraints applied to the preset map view toggles: 50 closest nodes for Mission Area, 500 nodes (2000 NM radius) for Regional Area, and no limits for Global.
+- **Improved Map Navigation**: Added classic `NavigationControl` (Zoom In/Out + Compass) to the bottom-right corner of the node cluster map.
+- **Styling Preservation**: Re-architected MapLibre CSS overrides so they bypass Tailwind's aggressive JIT purging, guaranteeing consistent dark tactical aesthetics across builds.
 
 ## Technical Details
 
-- **Backend**: Implemented `migrate_rf_plus.sql` for optimized spatial indexing of RF sites.
-- **API**: Updated `/api/rf/sites` to accept multiple `services` parameters.
-- **Frontend**: Refactored `useRFSites` hook for improved caching and debouncing during rapid radius changes.
-- **Layers**: New `geodesicCircle` integration in `buildAOTLayers` for boundary rendering.
+- **Backend**: Overrode the `get_kiwi_nodes` API limit parameter in `js8call/server.py`.
+- **Frontend**: Force-refetch logic bound to the `limit` query param within the `useKiwiNodes` React hook.
 
 ## Upgrade Instructions
 

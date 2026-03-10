@@ -1,3 +1,11 @@
+## [0.22.1] - 2026-03-10
+
+### Fixed
+
+- **KiwiSDR Node Limits:** Increased the backend node limit from 50 to 10,000 to enable the frontend "Global" radius toggle to correctly display all cached KiwiSDR receivers.
+- **Node Filtering Logic:** Updated the `useKiwiNodes` hook to properly trigger refetches when node limits change. Hardcoded limits applied to Mission (50), Regional (500), and Global (All) modes.
+- **Tactical Map Controls:** Restored MapLibre `NavigationControl` (+/- zoom buttons) to the bottom-right of the tactical map and themed them in the Sovereign Glass style. Extracted MapLibre CSS overrides from Tailwind's `@layer` directive to prevent the JIT compiler from purging them.
+
 ## [0.22.0] - 2026-03-09
 
 ### Added
