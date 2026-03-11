@@ -91,6 +91,19 @@ interface TacticalMapProps {
   repeatersLoading?: boolean;
   /** Called once the entity worker is ready, passing the live satellitesRef map. */
   onSatellitesRefReady?: (ref: MutableRefObject<Map<string, CoTEntity>>) => void;
+  // Shared Global State
+  entitiesRef: MutableRefObject<Map<string, CoTEntity>>;
+  satellitesRef: MutableRefObject<Map<string, CoTEntity>>;
+  knownUidsRef: MutableRefObject<Set<string>>;
+  drStateRef: MutableRefObject<Map<string, import("../../types").DRState>>;
+  visualStateRef: MutableRefObject<Map<string, import("../../types").VisualState>>;
+  prevCourseRef: MutableRefObject<Map<string, number>>;
+  alertedEmergencyRef: MutableRefObject<Map<string, string>>;
+  currentMissionRef: MutableRefObject<{
+    lat: number;
+    lon: number;
+    radius_nm: number;
+  } | null>;
 }
 
 export function OrbitalMap({
@@ -116,6 +129,14 @@ export function OrbitalMap({
   showRepeaters,
   repeatersLoading,
   onSatellitesRefReady,
+  entitiesRef,
+  satellitesRef,
+  knownUidsRef,
+  drStateRef,
+  visualStateRef,
+  prevCourseRef,
+  alertedEmergencyRef,
+  currentMissionRef,
 }: TacticalMapProps) {
   // Fetch infra data (Submarine cables & landing stations)
   const { cablesData, stationsData } = useInfraData();
@@ -321,11 +342,6 @@ export function OrbitalMap({
       .catch(() => { if (!cancelled) predictedGroundTrackRef.current = []; });
     return () => { cancelled = true; };
   }, [selectedEntity?.uid, showHistoryTails]);
-  const currentMissionRef = useRef<{
-    lat: number;
-    lon: number;
-    radius_nm: number;
-  } | null>(null);
 
   // Observer ring ref — passed to useAnimationLoop to render the AOI horizon on the orbital map.
   // radiusKm is derived from the mission's radius_nm (1 nm = 1.852 km).
@@ -398,9 +414,6 @@ export function OrbitalMap({
     }
   }, [showHistoryTails]);
 
-  // Entity Worker: TAK worker lifecycle, WebSocket, entity processing
-  const { entitiesRef, satellitesRef, knownUidsRef, drStateRef, visualStateRef, prevCourseRef, alertedEmergencyRef } =
-    useEntityWorker({ onEvent, currentMissionRef });
 
   // Expose the live satellitesRef to parent (App) so it can resolve NORAD IDs to real entities.
   // Use a ref+effect so this only fires once after mount, not on every render.

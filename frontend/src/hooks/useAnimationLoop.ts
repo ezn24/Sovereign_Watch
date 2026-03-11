@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo, MutableRefObject } from "react";
-import { CoTEntity, JS8Station, RFSite } from "../types";
+import { CoTEntity, JS8Station, RFSite, DRState, VisualState } from "../types";
 import { getCompensatedCenter, maidenheadToLatLon } from "../utils/map/geoUtils";
 import { getOrbitalLayers, GroundTrackPoint } from "../layers/OrbitalLayer";
 import { buildAOTLayers } from "../layers/buildAOTLayers";
@@ -11,7 +11,6 @@ import { buildInfraLayers } from "../layers/buildInfraLayers";
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import { getTerminatorLayer } from "../components/map/TerminatorLayer";
 import { buildH3CoverageLayer, H3CellData } from "../layers/buildH3CoverageLayer";
-import type { DeadReckoningState } from "./useEntityWorker";
 import type { MapboxOverlay } from "@deck.gl/mapbox";
 import type { MapRef } from "react-map-gl/maplibre";
 
@@ -19,10 +18,8 @@ interface UseAnimationLoopOptions {
   entitiesRef: MutableRefObject<Map<string, CoTEntity>>;
   satellitesRef: MutableRefObject<Map<string, CoTEntity>>;
   knownUidsRef: MutableRefObject<Set<string>>;
-  drStateRef: MutableRefObject<Map<string, DeadReckoningState>>;
-  visualStateRef: MutableRefObject<
-    Map<string, { lon: number; lat: number; alt: number }>
-  >;
+  drStateRef: MutableRefObject<Map<string, DRState>>;
+  visualStateRef: MutableRefObject<Map<string, VisualState>>;
   prevCourseRef: MutableRefObject<Map<string, number>>;
   alertedEmergencyRef?: MutableRefObject<Map<string, string>>;
   countsRef: MutableRefObject<{ air: number; sea: number; orbital: number }>;

@@ -185,3 +185,22 @@ export interface MapFilters {
   showPrivate: boolean;
   [key: string]: boolean | undefined;
 }
+
+export interface DRState {
+  serverLat: number;
+  serverLon: number;
+  serverSpeed: number;
+  serverCourseRad: number;
+  serverTime: number;
+  blendLat: number;
+  blendLon: number;
+  blendSpeed: number;
+  blendCourseRad: number;
+  expectedInterval: number;
+}
+
+export interface VisualState {
+  lon: number;
+  lat: number;
+  alt: number;
+}

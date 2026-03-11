@@ -1,3 +1,15 @@
+## [0.25.0] - 2026-03-10
+
+### Added
+
+- **Global COT State Persistence**: Re-engineered the map view lifecycle by hoisting the `useEntityWorker` hook and all tactical track state to the root `App.tsx`. This ensures that tactical tracks, dead reckoning state, and satellite telemetry persist instantly when switching between Tactical and Orbital map views.
+
+### Fixed
+
+- **Map View Transition Performance**: Eliminated the 5-10 second "re-sync" delay when switching map views by preserving the WebSocket and Worker thread throughout the session.
+- **State Reset Bug**: Fixed a critical `TypeError` in `App.tsx` where changing map filters would crash the application due to a missing return in the `setFilters` state updater.
+- **Prop Consistency**: Corrected `alertedEmergencyRef` and `repeatersLoading` type mismatches and interface duplications across `App.tsx`, `TacticalMap.tsx`, and `OrbitalMap.tsx`.
+
 ## [0.24.0] - 2026-03-10
 
 ### Added

@@ -91,6 +91,19 @@ interface TacticalMapProps {
   kiwiNodeRef?: MutableRefObject<{ lat: number; lon: number; host: string } | null>;
   showRepeaters?: boolean;
   repeatersLoading?: boolean;
+  // Shared Global State
+  entitiesRef: MutableRefObject<Map<string, CoTEntity>>;
+  satellitesRef: MutableRefObject<Map<string, CoTEntity>>;
+  knownUidsRef: MutableRefObject<Set<string>>;
+  drStateRef: MutableRefObject<Map<string, import("../../types").DRState>>;
+  visualStateRef: MutableRefObject<Map<string, import("../../types").VisualState>>;
+  prevCourseRef: MutableRefObject<Map<string, number>>;
+  alertedEmergencyRef: MutableRefObject<Map<string, string>>;
+  currentMissionRef: MutableRefObject<{
+    lat: number;
+    lon: number;
+    radius_nm: number;
+  } | null>;
 }
 
 export function TacticalMap({
@@ -116,6 +129,14 @@ export function TacticalMap({
   kiwiNodeRef,
   showRepeaters,
   repeatersLoading,
+  entitiesRef,
+  satellitesRef,
+  knownUidsRef,
+  drStateRef,
+  visualStateRef,
+  prevCourseRef,
+  alertedEmergencyRef,
+  currentMissionRef,
 }: TacticalMapProps) {
   // Fetch infra data (Submarine cables & landing stations)
   const { cablesData, stationsData } = useInfraData();
@@ -304,11 +325,6 @@ export function TacticalMap({
   }, [filters?.showCables, filters?.showLandingStations, showRepeaters, cablesData, stationsData, onEvent, rfSitesRef, repeatersLoading]);
 
   const countsRef = useRef({ air: 0, sea: 0, orbital: 0 });
-  const currentMissionRef = useRef<{
-    lat: number;
-    lon: number;
-    radius_nm: number;
-  } | null>(null);
 
   // Velocity Vector Toggle - use ref for reactivity in animation loop
   const velocityVectorsRef = useRef(showVelocityVectors ?? false);
@@ -364,9 +380,6 @@ export function TacticalMap({
     }
   }, [showHistoryTails]);
 
-  // Entity Worker: TAK worker lifecycle, WebSocket, entity processing
-  const { entitiesRef, satellitesRef, knownUidsRef, drStateRef, visualStateRef, prevCourseRef, alertedEmergencyRef } =
-    useEntityWorker({ onEvent, currentMissionRef });
 
   // Mission Area: mission state, AOT geometry, entity clearing, save form
   // currentMission/savedMissions/saveMission/deleteMission/handleSwitchMission/handlePresetSelect

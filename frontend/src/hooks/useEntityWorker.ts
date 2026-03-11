@@ -1,5 +1,5 @@
 import { useEffect, useRef, MutableRefObject } from "react";
-import { CoTEntity, TrailPoint } from "../types";
+import { CoTEntity, TrailPoint, DRState, VisualState } from "../types";
 import { getDistanceMeters, getBearing, uidToHash, chaikinSmooth } from "../utils/map/geoUtils";
 import type { EntityClassification } from "../types";
 
@@ -11,18 +11,6 @@ const getSmoothedTrail = (trail: TrailPoint[], existing?: CoTEntity) => {
   return trail.length >= 2 ? chaikinSmooth(trail.map(p => [p[0], p[1], p[2]])) : [];
 };
 
-export interface DeadReckoningState {
-  serverLat: number;
-  serverLon: number;
-  serverSpeed: number;
-  serverCourseRad: number;
-  serverTime: number;
-  blendLat: number;
-  blendLon: number;
-  blendSpeed: number;
-  blendCourseRad: number;
-  expectedInterval: number;
-}
 
 interface UseEntityWorkerOptions {
   onEvent:
@@ -44,10 +32,8 @@ interface UseEntityWorkerReturn {
   entitiesRef: MutableRefObject<Map<string, CoTEntity>>;
   satellitesRef: MutableRefObject<Map<string, CoTEntity>>;
   knownUidsRef: MutableRefObject<Set<string>>;
-  drStateRef: MutableRefObject<Map<string, DeadReckoningState>>;
-  visualStateRef: MutableRefObject<
-    Map<string, { lon: number; lat: number; alt: number }>
-  >;
+  drStateRef: MutableRefObject<Map<string, DRState>>;
+  visualStateRef: MutableRefObject<Map<string, VisualState>>;
   prevCourseRef: MutableRefObject<Map<string, number>>;
   alertedEmergencyRef: MutableRefObject<Map<string, string>>;
 }
@@ -106,10 +92,8 @@ export function useEntityWorker({
   const entitiesRef = useRef<Map<string, CoTEntity>>(new Map());
   const satellitesRef = useRef<Map<string, CoTEntity>>(new Map());
   const knownUidsRef = useRef<Set<string>>(new Set());
-  const drStateRef = useRef<Map<string, DeadReckoningState>>(new Map());
-  const visualStateRef = useRef<
-    Map<string, { lon: number; lat: number; alt: number }>
-  >(new Map());
+  const drStateRef = useRef<Map<string, DRState>>(new Map());
+  const visualStateRef = useRef<Map<string, VisualState>>(new Map());
   const prevCourseRef = useRef<Map<string, number>>(new Map());
   // Tracks the last emitted emergency key per UID to avoid duplicate alerts
   const alertedEmergencyRef = useRef<Map<string, string>>(new Map());
