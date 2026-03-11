@@ -360,13 +360,13 @@ export default function KiwiNodeBrowser({
           )}
 
           {/* Node rows */}
-          {nodes.map((node) => {
+          {nodes.map((node, index) => {
             const isActive =
               activeConfig?.host === node.host &&
               activeConfig?.port === node.port;
             return (
               <div
-                key={`${node.host}:${node.port}`}
+                key={`${node.host}:${node.port}-${index}`}
                 className={`
                 flex items-center gap-3 px-4 py-2.5 border-b border-slate-800/50 transition-colors
                 ${
@@ -489,14 +489,14 @@ export default function KiwiNodeBrowser({
             </Marker>
 
             {/* Node markers */}
-            {nodes.map((node) => {
+            {nodes.map((node, index) => {
               const isActive =
                 activeConfig?.host === node.host &&
                 activeConfig?.port === node.port;
               const color = isActive ? "#818cf8" : markerColor(node.distance_km);
               return (
                 <Marker
-                  key={`${node.host}:${node.port}`}
+                  key={`${node.host}:${node.port}-${index}`}
                   latitude={node.lat}
                   longitude={node.lon}
                   anchor="center"

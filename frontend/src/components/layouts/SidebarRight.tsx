@@ -318,21 +318,42 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       ? ((Number(detail.input_freq) - Number(detail.frequency)) > 0 ? `+${(Number(detail.input_freq) - Number(detail.frequency)).toFixed(2)}` : (Number(detail.input_freq) - Number(detail.frequency)).toFixed(2))
       : 'SIMPLEX';
 
+    const getHamBand = (freqMhz?: number | string): string => {
+      const f = Number(freqMhz);
+      if (!f || isNaN(f)) return 'UNKNOWN';
+      if (f >= 28 && f <= 29.7) return '10m';
+      if (f >= 50 && f <= 54) return '6m';
+      if (f >= 144 && f <= 148) return '2m';
+      if (f >= 219 && f <= 225) return '1.25m';
+      if (f >= 420 && f <= 450) return '70cm';
+      if (f >= 902 && f <= 928) return '33cm';
+      if (f >= 1240 && f <= 1300) return '23cm';
+      if (f >= 162.4 && f <= 162.55) return 'WX (VHF)';
+      if (f >= 462 && f <= 468) return 'GMRS (UHF)';
+      if (f >= 136 && f <= 174) return 'VHF COMMERCIAL';
+      if (f >= 380 && f <= 512) return 'UHF COMMERCIAL';
+      if (f >= 769 && f <= 869) return '700/800 MHz';
+      return 'OTHER';
+    };
+
     return (
       <div className="pointer-events-auto flex flex-col h-auto max-h-full overflow-hidden animate-in slide-in-from-right duration-500 font-mono">
         {/* Header */}
         <div className="p-3 border border-b-0 border-teal-400/30 bg-gradient-to-br from-teal-400/20 to-teal-400/5 backdrop-blur-md rounded-t-sm">
           <div className="flex justify-between items-start">
             <div className="flex flex-col flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <Radio size={14} className="text-teal-400 shrink-0" />
                 <span className="text-[10px] font-bold tracking-[.3em] text-white/40">RF_INFRASTRUCTURE</span>
+                <span className="px-1.5 py-[2px] rounded text-[9px] font-bold border border-white/20 text-white/70 bg-white/5 whitespace-nowrap mt-[-2px]">
+                  {getHamBand(detail.frequency as number)}
+                </span>
               </div>
               <h2 className="text-mono-xl font-bold tracking-tighter text-teal-300 drop-shadow-[0_0_8px_currentColor] mb-2 truncate" title={entity.callsign}>
                 {entity.callsign}
               </h2>
               <section className="border-l-2 border-l-white/20 pl-3 py-1 mb-2 space-y-0.5">
-                <h3 className="text-mono-sm font-bold text-white/90">
+                <h3 className="text-mono-sm font-bold text-white/90 tracking-[0.15em]">
                   {String(detail.use || 'REPEATER').toUpperCase()}
                 </h3>
                 <div className="flex flex-col gap-0.5 text-[10px] text-white/60">
@@ -365,6 +386,10 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
           <section className="space-y-2">
             <h3 className="text-[10px] text-white/50 font-bold">RF_Parameters</h3>
             <div className="space-y-1 text-mono-xs font-medium">
+              <div className="grid grid-cols-[100px_1fr] gap-2 border-b border-white/5 pb-1">
+                <span className="text-white/30">BAND:</span>
+                <span className="text-purple-300 font-bold">{getHamBand(detail.frequency as number)}</span>
+              </div>
               <div className="grid grid-cols-[100px_1fr] gap-2 border-b border-white/5 pb-1">
                 <span className="text-white/30">OUTPUT:</span>
                 <span className="text-teal-400 tabular-nums font-bold">{formatFreq(detail.frequency as number)}</span>

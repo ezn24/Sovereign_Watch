@@ -51,6 +51,7 @@
     # - VITE_MAPBOX_TOKEN (3D Terrain & Maps)
     # - KIWI_HOST / KIWI_PORT (JS8Call SDR source)
     # - MY_GRID (Your Maidenhead locator)
+    # - RADIOREF_APP_KEY / RADIOREF_USERNAME / RADIOREF_PASSWORD (RadioReference integration)
     ```
 
 2.  **Boot System**:
@@ -113,7 +114,7 @@ graph TD
         C[AIS Stream] -->|JSON| B
         Z[Orbital TLE Feed] -->|TLE| B
         JS[Sovereign JS8Call] -->|UDP Bridge| B
-        RP[RF Repeaters] -->|REST API| B
+        RF[RF Pulse: ARD/NOAA/RepBook/RadioRef] -->|REST API/SOAP| B
         B -->|TAK Protobuf| D(Redpanda Bus)
     end
 
@@ -187,7 +188,12 @@ Sovereign Watch uses the public KiwiSDR directory to find optimal listening node
 
 | Feed             | URL                                                                 | Notes                                                                                                     |
 | :--------------- | :------------------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------- |
-| **RepeaterBook** | [repeaterbook.com/api](https://www.repeaterbook.com/api/export.php) | API Key Required. (working to get app approved) Proxied server-side to avoid CORS. 24h client-side cache. |
+| **RepeaterBook** | [repeaterbook.com/api](https://www.repeaterbook.com/api/export.php) | API Key required. Proxied server-side via `rf_pulse`.                                                     |
+| **RadioReference**| [radioreference.com](https://www.radioreference.com)               | App Key, Username, and Password required via `.env`. Requires SOAP (`zeep`).                              |
+| **Amateur Radio Dir**| [amateur-radio-directory.com](https://amateur-radio-directory.com) | Open web scraping source using `beautifulsoup4` and `lxml`.                                             |
+| **NOAA NWR**     | [weather.gov/nwr](https://www.weather.gov/nwr/)                     | Publicly accessible NOAA Weather Radio master list CSV parsing.                                           |
+
+> **Note**: These four sources are aggregated continuously by the internal **`rf_pulse`** ingestion poller, a Python microservice with asynchronous Kafka-streaming orchestrated with `redis` caching, `zeep` (SOAP), and `beautifulsoup4/lxml` dependencies.
 
 ### 🌊 Undersea Infrastructure (Submarine Cables)
 

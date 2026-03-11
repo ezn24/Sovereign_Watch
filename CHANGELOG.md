@@ -1,3 +1,15 @@
+## [0.23.0] - 2026-03-10
+
+### Added
+
+- **Multi-Source RF Pulse Poller**: Refactored RF infrastructure ingestion into a single, highly concurrent Python microservice (`rf_pulse`) replacing disparate scripts. Supports RepeaterBook, RadioReference, Amateur Radio Directory (ARD), and NOAA NWR.
+- **RadioReference Integration**: Secured trunked/conventional system ingestion via authenticated SOAP requests using the user's `RADIOREF_APP_KEY`.
+- **Repeater Band Classification**: The Tactical Sidebar now actively computes and displays the physical frequency band (e.g., `2m`, `70cm`, `GMRS (UHF)`) as a compact visual badge attached to the header.
+
+### Changed
+
+- **RF Infrastructure Documentation**: Expanded the `README.md` to cleanly document the `rf_pulse` configuration variables, pipeline architecture, and supported upstream APIs.
+
 ## [0.22.1] - 2026-03-10
 
 ### Fixed
