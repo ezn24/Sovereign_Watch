@@ -320,9 +320,9 @@ class KiwiClient:
         lc, hc = MODE_FILTERS.get(mode, (-5000, 5000))
         # Must be sent as a single atomic command or the KiwiSDR stream will hang!
         await self._ws.send(f"SET mod={mode} low_cut={lc} high_cut={hc} freq={freq_khz:.3f}")
-        # Keep waterfall at full-band view on retune (cf= is not a valid WF parameter)
+        # Recenter waterfall on new frequency (zoom=5 = ±468 kHz span; cf= is valid WF parameter)
         if self._wf_ws:
-            await self._wf_ws.send("SET zoom=0 start=0")
+            await self._wf_ws.send(f"SET zoom=5 cf={freq_khz:.3f}")
 
     async def _receive_loop(self) -> None:
         """Read binary SND frames; dispatch PCM payload to on_audio callback."""
@@ -396,7 +396,7 @@ class KiwiClient:
 
         Full W/F handshake per the KiwiSDR protocol reference:
           1. SET auth t=kiwi p=
-          2. SET zoom=0 start=0   (full 0–30 MHz view)
+          2. SET zoom=5 cf=<freq>   (±468 kHz around audio frequency; cf= centers on kHz value)
           3. SET maxdb=-10 mindb=-110   (colour scale)
           4. SET wf_speed=4   (rows/second; 0 = no output, must be > 0)
           5. SET wf_comp=0   (uncompressed pixel bytes)
@@ -406,7 +406,7 @@ class KiwiClient:
             ws = await websockets.connect(wf_uri, open_timeout=CONNECT_TIMEOUT, ping_interval=None)
             self._wf_ws = ws
             await ws.send("SET auth t=kiwi p=")
-            await ws.send("SET zoom=0 start=0")       # full 0–30 MHz view
+            await ws.send(f"SET zoom=5 cf={self._freq_khz:.3f}")  # ±468 kHz around audio freq
             await ws.send("SET maxdb=-10 mindb=-110")  # colour scale
             await ws.send("SET wf_speed=4")            # 4 rows/second; must be >0 to receive frames
             await ws.send("SET wf_comp=0")             # uncompressed pixel bytes
