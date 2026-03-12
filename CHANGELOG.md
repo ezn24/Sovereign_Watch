@@ -1,3 +1,26 @@
+## [0.27.0] - 2026-03-12
+
+### Added
+
+- **Hybrid Globe Architecture**: Integrated ESRI World Imagery satellite basemap as a high-resolution alternative to the dark tactical style in Globe mode.
+- **Deep Space Starfield**: Implemented a dynamic StarField canvas with 320 twinkling stars, rendered behind the map to provide a cinematic backdrop when atmospheric layers are translucent.
+- **Globe Style Switcher**: New `DARK` / `SAT` toggle buttons exclusively in Globe mode for seamless transition between tactical and reconnaissance views.
+- **Atmospheric Tuning**: Refined the globe's atmosphere in `useMapCamera.ts` to allow starfield visibility while maintaining a high-altitude glow.
+
+### Changed
+
+- **Adaptive Map UI**: 2D and 3D views are now forced to the high-contrast Dark Tactical style for optimal UI performance and legibility. Satellite imagery is dynamically restricted to the Globe projection.
+- **Control Bar Refinement**: Repositioned 3D orientation controls (Rotation/Tilt) to sit above the mode selector for improved ergonomics.
+- **Orbital Parity**: Added full 3D orientation controls to the `OrbitalMap.tsx` component.
+- **Graticule Color Logic**: Latitude/Longitude grid lines now dynamically adjust contrast based on the underlying basemap (White on Satellite vs Cyan on Dark).
+
+### Fixed
+
+- **High-Load AIS Stability**: Implemented an exponential backoff (5s to 300s) and a 30s minimum cooldown strategy for the maritime poller to prevent IP rate-limiting during rapid mission re-centering.
+- **Websocket Lifecycle**: Fixed an `AttributeError` in `service.py` where stale connection delay variables were causing poller crashes during reconnection cycles.
+- **Orbital UI Missing Assets**: Resolved a `ReferenceError` in `OrbitalMap.tsx` where move/tilt icons were missing from the `lucide-react` module imports.
+- **Layer Re-application**: Fixed a bug where graticule and background layers would disappear after basemap style changes by migrating to persistent `.on("style.load")` listeners in `MapboxAdapter.tsx`.
+
 ## [0.26.1] - 2026-03-12
 
 ### Fixed

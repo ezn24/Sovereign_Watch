@@ -17,7 +17,7 @@ interface UseMapCameraOptions {
   enable3d: boolean;
   setEnable3d: React.Dispatch<React.SetStateAction<boolean>>;
   mapToken: string;
-  globeStyle?: 'dark' | 'satellite';
+  mapStyleMode?: 'dark' | 'satellite';
 }
 
 export function useMapCamera({
@@ -28,7 +28,7 @@ export function useMapCamera({
   enable3d,
   setEnable3d,
   mapToken,
-  globeStyle = 'dark',
+  mapStyleMode = 'dark',
 }: UseMapCameraOptions) {
   // Globe projection: Mapbox GL JS uses a string argument; MapLibre GL JS v5 uses { type }.
   // MapLibre v5 also requires the style to be loaded before setProjection can be called.
@@ -83,7 +83,7 @@ export function useMapCamera({
     const LAYER_ID = "graticule-lines";
 
     // White lines over satellite imagery; light blue over dark tactical basemap
-    const lineColor = globeStyle === 'satellite'
+    const lineColor = mapStyleMode === 'satellite'
       ? "rgba(255, 255, 255, 0.35)"
       : "rgba(80, 180, 255, 0.45)";
 
@@ -136,7 +136,7 @@ export function useMapCamera({
     return () => {
       map.off("style.load", apply);
     };
-  }, [globeMode, mapLoaded, globeStyle]);
+  }, [globeMode, mapLoaded, mapStyleMode]);
 
   // Dedicated 3D visuals + atmosphere Effect
   useEffect(() => {
@@ -178,14 +178,15 @@ export function useMapCamera({
       // transparent outside the globe sphere — this lets the StarField canvas
       // (rendered behind the map at z-index:0) show through.
       //
-      // Dark tactical mode: use a deep navy atmosphere.
-      if (globeMode && globeStyle !== 'satellite') {
+      // Dark tactical mode: use a deep navy atmosphere but with reduced
+      // opacity to allow the StarField background to show through.
+      if (globeMode && mapStyleMode !== 'satellite') {
         try {
           if (typeof map.setAtmosphere === 'function') {
             map.setAtmosphere({
-              "color": "#0c1e3a",        // Deep navy at horizon
-              "halo-color": "#000d1f",   // Near-black upper atmosphere
-              "intensity": 5,            // Overall glow intensity
+              "color": "rgba(12, 30, 58, 0.4)",      // Semi-transparent deep navy
+              "halo-color": "rgba(0, 13, 31, 0.6)",  // Darker outer halo
+              "intensity": 5,                        // Glow intensity
             });
           }
         } catch (e) {
@@ -214,7 +215,7 @@ export function useMapCamera({
     return () => {
       map.off("style.load", sync3D);
     };
-  }, [mapLoaded, enable3d, mapToken, globeMode, globeStyle]);
+  }, [mapLoaded, enable3d, mapToken, globeMode, mapStyleMode]);
 
 
   const setViewMode = (mode: "2d" | "3d") => {
