@@ -416,7 +416,7 @@ export default function ListeningPost({
         {/* Frequency Scale Overlay */}
         <div className="absolute bottom-12 left-0 right-0 h-8 flex justify-between px-4 border-t border-cyan-500/20 bg-black/40 backdrop-blur-sm">
             {wfMode === 'WIDE' ? (
-                [-4, -3, -2, -1, 0, 1, 2, 3, 4].map(v => (
+                [-400, -300, -200, -100, 0, 100, 200, 300, 400].map(v => (
                     <div key={v} className="flex flex-col items-center pt-1">
                         <div className="w-px h-2 bg-slate-700" />
                         <span className="text-[9px] text-slate-500">{v > 0 ? `+${v}k` : v === 0 ? 'CF' : `${v}k`}</span>
