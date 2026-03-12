@@ -24,22 +24,104 @@ interface InfraFilters {
     showCables?: boolean;
     showLandingStations?: boolean;
     showOutages?: boolean;
-    showDatacenters?: boolean;
-    cableOpacity?: number;
+        cableOpacity?: number;
 }
 
 export function buildInfraLayers(
     cablesData: { type: "FeatureCollection"; features: GeoJsonFeature[] } | null,
     stationsData: { type: "FeatureCollection"; features: GeoJsonFeature[] } | null,
     outagesData: { type: "FeatureCollection"; features: GeoJsonFeature[] } | null,
-    datacentersData: { type: "FeatureCollection"; features: GeoJsonFeature[] } | null,
     filters: InfraFilters | null,
     setHoveredInfra: (info: unknown) => void,
     setSelectedInfra: ((info: unknown) => void) | undefined,
     selectedEntity: { uid: string } | null = null,
-    globeMode: boolean = false
+    globeMode: boolean = false,
+    worldCountriesData: { type: "FeatureCollection"; features: GeoJsonFeature[] } | null = null
 ) {
     const layers = [];
+
+    // Country Outage Shading Layer
+    if (worldCountriesData && outagesData && filters?.showOutages === true) {
+        // Create a map of country codes to their outage data
+        const countryOutageMap: Record<string, any> = {};
+        outagesData.features.forEach(f => {
+            const countryCode = f.properties?.country_code as string;
+            if (countryCode) {
+                // Keep the record with the highest severity if duplicates exist
+                const current = countryOutageMap[countryCode];
+                if (!current || (f.properties?.severity as number || 0) > (current.severity || 0)) {
+                    countryOutageMap[countryCode] = f.properties;
+                }
+            }
+        });
+
+        layers.push(
+            new GeoJsonLayer({
+                id: `country-outages-layer-${globeMode ? "globe" : "merc"}`,
+                data: worldCountriesData,
+                pickable: true,
+                stroked: true,
+                filled: true,
+                getFillColor: (d: unknown) => {
+                    const feature = d as GeoJsonFeature;
+                    const iso2 = feature.properties?.["ISO3166-1-Alpha-2"] as string;
+                    const outage = countryOutageMap[iso2];
+                    const severity = outage?.severity || 0;
+                    
+                    if (severity === 0) return [0, 0, 0, 0];
+                    
+                    // Heat map color based on severity
+                    const alpha = Math.min(200, 50 + (severity * 1.5));
+                    if (severity > 80) return [239, 68, 68, alpha]; // Red
+                    if (severity > 50) return [249, 115, 22, alpha]; // Orange
+                    return [234, 179, 8, alpha]; // Yellow
+                },
+                getLineColor: [255, 255, 255, 30],
+                lineWidthMinPixels: 0.5,
+                updateTriggers: {
+                    getFillColor: [outagesData]
+                },
+                wrapLongitude: !globeMode,
+                parameters: globeMode ? { depthTest: true, depthBias: -30.0 } : undefined,
+                onHover: (info: any) => {
+                    const iso2 = info.object?.properties?.["ISO3166-1-Alpha-2"];
+                    const outage = iso2 ? countryOutageMap[iso2] : null;
+                    
+                    if (outage) {
+                        // Synthesize an 'outage' entity for the tooltip preserving geometry
+                        setHoveredInfra({
+                            ...info,
+                            object: {
+                                ...info.object,
+                                type: 'outage',
+                                properties: { ...info.object.properties, ...outage }
+                            }
+                        });
+                    } else {
+                        // Pass null object to clear tooltips for countries without outages
+                        setHoveredInfra({ ...info, object: null });
+                    }
+                },
+                onClick: (info: any) => {
+                    const iso2 = info.object?.properties?.["ISO3166-1-Alpha-2"];
+                    const outage = iso2 ? countryOutageMap[iso2] : null;
+                    
+                    if (outage && setSelectedInfra) {
+                        setSelectedInfra({
+                            ...info,
+                            object: {
+                                ...info.object,
+                                type: 'outage',
+                                properties: { ...info.object.properties, ...outage }
+                            }
+                        });
+                    } else if (setSelectedInfra) {
+                        setSelectedInfra({ ...info, object: null });
+                    }
+                },
+            })
+        );
+    }
 
     // Submarine Cables Layer - uses GeoJsonLayer
     if (cablesData && filters?.showCables !== false) {
@@ -72,8 +154,7 @@ export function buildInfraLayers(
                     getLineColor: 300,
                     getLineWidth: 300
                 },
-                wrapLongitude: !globeMode,
-                parameters: globeMode ? { depthTest: true, depthBias: -210.0 } : undefined,
+                parameters: globeMode ? { depthTest: true, depthBias: -40.0 } : undefined,
                 onHover: setHoveredInfra,
                 onClick: setSelectedInfra,
             })
@@ -121,66 +202,7 @@ export function buildInfraLayers(
                 updateTriggers: {
                     getFillColor: [cablesData]
                 },
-                wrapLongitude: !globeMode,
-                parameters: globeMode ? { depthTest: true, depthBias: -210.0 } : undefined,
-                onHover: setHoveredInfra,
-                onClick: setSelectedInfra,
-            })
-        );
-    }
-
-    // Internet Outages Layer - uses ScatterplotLayer
-    if (outagesData && filters?.showOutages === true) {
-        layers.push(
-            new ScatterplotLayer({
-                id: `internet-outages-layer-${globeMode ? "globe" : "merc"}`,
-                data: outagesData.features || [],
-                pickable: true,
-                opacity: 0.8,
-                stroked: true,
-                filled: true,
-                radiusScale: 100,
-                radiusMinPixels: 6,
-                radiusMaxPixels: 20,
-                lineWidthMinPixels: 1,
-                getPosition: (d: unknown) => (d as GeoJsonFeature).geometry.coordinates as [number, number],
-                getFillColor: (d: unknown) => {
-                    const feature = d as GeoJsonFeature;
-                    const severity = (feature.properties?.severity as number) || 0;
-                    // Grey scale or heat map based on severity. The original uses a grey outer ring/inner circle.
-                    // We'll use a hot red/orange color based on severity for Sovereign Glass theme
-                    if (severity > 80) return [239, 68, 68, 200]; // Red
-                    if (severity > 50) return [249, 115, 22, 200]; // Orange
-                    return [234, 179, 8, 200]; // Yellow
-                },
-                getLineColor: [255, 255, 255, 150],
-                wrapLongitude: !globeMode,
-                parameters: globeMode ? { depthTest: true, depthBias: -210.0 } : undefined,
-                onHover: setHoveredInfra,
-                onClick: setSelectedInfra,
-            })
-        );
-    }
-
-    // Datacenters Layer - uses ScatterplotLayer
-    if (datacentersData && filters?.showDatacenters === true) {
-        layers.push(
-            new ScatterplotLayer({
-                id: `datacenters-layer-${globeMode ? "globe" : "merc"}`,
-                data: datacentersData.features || [],
-                pickable: true,
-                opacity: 0.9,
-                stroked: true,
-                filled: true,
-                radiusScale: 50,
-                radiusMinPixels: 3,
-                radiusMaxPixels: 10,
-                lineWidthMinPixels: 1,
-                getPosition: (d: unknown) => (d as GeoJsonFeature).geometry.coordinates as [number, number],
-                getFillColor: [124, 58, 237, 200] as [number, number, number, number], // Purple (from the original codebase)
-                getLineColor: [255, 255, 255, 100],
-                wrapLongitude: !globeMode,
-                parameters: globeMode ? { depthTest: true, depthBias: -210.0 } : undefined,
+                parameters: globeMode ? { depthTest: true, depthBias: -40.0 } : undefined,
                 onHover: setHoveredInfra,
                 onClick: setSelectedInfra,
             })

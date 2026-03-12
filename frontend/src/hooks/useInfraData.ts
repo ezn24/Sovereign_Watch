@@ -90,16 +90,14 @@ export const useInfraData = () => {
   const [cablesData, setCablesData] = useState<any>(null);
   const [stationsData, setStationsData] = useState<any>(null);
   const [outagesData, setOutagesData] = useState<any>(null);
-  const [datacentersData, setDatacentersData] = useState<any>(null);
-
+  
   useEffect(() => {
     const fetchRealData = async () => {
       try {
-        const [cablesRes, stationsRes, outagesRes, datacentersRes] = await Promise.all([
+        const [cablesRes, stationsRes, outagesRes] = await Promise.all([
           fetch("/api/infra/cables").then(r => r.ok ? r.json() : null).catch(() => null),
           fetch("/api/infra/stations").then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch("/api/infra/outages").then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch("/api/infra/datacenters").then(r => r.ok ? r.json() : null).catch(() => null)
+          fetch("/api/infra/outages").then(r => r.ok ? r.json() : null).catch(() => null)
         ]);
 
         if (cablesRes && cablesRes.features && cablesRes.features.length > 0) {
@@ -120,17 +118,12 @@ export const useInfraData = () => {
           setOutagesData(fallbackEmpty);
         }
 
-        if (datacentersRes) {
-          setDatacentersData(datacentersRes);
-        } else {
-          setDatacentersData(fallbackEmpty);
-        }
       } catch (err) {
         console.warn("Falling back to local cache or minimal data:", err);
         setCablesData(fallbackCables);
         setStationsData(fallbackStations);
         setOutagesData(fallbackEmpty);
-        setDatacentersData(fallbackEmpty);
+        setOutagesData(fallbackEmpty);
       }
     };
     fetchRealData();
@@ -140,5 +133,5 @@ export const useInfraData = () => {
     return () => clearInterval(interval);
   }, []);
 
-  return { cablesData, stationsData, outagesData, datacentersData };
+  return { cablesData, stationsData, outagesData };
 };

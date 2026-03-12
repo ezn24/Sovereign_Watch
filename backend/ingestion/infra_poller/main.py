@@ -15,13 +15,9 @@ logger = logging.getLogger("InfraPoller")
 REDIS_URL = os.getenv("REDIS_URL", "redis://sovereign-redis:6379/0")
 POLL_INTERVAL_CABLES_HOURS = 24
 POLL_INTERVAL_IODA_MINUTES = 30
-POLL_INTERVAL_DC_HOURS = 24 * 7
 
 # IODA
-IODA_URL = "https://api.ioda.inetintel.cc.gatech.edu/v2/outages/alerts"
-
-# Data Centers
-DC_URL = "https://raw.githubusercontent.com/Ringmast4r/Data-Center-Map---Global/main/datacenters.json"
+IODA_URL = "https://api.ioda.inetintel.cc.gatech.edu/v2/outages/summary"
 
 # Submarine Cables
 CABLES_URL = "https://www.submarinecablemap.com/api/v3/cable/cable-geo.json"
@@ -30,7 +26,7 @@ STATIONS_URL = "https://www.submarinecablemap.com/api/v3/landing-point/landing-p
 # Connect to Redis
 redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
-# Geocoding Cache (simplified, but you could use OpenStreetMap Nominatim here if needed)
+# Geocoding Cache
 _region_geocode_cache = {}
 
 def geocode_region(region_name: str, country_code: str):
@@ -60,148 +56,64 @@ def geocode_region(region_name: str, country_code: str):
     return (0.0, 0.0)
 
 def fetch_internet_outages():
-    logger.info("Fetching Internet Outages from IODA...")
+    logger.info("Fetching Internet Outage Summary from IODA...")
     try:
-        # Get last 24h
+        # Get last 24h in UTC
         now = int(time.time())
         from_time = now - (24 * 3600)
 
-        # We need a proper time range, but the default URL is often enough. Let's use the default URL
-        resp = requests.get(f"{IODA_URL}?from={from_time}&until={now}", timeout=30)
+        params = {
+            "from": from_time,
+            "until": now,
+            "entityType": "country"
+        }
+        
+        resp = requests.get(IODA_URL, params=params, timeout=30)
         resp.raise_for_status()
-
+        
         data = resp.json().get("data", [])
-
+        
         outages = []
-        seen_regions = set()
-
-        for alert in data:
-            datasource = alert.get("datasource", "")
-            if datasource not in ("bgp", "ping-slash24"):
+        for entry in data:
+            entity = entry.get("entity", {})
+            if not entity:
+                continue
+                
+            scores = entry.get("scores", {})
+            # Use 'overall' score for severity
+            overall_score = scores.get("overall", 0)
+            if overall_score < 1000: # Ignore very minor noise
                 continue
 
-            entity_type = alert.get("entity_type", "")
-            if entity_type != "region":
-                continue
-
-            # Filter severity
-            value = alert.get("value", 0)
-            expected = alert.get("expected", 0)
-
-            if expected == 0:
-                continue
-
-            severity = (1 - (value / expected)) * 100
+            # Check for IR
+            country_code = entity.get("code", "")
+            country_name = entity.get("name", country_code)
+            
+            # Normalize overall_score to 0-100 severity
+            # Based on IODA scores (e.g., 350G is 3.5e11), we'll use a log scale
+            # log10(1,000) = 3 -> 10% severity
+            # log10(1,000,000,000,000) = 12 -> 100% severity
+            import math
+            log_score = math.log10(max(1, overall_score))
+            severity = (log_score / 12.0) * 100
             severity = max(0, min(100, severity))
 
-            if severity < 10:
-                continue
-
-            region_code = alert.get("entity_code", "")
-            country_code = alert.get("country_code", "")
-            region_name = alert.get("entity_name", region_code)
-            country_name = alert.get("country_name", country_code)
-
-            dedup_key = f"{region_code}-{country_code}"
-            if dedup_key in seen_regions:
-                continue
-
-            seen_regions.add(dedup_key)
-
-            lat, lon = geocode_region(region_name, country_code)
+            # Geocode
+            lat, lon = geocode_region(country_name, country_code)
             if lat == 0.0 and lon == 0.0:
-                 continue # skip if we couldn't geocode
+                continue
 
             outages.append({
-                "region_code": region_code,
-                "region_name": region_name,
-                "country_code": country_code,
-                "country_name": country_name,
-                "level": "outage",
-                "datasource": datasource,
-                "severity": round(severity, 1),
-                "lat": lat,
-                "lng": lon
-            })
-
-            if len(outages) >= 100:
-                break
-
-        # Sort by severity descending
-        outages.sort(key=lambda x: x["severity"], reverse=True)
-
-        # Build GeoJSON
-        features = []
-        for o in outages:
-            features.append({
                 "type": "Feature",
                 "properties": {
-                    "id": f"outage-{o['region_code']}",
-                    "region": o["region_name"],
-                    "country": o["country_name"],
-                    "severity": o["severity"],
-                    "datasource": o["datasource"]
-                },
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [o["lng"], o["lat"]]
-                }
-            })
-
-        geojson = {"type": "FeatureCollection", "features": features}
-
-        redis_client.set("infra:outages", json.dumps(geojson))
-        logger.info(f"Stored {len(features)} internet outages in Redis.")
-
-    except Exception as e:
-        logger.error(f"Failed to fetch internet outages: {e}")
-
-def fix_dc_coords(lat, lon, country):
-    southern_countries = ["Australia", "Brazil", "Argentina", "Chile", "South Africa", "New Zealand"]
-    if country in southern_countries and lat > 0:
-        lat = -lat
-    return lat, lon
-
-def fetch_datacenters():
-    logger.info("Fetching Data Centers...")
-    try:
-        resp = requests.get(DC_URL, timeout=30)
-        # If the direct URL fails (sometimes datasets move), we might need a fallback.
-        data = []
-        if resp.status_code == 200:
-            try:
-                data = resp.json()
-            except json.JSONDecodeError:
-                data = [] # Invalid JSON
-        else:
-             logger.warning(f"Failed to fetch DC data: {resp.status_code}")
-             data = []
-
-        features = []
-        # Support different formats just in case
-        items = data if isinstance(data, list) else data.get("datacenters", [])
-
-        for dc in items:
-            name = dc.get("name", "Unknown DC")
-            company = dc.get("company", "Unknown")
-            city = dc.get("city", "")
-            country = dc.get("country", "")
-            lat = float(dc.get("lat", 0))
-            lon = float(dc.get("lng", dc.get("lon", 0)))
-
-            lat, lon = fix_dc_coords(lat, lon, country)
-
-            if lat == 0 and lon == 0:
-                continue
-
-            features.append({
-                "type": "Feature",
-                "properties": {
-                    "id": f"dc-{name}-{city}".replace(" ", "-").lower(),
-                    "name": name,
-                    "company": company,
-                    "city": city,
-                    "country": country
+                    "id": f"outage-{country_code}",
+                    "region": country_name,
+                    "country": country_name,
+                    "country_code": country_code,
+                    "severity": round(severity, 1),
+                    "datasource": "IODA_OVERALL",
+                    "entity_type": "country",
+                    "score_raw": overall_score
                 },
                 "geometry": {
                     "type": "Point",
@@ -209,12 +121,20 @@ def fetch_datacenters():
                 }
             })
 
-        geojson = {"type": "FeatureCollection", "features": features}
-        redis_client.set("infra:datacenters", json.dumps(geojson))
-        logger.info(f"Stored {len(features)} datacenters in Redis.")
+            if len(outages) >= 200:
+                break
+
+        geojson = {"type": "FeatureCollection", "features": outages}
+        redis_client.set("infra:outages", json.dumps(geojson))
+        logger.info(f"Stored {len(outages)} internet outages in Redis from Summary.")
 
     except Exception as e:
-        logger.error(f"Failed to fetch datacenters: {e}")
+        logger.error(f"Failed to fetch internet outages from summary: {e}")
+        traceback.print_exc()
+
+    except Exception as e:
+        logger.error(f"Failed to fetch internet outages: {e}")
+
 
 def fetch_cables_and_stations():
     logger.info("Fetching Submarine Cables and Landing Stations...")
@@ -236,7 +156,6 @@ def main():
     logger.info("Starting InfraPoller...")
 
     last_ioda_fetch = 0
-    last_dc_fetch = 0
     last_cables_fetch = 0
 
     while True:
@@ -250,9 +169,6 @@ def main():
             fetch_internet_outages()
             last_ioda_fetch = now
 
-        if now - last_dc_fetch > POLL_INTERVAL_DC_HOURS * 3600:
-            fetch_datacenters()
-            last_dc_fetch = now
 
         time.sleep(60)
 

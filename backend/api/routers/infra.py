@@ -51,17 +51,3 @@ async def get_infra_outages():
         logger.error(f"Failed to fetch infra outages: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/api/infra/datacenters")
-async def get_infra_datacenters():
-    """Returns datacenters data from Redis."""
-    if not db.redis_client:
-        raise HTTPException(status_code=503, detail="Redis not ready")
-
-    try:
-        data = await db.redis_client.get("infra:datacenters")
-        if data:
-            return json.loads(data)
-        return {"type": "FeatureCollection", "features": []}
-    except Exception as e:
-        logger.error(f"Failed to fetch infra datacenters: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")

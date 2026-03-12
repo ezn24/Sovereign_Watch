@@ -76,9 +76,9 @@ interface UseAnimationLoopOptions {
   cablesData?: any;
   stationsData?: any;
   outagesData?: any;
-  datacentersData?: any;
-  setHoveredInfra?: (info: any) => void;
+    setHoveredInfra?: (info: any) => void;
   setSelectedInfra?: (info: any) => void;
+  worldCountriesData?: any;
   globeMode: boolean | undefined;
   enable3d: boolean;
   mapToken: string;
@@ -132,7 +132,6 @@ export function useAnimationLoop({
   cablesData,
   stationsData,
   outagesData,
-  datacentersData,
   setHoveredInfra,
   setSelectedInfra,
   globeMode,
@@ -154,6 +153,7 @@ export function useAnimationLoop({
   predictedGroundTrackRef,
   observerRef,
   currentMissionRef,
+  worldCountriesData,
 }: UseAnimationLoopOptions): void {
   // eslint-disable-next-line react-hooks/purity
   const lastFrameTimeRef = useRef<number>(Date.now());
@@ -841,12 +841,12 @@ export function useAnimationLoop({
         cablesData,
         stationsData,
         outagesData,
-        datacentersData,
         filters,
         setHoveredInfra || (() => { }),
         setSelectedInfra,
         currentSelected,
-        globeMode
+        globeMode,
+        worldCountriesData
       );
 
       // KiwiSDR node marker layer (Radio Beacon)
@@ -935,6 +935,9 @@ export function useAnimationLoop({
         // 0.25. Terminator Layer (always present, visibility internal to call)
         getTerminatorLayer(!!filters?.showTerminator),
 
+        // Infra layers (cables, stations, outages) - Rendered in background below live data
+        ...infraLayers,
+
         // 0.5. Orbital Layers
         ...getOrbitalLayers({
           satellites: filteredSatellites,
@@ -976,9 +979,6 @@ export function useAnimationLoop({
         // 2. Repeater infrastructure (rendered below entity icons for context)
         ...repeaterLayers,
 
-        // Infra layers (cables and landing stations)
-        ...infraLayers,
-
         // KiwiSDR node marker (rendered above infra, below entity icons)
         ...kiwiLayers,
 
@@ -1013,7 +1013,15 @@ export function useAnimationLoop({
         // setting projection on every frame interrupts MapboxOverlay's internal
         // camera sync with Mapbox, causing layers to drift when rotating the globe.
         // projection/_full3d are set once at construction in the adapter's useEffect.
-        overlayRef.current.setProps({ layers });
+        overlayRef.current.setProps({ 
+          layers,
+          onHover: (info: any) => {
+            if (!info.object) {
+              setHoveredEntity(null);
+              setHoverPosition(null);
+            }
+          }
+        });
       }
 
       rafRef.current = requestAnimationFrame(animate);
@@ -1047,6 +1055,6 @@ export function useAnimationLoop({
     cablesData,
     stationsData,
     outagesData,
-    datacentersData,
+    worldCountriesData,
   ]);
 }

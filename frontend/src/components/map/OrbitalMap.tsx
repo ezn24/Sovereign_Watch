@@ -159,7 +159,7 @@ export function OrbitalMap({
   currentMissionRef,
 }: TacticalMapProps) {
   // Fetch infra data (Submarine cables, landing stations, outages, datacenters)
-  const { cablesData, stationsData, outagesData, datacentersData } = useInfraData();
+  const { cablesData, stationsData, outagesData } = useInfraData();
 
   // State for UI interactions
   const [hoveredEntity, setHoveredEntity] = useState<CoTEntity | null>(null);
@@ -501,7 +501,6 @@ export function OrbitalMap({
     cablesData,
     stationsData,
     outagesData,
-    datacentersData,
     setHoveredInfra: handleHoveredInfra,
     setSelectedInfra: (info: any) => {
       if (!info || !info.object) return;

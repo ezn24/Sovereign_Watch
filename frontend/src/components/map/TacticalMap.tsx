@@ -159,7 +159,15 @@ export function TacticalMap({
   currentMissionRef,
 }: TacticalMapProps) {
   // Fetch infra data (Submarine cables, landing stations, outages, datacenters)
-  const { cablesData, stationsData, outagesData, datacentersData } = useInfraData();
+  const { cablesData, stationsData, outagesData } = useInfraData();
+  const [worldCountriesData, setWorldCountriesData] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/world-countries.json")
+      .then(res => res.json())
+      .then(data => setWorldCountriesData(data))
+      .catch(err => console.error("Failed to load world countries GeoJSON:", err));
+  }, []);
 
   // State for UI interactions
   const [hoveredEntity, setHoveredEntity] = useState<CoTEntity | null>(null);
@@ -180,14 +188,28 @@ export function TacticalMap({
     const obj = info?.object || null;
     setHoveredInfraState(obj);
     if (obj) {
-      const props = obj.properties || {};
-      const lat = obj.geometry.type === 'Point' ? obj.geometry.coordinates[1] : obj.geometry.coordinates[0][1];
-      const lon = obj.geometry.type === 'Point' ? obj.geometry.coordinates[0] : obj.geometry.coordinates[0][0];
+      let lat = 0, lon = 0;
+      if (info.coordinate) {
+        [lon, lat] = info.coordinate;
+      } else {
+        const geom = obj.geometry;
+        if (geom.type === 'Point') {
+          [lon, lat] = geom.coordinates;
+        } else if (geom.type === 'LineString') {
+          [lon, lat] = geom.coordinates[0];
+        } else if (geom.type === 'Polygon') {
+          [lon, lat] = geom.coordinates[0][0];
+        } else if (geom.type === 'MultiPolygon') {
+          [lon, lat] = geom.coordinates[0][0][0];
+        }
+      }
 
+      const props = obj.properties || {};
+      const isOutage = props.entity_type === 'outage' || props.severity !== undefined;
       const entity: CoTEntity = {
         uid: props.id || String(obj.id),
-        type: 'infra',
-        callsign: props.name || 'Unknown Infra',
+        type: isOutage ? 'outage' : 'infra',
+        callsign: props.name || props.region || (isOutage ? 'INTERNET OUTAGE' : 'Unknown Infra'),
         lat,
         lon,
         altitude: 0,
@@ -201,8 +223,8 @@ export function TacticalMap({
       setHoveredEntity(entity);
       setHoverPosition({ x: info.x, y: info.y });
     } else {
-      // Clear tooltip only if current hovered item is infra
-      setHoveredEntity(prev => (prev?.type === 'infra' ? null : prev));
+      // Clear tooltip only if current hovered item is infra or outage
+      setHoveredEntity((prev: CoTEntity | null) => (prev?.type === 'infra' || prev?.type === 'outage' ? null : prev));
     }
   }, []);
 
@@ -459,7 +481,6 @@ export function TacticalMap({
     cablesData,
     stationsData,
     outagesData,
-    datacentersData,
     setHoveredInfra: handleHoveredInfra,
     setSelectedInfra: (info: any) => {
       if (!info || !info.object) return;
@@ -496,6 +517,7 @@ export function TacticalMap({
     rfSitesRef,
     kiwiNodeRef,
     showRepeaters,
+    worldCountriesData,
   });
 
   // Map Camera: projection, graticule, 3D terrain/fog
