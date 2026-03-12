@@ -1,0 +1,198 @@
+# Configuration Reference
+
+> All runtime configuration is managed through a single `.env` file at the project root.
+> Copy `.env.example` to `.env` and fill in your values before running `docker compose up -d`.
+
+---
+
+## Quick Start
+
+```bash
+cp .env.example .env
+# Edit .env with your values, then:
+docker compose up -d --build
+```
+
+---
+
+## Area of Responsibility (AOR)
+
+These three variables define your **monitoring area** and are consumed by the ADS-B, AIS, and RF Pulse pollers.
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `CENTER_LAT` | `45.5152` | AOR center latitude (decimal degrees, -90 to +90) |
+| `CENTER_LON` | `-122.6784` | AOR center longitude (decimal degrees, -180 to +180) |
+| `COVERAGE_RADIUS_NM` | `150` | AOR radius in nautical miles (10–300) |
+
+> **Tip:** The AOR can also be updated at runtime without restarting containers via the Settings HUD or `POST /api/config/location`.
+
+**Default location:** Portland, OR, USA (`45.5152, -122.6784`)
+
+---
+
+## Map Rendering
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `VITE_MAPBOX_TOKEN` | *(empty)* | Mapbox GL JS access token. **Required** for 3D terrain and satellite imagery. Get one at [mapbox.com](https://mapbox.com). If empty, falls back to MapLibre + CARTO Dark Matter (no token needed). |
+| `VITE_ENABLE_MAPBOX` | `true` | Set to `false` to force MapLibre even when a Mapbox token is present. |
+
+---
+
+## Maritime (AIS)
+
+| Variable | Default | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `AISSTREAM_API_KEY` | *(empty)* | **Yes** | AISStream.io WebSocket API key. Get a free key at [aisstream.io](https://aisstream.io). Without this, no maritime data is ingested. |
+
+---
+
+## AI / LLM Cognition
+
+Sovereign Watch uses **LiteLLM** as a unified AI gateway, supporting local and cloud models simultaneously.
+
+| Variable | Default | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `ANTHROPIC_API_KEY` | *(empty)* | For Claude | Anthropic API key for Claude 3.5 Sonnet (`deep-reasoner` model). |
+| `GEMINI_API_KEY` | *(empty)* | For Gemini | Google AI Studio API key for Gemini 1.5 Flash (`public-flash` model). |
+
+> The **LLaMA3** local model (`secure-core`) requires an Ollama instance accessible to the backend container. No API key needed, but requires GPU/CPU resources.
+
+---
+
+## RF Infrastructure
+
+### RepeaterBook
+
+| Variable | Default | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `REPEATERBOOK_API_TOKEN` | *(empty)* | For RepeaterBook | RepeaterBook API token. Ingestion is **disabled** if not set. |
+| `RF_RB_RADIUS_MI` | `200` | No | RepeaterBook query radius in **miles**. |
+| `RF_REPEATERBOOK_INTERVAL_H` | `6` | No | Fetch interval in hours. |
+
+### RadioReference
+
+| Variable | Default | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `RADIOREF_APP_KEY` | *(empty)* | For RadioRef | RadioReference application key. Ingestion is **disabled** if not set (along with username/password). |
+| `RADIOREF_USERNAME` | *(empty)* | For RadioRef | RadioReference account username. |
+| `RADIOREF_PASSWORD` | *(empty)* | For RadioRef | RadioReference account password. |
+
+### RF Pulse Intervals
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `RF_REPEATERBOOK_INTERVAL_H` | `6` | RepeaterBook fetch interval (hours) |
+| `RF_ARD_INTERVAL_H` | `24` | Amateur Radio Directory fetch interval (hours) |
+| `RF_NOAA_INTERVAL_H` | `168` | NOAA Weather Radio fetch interval (hours) — weekly |
+
+---
+
+## JS8Call / HF Radio Terminal
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `KIWI_HOST` | `kiwisdr.example.com` | KiwiSDR node hostname or IP. Find public nodes at [kiwisdr.com](http://kiwisdr.com). |
+| `KIWI_PORT` | `8073` | KiwiSDR node port (default 8073). |
+| `KIWI_FREQ` | `14074` | Receive frequency in kHz. `14074` = 20m JS8Call calling frequency. |
+| `KIWI_MODE` | `usb` | Receive mode. Use `usb` for JS8Call. |
+| `MY_GRID` | `CN85` | Your Maidenhead grid square locator (4 or 6 characters). Used for distance/bearing calculations. |
+
+---
+
+## Database
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `POSTGRES_PASSWORD` | `password` | TimescaleDB postgres user password. **Change this for production deployments.** |
+| `POSTGRES_DB` | `sovereign_watch` | Database name (hardcoded in service configs; change with care). |
+
+---
+
+## Backend API
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `ALLOWED_ORIGINS` | `http://localhost,http://127.0.0.1` | CORS allowed origins (comma-separated). Add your domain if accessing remotely. |
+
+---
+
+## Internal Service Variables
+
+These are set automatically by `docker-compose.yml` and **do not need to be changed** in `.env`:
+
+| Variable | Value | Used By |
+| :--- | :--- | :--- |
+| `KAFKA_BROKERS` | `sovereign-redpanda:9092` | All pollers, Backend API |
+| `REDIS_HOST` | `sovereign-redis` | AIS, ADS-B, RF Pulse, Backend API |
+| `REDIS_PORT` | `6379` | AIS, ADS-B, RF Pulse, Backend API |
+| `REDIS_URL` | `redis://sovereign-redis:6379/0` | Infra Poller |
+| `LITELLM_MODEL` | `deep-reasoner` | Backend API |
+| `DB_DSN` | `postgresql://postgres:...` | Backend API |
+
+---
+
+## Feature Flags
+
+The following features are automatically enabled or disabled based on credential presence:
+
+| Feature | Enabled When |
+| :--- | :--- |
+| RepeaterBook ingestion | `REPEATERBOOK_API_TOKEN` is set |
+| RadioReference ingestion | `RADIOREF_APP_KEY` + `RADIOREF_USERNAME` + `RADIOREF_PASSWORD` are all set |
+| Mapbox 3D terrain | `VITE_MAPBOX_TOKEN` is set and `VITE_ENABLE_MAPBOX=true` |
+| Claude AI analysis | `ANTHROPIC_API_KEY` is set |
+| Gemini AI analysis | `GEMINI_API_KEY` is set |
+
+Use `GET /api/config/features` to check which features are currently enabled at runtime.
+
+---
+
+## Example `.env` File
+
+```bash
+# ── Area of Responsibility ─────────────────────────────────────
+CENTER_LAT=38.8977
+CENTER_LON=-77.0365
+COVERAGE_RADIUS_NM=100
+
+# ── Map ────────────────────────────────────────────────────────
+VITE_MAPBOX_TOKEN=pk.eyJ1IjoiZXhhbXBsZSIsImEiOiJjbH...
+VITE_ENABLE_MAPBOX=true
+
+# ── Maritime ───────────────────────────────────────────────────
+AISSTREAM_API_KEY=your-aisstream-key-here
+
+# ── AI Cognition ───────────────────────────────────────────────
+ANTHROPIC_API_KEY=sk-ant-api03-...
+GEMINI_API_KEY=AIzaSy...
+
+# ── RF Infrastructure ──────────────────────────────────────────
+REPEATERBOOK_API_TOKEN=your-rb-token
+RF_RB_RADIUS_MI=150
+
+# RadioReference (optional)
+# RADIOREF_APP_KEY=your-rr-app-key
+# RADIOREF_USERNAME=your-rr-username
+# RADIOREF_PASSWORD=your-rr-password
+
+# ── JS8Call / HF Radio ─────────────────────────────────────────
+KIWI_HOST=my-kiwisdr-node.example.com
+KIWI_PORT=8073
+KIWI_FREQ=14074
+KIWI_MODE=usb
+MY_GRID=FM18
+
+# ── Database ───────────────────────────────────────────────────
+POSTGRES_PASSWORD=change-me-in-production
+```
+
+---
+
+## Related
+
+- [Deployment & Upgrade Guide](./Deployment.md)
+- [ADS-B Poller Guide](./pollers/ADSB.md)
+- [AIS Maritime Poller Guide](./pollers/AIS.md)
+- [RF Pulse Guide](./pollers/RF.md)
