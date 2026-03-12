@@ -152,6 +152,27 @@ class KiwiClient:
 
         logger.info("KiwiClient connected: %s:%d @ %.3f kHz %s", host, port, freq_khz, mode)
 
+    async def set_agc(self, agc_on: bool, man_gain: int) -> None:
+        """
+        Control the KiwiSDR AGC / manual RF gain.
+
+        Parameters
+        ----------
+        agc_on   : True = automatic gain control, False = manual gain.
+        man_gain : Pre-ADC gain level, 0–120 dB.  Meaningful in both modes
+                   (acts as max-gain ceiling when AGC is on).
+        """
+        if not self.is_connected:
+            raise RuntimeError("KiwiClient.set_agc() called while not connected")
+        level = max(0, min(120, man_gain))
+        if agc_on:
+            await self._ws.send(
+                f"SET agc=1 hang=0 thresh=-100 slope=6 decay=1000 manGain={level}"
+            )
+        else:
+            await self._ws.send(f"SET agc=0 manGain={level}")
+        logger.info("KiwiClient AGC → agc_on=%s manGain=%d", agc_on, level)
+
     async def set_squelch(self, enabled: bool, threshold: int) -> None:
         """
         Enable or disable the KiwiSDR squelch gate.
