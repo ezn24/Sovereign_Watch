@@ -152,6 +152,25 @@ class KiwiClient:
 
         logger.info("KiwiClient connected: %s:%d @ %.3f kHz %s", host, port, freq_khz, mode)
 
+    async def set_squelch(self, enabled: bool, threshold: int) -> None:
+        """
+        Enable or disable the KiwiSDR squelch gate.
+
+        Parameters
+        ----------
+        enabled   : True = squelch on, False = squelch off.
+        threshold : 0–150.  Frames below this level are muted.
+                    Meaningful only when enabled=True.
+        """
+        if not self.is_connected:
+            raise RuntimeError("KiwiClient.set_squelch() called while not connected")
+        if enabled:
+            level = max(0, min(150, threshold))
+            await self._ws.send(f"SET squelch=1 max={level}")
+        else:
+            await self._ws.send("SET squelch=0 max=0")
+        logger.info("KiwiClient squelch → enabled=%s threshold=%d", enabled, threshold)
+
     async def tune(self, freq_khz: float, mode: str) -> None:
         """
         Lossless retune — send new SET mod/freq commands over the live WebSocket.
@@ -308,18 +327,24 @@ class KiwiClient:
             logger.debug("KiwiClient keepalive error: %s", exc)
 
     async def _start_waterfall(self, host: str, port: int) -> None:
-        """Start the KiwiSDR waterfall stream (W/F)."""
+        """Start the KiwiSDR waterfall stream (W/F).
+
+        KiwiSDR W/F handshake (minimal — only send commands the server understands):
+          1. SET auth t=kiwi p=
+          2. SET zoom=N cf=F   (zoom level; cf in kHz)
+        Any extra SET commands not in the W/F protocol will be silently dropped or
+        cause the server to stop sending W/F frames entirely.
+        """
         wf_uri = f"ws://{host}:{port}/{int(time.time() * 1000)}/W/F"
         try:
             ws = await websockets.connect(wf_uri, open_timeout=CONNECT_TIMEOUT, ping_interval=None)
             self._wf_ws = ws
             await ws.send("SET auth t=kiwi p=")
+            # zoom=0 → full HF spectrum; cf is center frequency in kHz
             await ws.send(f"SET zoom=0 cf={self._freq_khz:.3f}")
-            await ws.send("SET max_freq=30000000")
-            await ws.send("SET bins=1024") # Standardized bin width
-            
+
             self._wf_recv_task = asyncio.create_task(self._wf_receive_loop(), name="kiwi-wf-recv")
-            logger.info("KiwiClient waterfall started")
+            logger.info("KiwiClient waterfall started @ %.3f kHz", self._freq_khz)
         except Exception as exc:
             logger.warning("KiwiClient waterfall startup failed: %s", exc)
 

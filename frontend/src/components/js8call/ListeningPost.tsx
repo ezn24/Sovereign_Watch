@@ -366,7 +366,18 @@ export default function ListeningPost({
 
       {/* ── MAIN AREA: WATERFALL ── */}
       <div className="flex-1 flex flex-col relative overflow-hidden bg-black">
-        
+
+        {/* No-connection overlay — shown when no KiwiSDR is linked */}
+        {!activeKiwiConfig && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-none select-none">
+            <div className="flex flex-col items-center gap-3 text-center px-8">
+              <Activity className="w-10 h-10 text-slate-600 animate-pulse" />
+              <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">No SDR Node Linked</span>
+              <span className="text-slate-600 text-[11px]">Open the Node Browser (top bar) to connect to a KiwiSDR.<br />Frequency controls will activate once a node is linked.</span>
+            </div>
+          </div>
+        )}
+
         {/* Top Waterfall Controls */}
         <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10 pointer-events-none">
             <div className="flex items-center gap-2 pointer-events-auto">
@@ -463,29 +474,39 @@ export default function ListeningPost({
                 </div>
             </div>
 
-            {/* SQN Control */}
+            {/* SQN Control — display only, not a KiwiSDR parameter */}
             <div className="space-y-3">
                 <div className="flex justify-between items-end">
                     <span className="text-[9px] text-slate-500 uppercase font-bold">SQN (Noise Flush)</span>
                     <span className="text-rose-400 font-bold">{sqn}</span>
                 </div>
-                <input 
-                    type="range" min={0} max={100} value={sqn} 
+                <input
+                    type="range" min={0} max={100} value={sqn}
                     onChange={e => setSqn(parseInt(e.target.value))}
-                    className="w-full h-1 accent-rose-500 bg-[#1a2b36] rounded appearance-none cursor-pointer" 
+                    className="w-full h-1 accent-rose-500 bg-[#1a2b36] rounded appearance-none cursor-pointer"
                 />
             </div>
 
-            {/* SQL Control */}
+            {/* SQL Control — sends SET squelch to KiwiSDR */}
             <div className="space-y-3">
                 <div className="flex justify-between items-end">
                     <span className="text-[9px] text-slate-500 uppercase font-bold">SQL (Squelch)</span>
-                    <span className="text-indigo-400 font-bold">{sql}%</span>
+                    <span className="text-indigo-400 font-bold">{sql > 0 ? `${sql}%` : 'OFF'}</span>
                 </div>
-                <input 
-                    type="range" min={0} max={100} value={sql} 
-                    onChange={e => setSql(parseInt(e.target.value))}
-                    className="w-full h-1 accent-indigo-500 bg-[#1a2b36] rounded appearance-none cursor-pointer" 
+                <input
+                    type="range" min={0} max={100} value={sql}
+                    onChange={e => {
+                        const val = parseInt(e.target.value);
+                        setSql(val);
+                        if (activeKiwiConfig && bridgeConnected) {
+                            sendAction({
+                                action: 'SET_SQUELCH',
+                                enabled: val > 0,
+                                threshold: val,
+                            });
+                        }
+                    }}
+                    className="w-full h-1 accent-indigo-500 bg-[#1a2b36] rounded appearance-none cursor-pointer"
                 />
             </div>
 
