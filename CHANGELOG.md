@@ -1,3 +1,9 @@
+## [0.26.1] - 2026-03-12
+
+### Fixed
+
+- **KiwiSDR Tuning Stability**: Implemented a 500ms debouncing mechanism for frequency tuning, AGC, and squelch adjustments in the `js8call` service. This prevents remote SDR nodes from being overwhelmed by rapid UI interactions and mitigates connection drops and rate-limiting.
+
 ## [0.26.0] - 2026-03-12
 
 ### Added

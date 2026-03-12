@@ -94,6 +94,7 @@ class KiwiClient:
         self._recv_task:      Optional[asyncio.Task] = None
         self._keepalive_task: Optional[asyncio.Task] = None
         self._wf_recv_task:   Optional[asyncio.Task] = None
+        self._command_tasks:  Dict[str, asyncio.Task] = {}
 
         self._host:        str   = ""
         self._port:        int   = 0
@@ -164,14 +165,18 @@ class KiwiClient:
         """
         if not self.is_connected:
             raise RuntimeError("KiwiClient.set_agc() called while not connected")
-        level = max(0, min(120, man_gain))
-        if agc_on:
-            await self._ws.send(
-                f"SET agc=1 hang=0 thresh=-100 slope=6 decay=1000 manGain={level}"
-            )
-        else:
-            await self._ws.send(f"SET agc=0 manGain={level}")
-        logger.info("KiwiClient AGC → agc_on=%s manGain=%d", agc_on, level)
+        
+        async def _do_set_agc():
+            level = max(0, min(120, man_gain))
+            if agc_on:
+                await self._ws.send(
+                    f"SET agc=1 hang=0 thresh=-100 slope=6 decay=1000 manGain={level}"
+                )
+            else:
+                await self._ws.send(f"SET agc=0 manGain={level}")
+            logger.info("KiwiClient AGC → agc_on=%s manGain=%d", agc_on, level)
+
+        await self._debounce_command("agc", 0.5, _do_set_agc)
 
     async def set_squelch(self, enabled: bool, threshold: int) -> None:
         """
@@ -185,12 +190,16 @@ class KiwiClient:
         """
         if not self.is_connected:
             raise RuntimeError("KiwiClient.set_squelch() called while not connected")
-        if enabled:
-            level = max(0, min(150, threshold))
-            await self._ws.send(f"SET squelch=1 max={level}")
-        else:
-            await self._ws.send("SET squelch=0 max=0")
-        logger.info("KiwiClient squelch → enabled=%s threshold=%d", enabled, threshold)
+
+        async def _do_set_squelch():
+            if enabled:
+                level = max(0, min(150, threshold))
+                await self._ws.send(f"SET squelch=1 max={level}")
+            else:
+                await self._ws.send("SET squelch=0 max=0")
+            logger.info("KiwiClient squelch → enabled=%s threshold=%d", enabled, threshold)
+
+        await self._debounce_command("squelch", 0.5, _do_set_squelch)
 
     async def tune(self, freq_khz: float, mode: str) -> None:
         """
@@ -199,26 +208,38 @@ class KiwiClient:
         """
         if not self.is_connected:
             raise RuntimeError("KiwiClient.tune() called while not connected")
-        await self._send_mod(freq_khz, mode)
-        self._freq_khz = freq_khz
-        self._mode     = mode
-        self._on_status({
-            "connected": True,
-            "host": self._host, "port": self._port,
-            "freq": freq_khz, "mode": mode,
-        })
-        logger.info("KiwiClient retuned → %.3f kHz %s", freq_khz, mode)
+
+        async def _do_tune():
+            await self._send_mod(freq_khz, mode)
+            self._freq_khz = freq_khz
+            self._mode     = mode
+            self._on_status({
+                "connected": True,
+                "host": self._host, "port": self._port,
+                "freq": freq_khz, "mode": mode,
+            })
+            logger.info("KiwiClient retuned → %.3f kHz %s", freq_khz, mode)
+
+        await self._debounce_command("tune", 0.5, _do_tune)
 
     async def disconnect(self) -> None:
         """Gracefully close the WebSocket and cancel background tasks."""
         self._disconnecting = True
-        for task in (self._recv_task, self._keepalive_task, self._wf_recv_task):
+        
+        # Cancel all background loops and debounced command tasks
+        tasks_to_cancel = [self._recv_task, self._keepalive_task, self._wf_recv_task]
+        tasks_to_cancel.extend(self._command_tasks.values())
+
+        for task in tasks_to_cancel:
             if task and not task.done():
                 task.cancel()
                 try:
                     await task
                 except asyncio.CancelledError:
                     pass
+        
+        self._command_tasks.clear()
+
         for ws in (self._ws, self._wf_ws):
             if ws:
                 try:
@@ -255,6 +276,28 @@ class KiwiClient:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    async def _debounce_command(self, name: str, delay: float, coro_func) -> None:
+        """
+        Cancel existing task for 'name' and schedule a new one after 'delay' seconds.
+        """
+        if name in self._command_tasks:
+            task = self._command_tasks[name]
+            if not task.done():
+                task.cancel()
+        
+        async def _wrapper():
+            try:
+                await asyncio.sleep(delay)
+                await coro_func()
+            except asyncio.CancelledError:
+                pass
+            finally:
+                # Only remove if it's still our task (avoid race condition)
+                if self._command_tasks.get(name) == asyncio.current_task():
+                    self._command_tasks.pop(name, None)
+
+        self._command_tasks[name] = asyncio.create_task(_wrapper(), name=f"kiwi-db-{name}")
 
     async def _handshake(self, freq_khz: float, mode: str) -> None:
         """Execute the KiwiSDR SND handshake sequence."""
