@@ -201,10 +201,11 @@ export function useJS8Stations(): UseJS8StationsResult {
 
   const sendMessage = useCallback((target: string, text: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      // Backend expects action:"SEND", target, message (not text)
       wsRef.current.send(JSON.stringify({
-        action: 'TX_DIRECTED',
+        action: 'SEND',
         target,
-        text,
+        message: text,
       }));
     }
   }, []);

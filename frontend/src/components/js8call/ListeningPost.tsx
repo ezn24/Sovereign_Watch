@@ -117,10 +117,12 @@ export default function ListeningPost({
   const [wfMode, setWfMode] = useState<'PASSBAND' | 'WIDE'>('WIDE');
   
   // Settings
-  const [gain] = useState(50);
-  const [speed, setSpeed] = useState('Normal');
+  const [manGain, setManGain] = useState(50);   // 0-120 KiwiSDR manGain
+  const [agcOn,   setAgcOn]   = useState(true);  // AGC enabled by default
+  const [wfSkip,  setWfSkip]  = useState(1);     // client-side frame skip (1=all,2=every other,…)
   const [sqn, setSqn] = useState(30);
   const [sql, setSql] = useState(23);
+  const wfFrameCountRef = useRef(0);
 
 
   // ── Waterfall Rendering Loop ──────────────────────────────────────────────
@@ -177,6 +179,8 @@ export default function ListeningPost({
 
             ws.onmessage = (evt) => {
                 if (evt.data instanceof ArrayBuffer) {
+                    wfFrameCountRef.current += 1;
+                    if (wfFrameCountRef.current % wfSkip !== 0) return; // client-side cadence
                     const pixels = new Uint8Array(evt.data);
                     drawRow(pixels, ctx2d, canvas.width, canvas.height);
                 }
@@ -200,7 +204,7 @@ export default function ListeningPost({
             }
         };
     }
-  }, [wfMode, analyserNode, drawRow]);
+  }, [wfMode, analyserNode, drawRow, wfSkip]);
 
   // Sync local frequency and mode with active config from bridge
   // Use render-phase stabilization to avoid cascading render warnings in useEffect
@@ -366,7 +370,18 @@ export default function ListeningPost({
 
       {/* ── MAIN AREA: WATERFALL ── */}
       <div className="flex-1 flex flex-col relative overflow-hidden bg-black">
-        
+
+        {/* No-connection overlay — shown when no KiwiSDR is linked */}
+        {!activeKiwiConfig && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-none select-none">
+            <div className="flex flex-col items-center gap-3 text-center px-8">
+              <Activity className="w-10 h-10 text-slate-600 animate-pulse" />
+              <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">No SDR Node Linked</span>
+              <span className="text-slate-600 text-[11px]">Open the Node Browser (top bar) to connect to a KiwiSDR.<br />Frequency controls will activate once a node is linked.</span>
+            </div>
+          </div>
+        )}
+
         {/* Top Waterfall Controls */}
         <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-10 pointer-events-none">
             <div className="flex items-center gap-2 pointer-events-auto">
@@ -444,60 +459,102 @@ export default function ListeningPost({
         </div>
 
         <div className="px-5 space-y-8">
-            {/* Gain Setting */}
+            {/* RF Gain — sends SET agc/manGain to KiwiSDR */}
             <div className="space-y-3">
                 <div className="flex justify-between items-end">
                     <span className="text-[9px] text-slate-500 uppercase font-bold">RF Gain</span>
-                    <span className="text-cyan-400 font-bold">{gain} dB</span>
+                    <span className="text-cyan-400 font-bold">{manGain} dB</span>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                    {['Normal', 'Fast', 'Turbo', 'x2', 'x5', 'x10'].map(m => (
-                        <button 
-                            key={m} 
-                            onClick={(e) => { e.preventDefault(); setSpeed(m); }}
-                            className={`px-3 py-1 flex-1 rounded border text-[9px] font-bold ${speed === m ? 'bg-cyan-600/20 border-cyan-500 text-cyan-300' : 'bg-black/30 border-[#1a2b36] text-slate-600'}`}
-                        >
-                            {m}
-                        </button>
-                    ))}
+                {/* AGC toggle */}
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => {
+                            const next = true;
+                            setAgcOn(next);
+                            if (activeKiwiConfig && bridgeConnected)
+                                sendAction({ action: 'SET_AGC', agc: next, man_gain: manGain });
+                        }}
+                        className={`flex-1 py-1 rounded-l border text-[9px] font-bold transition-all ${agcOn ? 'bg-cyan-600/20 border-cyan-500 text-cyan-300' : 'bg-black/30 border-[#1a2b36] text-slate-600'}`}
+                    >
+                        AGC
+                    </button>
+                    <button
+                        onClick={() => {
+                            const next = false;
+                            setAgcOn(next);
+                            if (activeKiwiConfig && bridgeConnected)
+                                sendAction({ action: 'SET_AGC', agc: next, man_gain: manGain });
+                        }}
+                        className={`flex-1 py-1 rounded-r border text-[9px] font-bold transition-all ${!agcOn ? 'bg-amber-600/20 border-amber-500 text-amber-300' : 'bg-black/30 border-[#1a2b36] text-slate-600'}`}
+                    >
+                        MAN
+                    </button>
                 </div>
-            </div>
-
-            {/* SQN Control */}
-            <div className="space-y-3">
-                <div className="flex justify-between items-end">
-                    <span className="text-[9px] text-slate-500 uppercase font-bold">SQN (Noise Flush)</span>
-                    <span className="text-rose-400 font-bold">{sqn}</span>
-                </div>
-                <input 
-                    type="range" min={0} max={100} value={sqn} 
-                    onChange={e => setSqn(parseInt(e.target.value))}
-                    className="w-full h-1 accent-rose-500 bg-[#1a2b36] rounded appearance-none cursor-pointer" 
+                <input
+                    type="range" min={0} max={120} value={manGain}
+                    onChange={e => {
+                        const val = parseInt(e.target.value);
+                        setManGain(val);
+                        if (activeKiwiConfig && bridgeConnected)
+                            sendAction({ action: 'SET_AGC', agc: agcOn, man_gain: val });
+                    }}
+                    className="w-full h-1 accent-cyan-500 bg-[#1a2b36] rounded appearance-none cursor-pointer"
                 />
             </div>
 
-            {/* SQL Control */}
+            {/* SQL Control — sends SET squelch to KiwiSDR */}
             <div className="space-y-3">
                 <div className="flex justify-between items-end">
                     <span className="text-[9px] text-slate-500 uppercase font-bold">SQL (Squelch)</span>
-                    <span className="text-indigo-400 font-bold">{sql}%</span>
+                    <span className="text-indigo-400 font-bold">{sql > 0 ? `${sql}%` : 'OFF'}</span>
                 </div>
-                <input 
-                    type="range" min={0} max={100} value={sql} 
-                    onChange={e => setSql(parseInt(e.target.value))}
-                    className="w-full h-1 accent-indigo-500 bg-[#1a2b36] rounded appearance-none cursor-pointer" 
+                <input
+                    type="range" min={0} max={100} value={sql}
+                    onChange={e => {
+                        const val = parseInt(e.target.value);
+                        setSql(val);
+                        if (activeKiwiConfig && bridgeConnected) {
+                            sendAction({
+                                action: 'SET_SQUELCH',
+                                enabled: val > 0,
+                                threshold: val,
+                            });
+                        }
+                    }}
+                    className="w-full h-1 accent-indigo-500 bg-[#1a2b36] rounded appearance-none cursor-pointer"
+                />
+            </div>
+
+            {/* SQN — display-only noise floor meter */}
+            <div className="space-y-3">
+                <div className="flex justify-between items-end">
+                    <span className="text-[9px] text-slate-500 uppercase font-bold">SQN (Noise Floor)</span>
+                    <span className="text-rose-400 font-bold">{sqn}</span>
+                </div>
+                <input
+                    type="range" min={0} max={100} value={sqn}
+                    onChange={e => setSqn(parseInt(e.target.value))}
+                    className="w-full h-1 accent-rose-500 bg-[#1a2b36] rounded appearance-none cursor-pointer"
                 />
             </div>
 
             <div className="h-px bg-[#1a2b36]" />
 
-            {/* Scale Options */}
+            {/* Waterfall Cadence — client-side frame skip (can throttle, not speed up) */}
             <div className="space-y-3">
                 <span className="text-[9px] text-slate-500 uppercase font-bold">Waterfall Cadence</span>
-                <div className="flex flex-wrap gap-1">
-                    {['Slow', 'Normal', 'Squelch', 'Fast', 'x2', 'x5', 'Turbo'].map(m => (
-                        <button key={m} className="px-2 py-1 flex-1 rounded border border-[#1a2b36] text-[8px] font-bold bg-black/20 text-slate-600 hover:text-slate-400">
-                            {m}
+                <div className="flex gap-1">
+                    {([['¼', 4], ['½', 2], ['1×', 1]] as [string, number][]).map(([label, skip]) => (
+                        <button
+                            key={label}
+                            onClick={() => setWfSkip(skip)}
+                            className={`flex-1 py-1 rounded border text-[9px] font-bold transition-all ${
+                                wfSkip === skip
+                                    ? 'bg-cyan-600/20 border-cyan-500 text-cyan-300'
+                                    : 'bg-black/20 border-[#1a2b36] text-slate-600 hover:text-slate-400'
+                            }`}
+                        >
+                            {label}
                         </button>
                     ))}
                 </div>
