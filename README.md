@@ -1,8 +1,9 @@
 <div align="center">
   <img src="assets/images/logo.png" alt="Sovereign Watch Logo" width="260"/>
 
-  # Sovereign Watch
-  ### Distributed Multi-INT Fusion Center
+# Sovereign Watch
+
+### Distributed Multi-INT Fusion Center
 
   <p align="center">
     <a href="https://github.com/d3mocide/Sovereign_Watch/releases"><img src="https://img.shields.io/github/v/release/d3mocide/Sovereign_Watch?color=10B981&label=Release&style=for-the-badge" alt="Release"></a>
@@ -29,6 +30,14 @@
 
 ![Sovereign Watch - Orbital Map](assets/images/SovereignWatch-2.png)
 
+### JS8CALL Terminal
+
+![Sovereign Watch - JS8CALL Terminal](assets/images/SovereignWatch-3.png)
+
+### Global Map Filters and Layers
+
+![Sovereign Watch - Global Map Filters and Layers](assets/images/SovereignWatch-4.png)
+
 ---
 
 ## Quick Start
@@ -49,6 +58,7 @@ docker compose up -d --build
 ```
 
 **Minimum config required in `.env`:**
+
 ```bash
 CENTER_LAT=45.5152        # Your monitoring area
 CENTER_LON=-122.6784
@@ -63,18 +73,18 @@ ANTHROPIC_API_KEY=...     # For AI track analysis (optional)
 
 Full documentation is in the [`Documentation/`](./Documentation/) folder:
 
-| Guide | Description |
-| :--- | :--- |
-| [Deployment & Upgrade Guide](./Documentation/Deployment.md) | Install, run, upgrade, troubleshoot |
-| [Configuration Reference](./Documentation/Configuration.md) | All `.env` variables |
-| [ADS-B Poller](./Documentation/pollers/ADSB.md) | Aviation data ingestion |
-| [AIS Maritime Poller](./Documentation/pollers/AIS.md) | Maritime data ingestion |
-| [Orbital Pulse](./Documentation/pollers/Orbital.md) | Satellite tracking |
-| [Infra Poller](./Documentation/pollers/Infra.md) | Internet outages + submarine cables |
-| [RF Pulse](./Documentation/pollers/RF.md) | RF repeaters + NOAA weather radio |
-| [TAK Protocol Reference](./Documentation/TAK_Protocol.md) | Internal message schema (CoT/Protobuf) |
-| [API Reference](./Documentation/API_Reference.md) | REST endpoints + WebSocket |
-| [UI User Guide](./Documentation/UI_Guide.md) | How to use the Tactical and Orbital maps |
+| Guide                                                       | Description                              |
+| :---------------------------------------------------------- | :--------------------------------------- |
+| [Deployment & Upgrade Guide](./Documentation/Deployment.md) | Install, run, upgrade, troubleshoot      |
+| [Configuration Reference](./Documentation/Configuration.md) | All `.env` variables                     |
+| [ADS-B Poller](./Documentation/pollers/ADSB.md)             | Aviation data ingestion                  |
+| [AIS Maritime Poller](./Documentation/pollers/AIS.md)       | Maritime data ingestion                  |
+| [Orbital Pulse](./Documentation/pollers/Orbital.md)         | Satellite tracking                       |
+| [Infra Poller](./Documentation/pollers/Infra.md)            | Internet outages + submarine cables      |
+| [RF Pulse](./Documentation/pollers/RF.md)                   | RF repeaters + NOAA weather radio        |
+| [TAK Protocol Reference](./Documentation/TAK_Protocol.md)   | Internal message schema (CoT/Protobuf)   |
+| [API Reference](./Documentation/API_Reference.md)           | REST endpoints + WebSocket               |
+| [UI User Guide](./Documentation/UI_Guide.md)                | How to use the Tactical and Orbital maps |
 
 ---
 
@@ -129,14 +139,14 @@ graph TD
 
 All upstream data is sourced from **public, open-access networks**.
 
-| Domain | Source | Update Rate |
-| :--- | :--- | :--- |
-| Aviation (ADS-B) | adsb.fi, adsb.lol, airplanes.live | Every 2–30 seconds |
-| Maritime (AIS) | AISStream.io WebSocket | Event-driven (real time) |
-| Orbital | Celestrak TLE + SGP4 propagation | Every 5 seconds |
-| Internet Outages | IODA (Georgia Tech) | Every 30 minutes |
-| Submarine Cables | TeleGeography | Every 24 hours |
-| RF Infrastructure | RepeaterBook, ARD, NOAA NWR, RadioReference | Every 6–168 hours |
+| Domain            | Source                                      | Update Rate              |
+| :---------------- | :------------------------------------------ | :----------------------- |
+| Aviation (ADS-B)  | adsb.fi, adsb.lol, airplanes.live           | Every 2–30 seconds       |
+| Maritime (AIS)    | AISStream.io WebSocket                      | Event-driven (real time) |
+| Orbital           | Celestrak TLE + SGP4 propagation            | Every 5 seconds          |
+| Internet Outages  | IODA (Georgia Tech)                         | Every 30 minutes         |
+| Submarine Cables  | TeleGeography                               | Every 24 hours           |
+| RF Infrastructure | RepeaterBook, ARD, NOAA NWR, RadioReference | Every 6–168 hours        |
 
 ---
 
