@@ -1,3 +1,21 @@
+## [0.28.2] - 2026-03-13
+
+### Changed
+
+- **Frontend Code Cleanup**: Comprehensive dead code removal and refactor across the frontend codebase.
+  - **`useAnimationLoop.ts`**: Removed unused `useMemo` import; removed `mapToken` and `mapStyle` from hook options (never read inside the loop); removed dead `speedKts` computation that was calculated every frame then discarded; removed invalid `// eslint-disable-next-line react-hooks/purity` comment; extracted duplicated sea/air entity filter logic into a standalone `filterEntity()` helper; extracted duplicated satellite category classification into a standalone `filterSatellite()` helper, eliminating verbatim duplication between the orbital count pass and the rendered satellite pass.
+  - **`useEntityWorker.ts`**: Removed misleading `smoothedCourse` alias — the variable was assigned directly from `computedCourse` with no transformation, implying smoothing that no longer exists.
+  - **`useMissionLocations.ts`**: Removed `updateMission` — defined, memoised, and exported but never imported or called anywhere in the codebase.
+  - **`useRFSites.ts`**: Removed `rfSites` array state and `error` state from the hook; both were populated but never consumed by any component. The hook now returns only `{ rfSitesRef, loading }`.
+  - **`useMissionArea.ts`**: Removed 4 debug `console.log` statements that fired on every 2-second poll cycle and every mission change.
+  - **`useSystemHealth.ts`**: Removed dead `if (latency > 1000) status = 'degraded'` branch — unreachable because the preceding `latency > 200` condition already set the same value.
+  - **`useInfraData.ts`**: Removed duplicate consecutive `setOutagesData(fallbackEmpty)` call in the `catch` block.
+  - **`missionArea.ts`**: Replaced hardcoded `VITE_API_URL` base URL with relative `/api/config/location` paths, consistent with all other API modules.
+  - **`App.tsx`**: Collapsed two identical `<SidebarRight>` renders (one under `TACTICAL`, one under `ORBITAL`) into a single conditional render.
+  - **`TacticalMap.tsx` / `OrbitalMap.tsx`**: Removed `mapToken` and `mapStyle` props from `useAnimationLoop` calls after those options were removed from the hook interface.
+  - **`replayUtils.test.ts`**: Replaced trivial benchmark test (`expect(end - start).toBeGreaterThan(0)`) with a meaningful data-integrity assertion verifying all entities and point counts are preserved across a large dataset. Removed in-test `console.log`.
+  - **Multiple components**: Removed invalid `// eslint-disable-next-line react-hooks/purity` and `// eslint-disable-next-line react-hooks/set-state-in-effect` comments from `PassPredictorWidget.tsx`, `SearchWidget.tsx`, `SidebarRight.tsx`, `KiwiNodeBrowser.tsx`, and `TacticalMap.tsx` — these ESLint rule names do not exist.
+
 ## [0.28.1] - 2026-03-12
 
 ### Added
