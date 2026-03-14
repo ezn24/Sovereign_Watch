@@ -1,6 +1,37 @@
-# Release - v0.28.3 - Waterfall Stream Fix
+# Release - v0.28.3 - Filter Integrity & Stream Stability
 
-This is a targeted bug-fix release resolving a regression that prevented the WIDE-mode panoramic waterfall from loading in the HF Listening Post.
+This release fixes two frontend bugs: category filters being silently ignored during track replay, and the WIDE-mode waterfall stream failing on load.
+
+---
+
+## 🗂 Replay Category Filters Now Work for Ships and Aircraft
+
+### What was broken
+
+When using the track replay timeline, all vessel and aircraft category filters (cargo, tanker, passenger, fishing, military, commercial, helicopter, drone, etc.) had no effect — every entity rendered on the map regardless of which filters were active. Live mode was unaffected.
+
+### Root cause
+
+`processReplayData` (`replayUtils.ts`) reconstructs `CoTEntity` objects from historical database rows. It correctly mapped `meta.callsign` but never mapped `meta.classification`, which is where both the AIS poller and the ADS-B poller store their classification data.
+
+The animation loop's `filterEntity()` function reads category from two distinct top-level fields on the entity:
+- Ships → `entity.vesselClassification.category`
+- Aircraft → `entity.classification.affiliation` / `entity.classification.platform`
+
+Since neither field was ever populated in replay mode, `filterEntity()` skipped all category checks for every entity and let everything through.
+
+### Fix
+
+`processReplayData` now maps `meta.classification` from the DB row into the correct top-level field based on entity type:
+
+| Entity type | Source | Destination |
+|---|---|---|
+| Ship (CoT type contains `S`) | `meta.classification.category` | `entity.vesselClassification.category` |
+| Aircraft | full `meta.classification` | `entity.classification` |
+
+Three new tests cover ship category mapping, aircraft classification mapping, and graceful handling of rows with no classification data.
+
+---
 
 ## 📡 Waterfall Stream Restored
 
@@ -22,9 +53,11 @@ In development, React 18 `StrictMode` intentionally double-invokes effects: it m
 
 **Fix**: The effect cleanup now checks `ws.readyState`. If `CONNECTING`, it registers `ws.onopen = () => ws.close()` instead of calling `close()` immediately, allowing the handshake to complete before tearing down cleanly.
 
+---
+
 ## 📄 Upgrade Instructions
 
-No service restart required — the fix is frontend-only and is delivered via Vite HMR. For a clean pull:
+No backend or database changes — frontend-only. For a clean pull:
 
 ```bash
 git pull origin main
