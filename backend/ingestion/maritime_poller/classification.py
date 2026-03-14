@@ -5,8 +5,17 @@ def classify_vessel(ship_type: int, mmsi: int, name: str) -> Dict[str, Any]:
     hazardous = False
     name_upper = name.upper() if name else ""
 
+    # Ensure ship_type is an integer
+    if not isinstance(ship_type, int):
+        try:
+            ship_type = int(ship_type)
+        except (ValueError, TypeError):
+            ship_type = 0
+
     # 1. Primary classification by AIS Ship Type
-    if ship_type == 30:
+    if 20 <= ship_type <= 29:
+        category = "wig"
+    elif ship_type == 30:
         category = "fishing"
     elif ship_type in (31, 32, 52):
         category = "tug"
@@ -30,7 +39,9 @@ def classify_vessel(ship_type: int, mmsi: int, name: str) -> Dict[str, Any]:
         category = "anti_pollution"
     elif ship_type == 55:
         category = "law_enforcement"
-    elif ship_type in (58, 59):
+    elif ship_type == 58:
+        category = "medical"
+    elif ship_type == 59:
         category = "special"
     elif 60 <= ship_type <= 69:
         category = "passenger"
@@ -38,7 +49,7 @@ def classify_vessel(ship_type: int, mmsi: int, name: str) -> Dict[str, Any]:
         category = "cargo"
     elif 80 <= ship_type <= 89:
         category = "tanker"
-    elif ship_type == 90:
+    elif 90 <= ship_type <= 99:
         category = "other"
 
     # 2. Heuristics fallback for "unknown" or "other" types.
