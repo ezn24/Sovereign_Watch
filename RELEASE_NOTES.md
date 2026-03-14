@@ -1,18 +1,15 @@
-# Release - v0.28.5 - Signal Recovery Patch
+# Release - v0.28.6 - RF Layer Rendering Patch
 
 ## High-Level Summary
-This patch restores full visibility of RF Infrastructure and Global Network status on the Tactical Map. It resolves a critical data-recovery race condition in the backend that could lead to an empty database on service restarts, and standardizes map rendering parameters to eliminate depth-fighting between underlay layers and the 3D terrain.
+This emergency patch resolves a frontend regression where RF repeater sites were hidden from the Tactical Map. It also fortifies the developer documentation to prevent similar regressions in future layer modifications.
 
 ## Key Features & Fixes
-- **Data Recovery Engine**: The `historian` now automatically backfills missing ingestion data from the Kafka bus using `earliest` offset resets. This guarantees that your RF site database remains populated even after container rebuilds or transient network partitions.
-- **Enhanced Map Visibility**: standardizing on negative `depthBias` for all tactical infrastructure. This "pulls" repeaters, cables, and outages to the foreground, preventing them from being buried under the map basemap or satellite terrain.
-- **Tactical RF Highlighting**: Increased cluster halo opacity and added high-contrast outlines to single RF dots to ensure visibility against the deep-blue and terrain textures.
-- **IntelliSense Refinement**: Elimined "0 stations" false-negative log entries by gating notifications behind actual data availability confirmed by the frontend hooks.
+- **RF Layer Rendering**: Fixed a critical bug where `rfSitesRef` was disconnected from the map animation loop, causing repeater sites to be hidden despite successful data fetching.
+- **Agent Documentation**: Significantly expanded `agent_docs/z-ordering.md` with a mandatory **Animation Loop Data Threading Checklist** to prevent silent failures in future map layer development.
+- **Architectural Guardrails**: Updated `AGENTS.md` to require reading the z-ordering and threading guides before any map layer modifications.
 
 ## Technical Details
-- **Kafka**: Migrated to `group_id: historian-writer-v2` to trigger a mandatory partition re-read.
-- **Deck.gl**: All infrastructure layer builders now use `depthTest: true` / `depthBias: -100` (or similar) to ensure Z-axis dominance over the Mapbox/MapLibre tiles.
-- **React**: Memoized filter arrays in `App.tsx` and bumped the `useRFSites` cache key to `v3` to force an immediate stale-cache invalidation for all clients.
+- **Frontend**: Restored the missing `rfSitesRef` binding in `TacticalMap.tsx` and updated the `useAnimationLoop` interface.
 
 ## Upgrade Instructions
 This release updates both the backend logic (Historian) and the frontend rendering. A full rebuild is recommended.

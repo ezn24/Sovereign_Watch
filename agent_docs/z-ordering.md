@@ -1,6 +1,6 @@
 # Sovereign Watch — Layer Depth & Z-Ordering Reference
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-14 (added animation loop data threading rules)
 **Applies To:** `useAnimationLoop.ts`, all `build*Layers.ts` files, `OrbitalLayer.tsx`
 
 ---
@@ -197,7 +197,59 @@ handles wrapping in the projection; enabling it in Globe mode causes rendering a
 
 ---
 
+## Animation Loop Data Threading
+
+> [!CAUTION]
+> This is the **most common silent failure mode** for new layers. A layer builder that receives `undefined` instead of its data ref will produce **no error, no warning, and no visible output** — the layer simply doesn't render.
+
+### How Data Reaches the Layer Builder
+
+The animation loop (`useAnimationLoop.ts`) is the single place where all layer builders are called. It receives data through two mechanisms:
+
+| Mechanism | Examples | How it flows |
+|-----------|----------|--------------|
+| **Plain data props** | `cablesData`, `stationsData`, `outagesData`, `worldCountriesData` | Passed as normal React props → `TacticalMap` props → `useAnimationLoop` args → `buildInfraLayers(...)` |
+| **MutableRef props** | `rfSitesRef`, `js8StationsRef`, `ownGridRef`, `kiwiNodeRef`, `entitiesRef`, `satellitesRef` | Passed as React refs → must be explicitly threaded through **every** call boundary |
+
+### The Complete Threading Chain for Ref-based Data
+
+For any `MutableRefObject` data source, it must appear at **all four** of these locations:
+
+```
+1. useRFSites (or equivalent hook)          → produces rfSitesRef
+2. TacticalMap props interface              → rfSitesRef?: MutableRefObject<RFSite[]>
+3. TacticalMap useAnimationLoop({...})      → rfSitesRef,          ← MOST COMMONLY MISSED
+4. useAnimationLoop options interface       → rfSitesRef?: MutableRefObject<RFSite[]>
+5. buildRFLayers(..., rfSitesRef.current)   → consumes the data
+```
+
+Missing **step 3** means the hook receives `undefined` — the guard `if (showRepeaters && rfSitesRef && ...)` silently short-circuits and the layer is never built. This was the root cause of the RF repeater layer not rendering (fixed 2026-03-14, see `agent_docs/tasks/2026-03-14-fix-rf-layer-rendering.md`).
+
+### Layer Builder → Data Dependency Table
+
+| Layer Builder | Called From | Required Refs/Props | Guard Condition |
+|---------------|-------------|--------------------|-----------------|
+| `buildRFLayers` | `useAnimationLoop` | `rfSitesRef` (ref) | `showRepeaters && rfSitesRef && rfSitesRef.current.length > 0` |
+| `buildJS8Layers` | `useAnimationLoop` | `js8StationsRef`, `ownGridRef` (refs) | `js8StationsRef && ownGridRef` |
+| `buildInfraLayers` | `useAnimationLoop` | `cablesData`, `stationsData`, `outagesData` (plain props) | always called, visibility internal |
+| `buildEntityLayers` | `useAnimationLoop` | `entitiesRef`, `visualStateRef` (refs) | always called |
+| `buildAOTLayers` | `useAnimationLoop` | `aotShapes` (state via ref), `currentMissionRef` | always called |
+| `getOrbitalLayers` | `useAnimationLoop` | `satellitesRef` (ref, pre-filtered) | always called |
+| `buildTrailLayers` | `useAnimationLoop` | `entitiesRef` (ref, pre-filtered) | always called |
+| `kiwi-node-*` (inline) | `useAnimationLoop` | `kiwiNodeRef` (ref) | `kiwiNode && kiwiNode.lat !== 0` |
+
+---
+
 ## Adding a New Layer Checklist
+
+**Step 0 — Thread your data ref (do this before any rendering work):**
+- [ ] Add the ref/prop to the hook/component that produces the data
+- [ ] Add it to `TacticalMapProps` interface in `TacticalMap.tsx`
+- [ ] Destructure it in the `TacticalMap` function body
+- [ ] Pass it to `useAnimationLoop({..., myNewRef, ...})`
+- [ ] Add it to `UseAnimationLoopOptions` interface in `useAnimationLoop.ts`
+- [ ] Destructure it in the `useAnimationLoop` call
+- [ ] Add it to the `useEffect` dependency array if it's a plain value (refs don't need this)
 
 1. **Determine z-position**: Is geometry at z=0 (surface) or z=altitude (airborne/orbital)?
 2. **Choose the parameter pattern**:

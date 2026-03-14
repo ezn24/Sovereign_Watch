@@ -19,6 +19,7 @@
 - **Container-First**: Do NOT run `npm`, `node`, `python`, `pip`, or `go` directly on the host shell for build/runtime tasks. Use Docker Compose (`docker compose build <service>`, `docker compose up -d --build <service>`).
 - **Communication**: All inter-service communication must use **TAK Protocol V1 (Protobuf)** via `tak.proto`. No ad-hoc JSON.
 - **Rendering**: Hybrid Architecture (WebGL2 for visuals, WebGPU/Workers for compute). Do not downgrade to Leaflet.
+  - **Map Layer Reference**: Before adding or modifying any Deck.gl layer, you **MUST** read `agent_docs/z-ordering.md`. It documents the full draw-order stack, `depthTest`/`depthBias` rules, and — critically — the **animation loop data threading checklist** that every new layer's data ref must complete to be visible on the map.
 - **State**: Backend uses `Redpanda` (Kafka-compatible) for event streaming.
 - **Ingestion**: Use Python pollers (`backend/ingestion/`). Do NOT use Redpanda Connect (Benthos).
 
@@ -85,7 +86,8 @@ python -m pytest
 │   ├── db/           # Database Initialization (init.sql)
 │   └── scripts/      # Utility Scripts
 ├── agent_docs/       # Agent Documentation
-│   └── tasks/        # Task-specific change logs (YYYY-MM-DD-slug.md)
+│   ├── tasks/        # Task-specific change logs (YYYY-MM-DD-slug.md)
+│   └── z-ordering.md # Deck.gl layer draw order, depthTest rules & data threading guide (READ BEFORE TOUCHING MAP LAYERS)
 ├── Documentation/    # Project Wiki
 ├── docker-compose.yml
 └── AGENTS.md         # This file

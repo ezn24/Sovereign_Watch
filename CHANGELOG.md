@@ -1,3 +1,10 @@
+## [0.28.6] - 2026-03-14
+
+### Fixed
+
+- **RF Repeater Rendering**: Resolved a regression where RF repeater sites were hidden on the map due to `rfSitesRef` not being passed to the animation loop.
+- **Developer Documentation**: Added a comprehensive **Animation Loop Data Threading Checklist** to `agent_docs/z-ordering.md` and updated `AGENTS.md` to mandate its use, preventing silent failures in future layer work.
+
 ## [0.28.5] - 2026-03-14
 
 ### Fixed

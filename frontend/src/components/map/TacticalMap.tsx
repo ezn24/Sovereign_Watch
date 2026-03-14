@@ -523,6 +523,7 @@ export function TacticalMap({
     onEntityLiveUpdate,
     onFollowModeChange,
     kiwiNodeRef,
+    rfSitesRef,
     showRepeaters,
     worldCountriesData,
     cablesData,
