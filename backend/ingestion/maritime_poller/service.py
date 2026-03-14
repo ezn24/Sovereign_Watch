@@ -222,7 +222,7 @@ class MaritimePollerService:
             self.ws = await websockets.connect(
                 "wss://stream.aisstream.io/v0/stream",
                 open_timeout=30,
-                ping_interval=20,
+                ping_interval=30,
                 ping_timeout=20
             )
             await self.ws.send(json.dumps(subscription_message))
@@ -531,12 +531,18 @@ class MaritimePollerService:
                                         self.handle_static_data(mmsi, msg_data["ReportA"])
                                     if "ReportB" in msg_data:
                                         self.handle_static_data(mmsi, msg_data["ReportB"])
+                            else:
+                                # AISStream sends error/status frames without a MessageType
+                                # (e.g. rate-limit notices). Log them so they're visible.
+                                error = data.get("Error") or data.get("error")
+                                if error:
+                                    logger.warning(f"⚠️ AISStream error frame: {error}")
+                                else:
+                                    logger.debug(f"Unhandled AISStream frame (type={msg_type}): {data}")
                         else:
-                            # Timeout elapsed - send keepalive ping
+                            # Timeout elapsed — the websockets library's ping_interval
+                            # already handles keepalives; just cancel pending tasks.
                             for task in pending: task.cancel()
-                            if self.ws:
-                                await self.ws.ping()
-                                logger.debug("💓 Sent keepalive ping to AISStream.io")
 
                     except websockets.exceptions.ConnectionClosed:
                         logger.warning("🌊 AISStream connection closed by server")
