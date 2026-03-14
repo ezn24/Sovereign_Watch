@@ -14,9 +14,9 @@ mock_litellm = MagicMock()
 sys.modules["litellm"] = mock_litellm
 
 # Mock dependencies
-with patch("asyncpg.create_pool", new=AsyncMock()) as mock_pool, \
-     patch("redis.from_url", new=AsyncMock()) as mock_redis, \
-     patch("aiokafka.AIOKafkaConsumer", new=MagicMock()) as mock_kafka:
+with patch("asyncpg.create_pool", new=AsyncMock()) as _mock_pool, \
+     patch("redis.from_url", new=AsyncMock()) as _mock_redis, \
+     patch("aiokafka.AIOKafkaConsumer", new=MagicMock()) as _mock_kafka:
 
     from main import app
 

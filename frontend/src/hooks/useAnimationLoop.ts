@@ -1,16 +1,9 @@
 import React, { useEffect, useRef, MutableRefObject } from "react";
 import { CoTEntity, JS8Station, RFSite, DRState, VisualState } from "../types";
-import { getCompensatedCenter, maidenheadToLatLon } from "../utils/map/geoUtils";
-import { getOrbitalLayers, GroundTrackPoint } from "../layers/OrbitalLayer";
-import { buildAOTLayers } from "../layers/buildAOTLayers";
-import { buildTrailLayers } from "../layers/buildTrailLayers";
-import { buildEntityLayers } from "../layers/buildEntityLayers";
-import { buildJS8Layers } from "../layers/buildJS8Layers";
-import { buildRFLayers } from "../layers/buildRFLayers";
-import { buildInfraLayers } from "../layers/buildInfraLayers";
-import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
-import { getTerminatorLayer } from "../components/map/TerminatorLayer";
-import { buildH3CoverageLayer, H3CellData } from "../layers/buildH3CoverageLayer";
+import { getCompensatedCenter } from "../utils/map/geoUtils";
+import { filterEntity, filterSatellite } from "../utils/filters";
+import { interpolatePVB } from "../utils/interpolation";
+import { composeAllLayers } from "../layers/composition";
 import type { MapboxOverlay } from "@deck.gl/mapbox";
 import type { MapRef } from "react-map-gl/maplibre";
 
@@ -104,72 +97,7 @@ interface UseAnimationLoopOptions {
   observerRef?: MutableRefObject<{ lat: number; lon: number; radiusKm: number } | null>;
 }
 
-/** Returns 'sea', 'air', or null (=skip) based on entity type and active filters. */
-function filterEntity(
-  entity: CoTEntity,
-  filters: UseAnimationLoopOptions['filters'],
-): 'sea' | 'air' | null {
-  const isShip = entity.type?.includes('S');
-  if (isShip) {
-    if (!filters?.showSea) return null;
-    if (entity.vesselClassification) {
-      const cat = entity.vesselClassification.category;
-      if (cat === 'cargo' && filters?.showCargo === false) return null;
-      if (cat === 'tanker' && filters?.showTanker === false) return null;
-      if (cat === 'passenger' && filters?.showPassenger === false) return null;
-      if (cat === 'fishing' && filters?.showFishing === false) return null;
-      if (cat === 'military' && filters?.showSeaMilitary === false) return null;
-      if (cat === 'law_enforcement' && filters?.showLawEnforcement === false) return null;
-      if (cat === 'sar' && filters?.showSar === false) return null;
-      if (cat === 'tug' && filters?.showTug === false) return null;
-      if (cat === 'pleasure' && filters?.showPleasure === false) return null;
-      if (cat === 'hsc' && filters?.showHsc === false) return null;
-      if (cat === 'pilot' && filters?.showPilot === false) return null;
-      if ((cat === 'special' || cat === 'unknown') && filters?.showSpecial === false) return null;
-    }
-    return 'sea';
-  } else {
-    if (!filters?.showAir) return null;
-    if (entity.classification) {
-      const cls = entity.classification;
-      if (cls.platform === 'helicopter' && filters?.showHelicopter === false) return null;
-      if (cls.platform === 'drone' && filters?.showDrone === false) return null;
-      if (cls.affiliation === 'military' && filters?.showMilitary === false) return null;
-      if (cls.affiliation === 'government' && filters?.showGovernment === false) return null;
-      if (cls.affiliation === 'commercial' && filters?.showCommercial === false) return null;
-      if (cls.affiliation === 'general_aviation' && filters?.showPrivate === false) return null;
-    }
-    return 'air';
-  }
-}
-
 /** Returns true if the satellite should be visible given the current filters. */
-function filterSatellite(
-  sat: CoTEntity,
-  filters: UseAnimationLoopOptions['filters'],
-): boolean {
-  if (!filters?.showSatellites) return false;
-  const constellation = sat.detail?.constellation as string | undefined;
-  if (constellation && filters?.[`showConstellation_${constellation}`] === false) return false;
-  const cat = (sat.detail?.category as string)?.toLowerCase() || '';
-  if (cat.includes('gps') || cat.includes('gnss') || cat.includes('galileo') ||
-      cat.includes('beidou') || cat.includes('glonass')) {
-    return filters.showSatGPS !== false;
-  }
-  if (cat.includes('weather') || cat.includes('noaa') || cat.includes('meteosat') ||
-      cat.includes('fengYun')) {
-    return filters.showSatWeather !== false;
-  }
-  if (cat.includes('comms') || cat.includes('communications') || cat.includes('starlink') ||
-      cat.includes('iridium') || cat.includes('oneweb') || cat.includes('intelsat')) {
-    return filters.showSatComms !== false;
-  }
-  if (cat.includes('surveillance') || cat.includes('military') || cat.includes('isr') ||
-      cat.includes('intel') || cat.includes('earth observation') || cat.includes('imaging')) {
-    return filters.showSatSurveillance !== false;
-  }
-  return filters.showSatOther !== false;
-}
 
 export function useAnimationLoop({
   entitiesRef,
@@ -307,121 +235,27 @@ export function useAnimationLoop({
           else airCount++;
 
           // Interpolate
-          // Projective Velocity Blending (PVB)
           const dr = drStateRef.current.get(uid);
+          const visual = visualStateRef.current.get(uid);
+          
+          const { visual: newVisual, interpolatedEntity } = interpolatePVB(
+            entity,
+            dr,
+            visual,
+            now,
+            dt
+          );
 
-          let targetLat = entity.lat;
-          let targetLon = entity.lon;
-
-          if (dr && entity.speed > 0.5) {
-            const timeSinceUpdate = now - dr.serverTime;
-            const alpha = Math.min(
-              Math.max(timeSinceUpdate / dr.expectedInterval, 0),
-              1,
-            );
-            const dtSec = timeSinceUpdate / 1000;
-
-            // 1. Server Projection (Where it should be now based on latest report)
-            const R = 6371000;
-            const distServer = dr.serverSpeed * dtSec;
-            const dLatServer =
-              ((distServer * Math.cos(dr.serverCourseRad)) / R) *
-              (180 / Math.PI);
-            const dLonServer =
-              ((distServer * Math.sin(dr.serverCourseRad)) /
-                (R * Math.cos((dr.serverLat * Math.PI) / 180))) *
-              (180 / Math.PI);
-
-            const serverProjLat = dr.serverLat + dLatServer;
-            const serverProjLon = dr.serverLon + dLonServer;
-
-            // 2. Client Projection (Where we were going visually)
-            // Blend the velocities for smooth transition
-            const blendSpeed =
-              dr.blendSpeed + (dr.serverSpeed - dr.blendSpeed) * alpha;
-
-            // Angle blending (taking shortest path)
-            let dAngle = dr.serverCourseRad - dr.blendCourseRad;
-            while (dAngle <= -Math.PI) dAngle += 2 * Math.PI;
-            while (dAngle > Math.PI) dAngle -= 2 * Math.PI;
-            const blendCourse = dr.blendCourseRad + dAngle * alpha;
-
-            const distClient = blendSpeed * dtSec;
-            const dLatClient =
-              ((distClient * Math.cos(blendCourse)) / R) * (180 / Math.PI);
-            const dLonClient =
-              ((distClient * Math.sin(blendCourse)) /
-                (R * Math.cos((dr.blendLat * Math.PI) / 180))) *
-              (180 / Math.PI);
-
-            const clientProjLat = dr.blendLat + dLatClient;
-            const clientProjLon = dr.blendLon + dLonClient;
-
-            // 3. Final Target (Blend projections)
-            // As alpha -> 1, we rely fully on the server projection
-            targetLat = clientProjLat + (serverProjLat - clientProjLat) * alpha;
-            targetLon = clientProjLon + (serverProjLon - clientProjLon) * alpha;
-          }
-
-          let visual = visualStateRef.current.get(uid);
-          if (!visual) {
-            // Initialize immediately to prevent startup delay
-            visual = { lat: targetLat, lon: targetLon, alt: entity.altitude };
-            visualStateRef.current.set(uid, visual);
-          } else {
-            // PVB handles smoothness, just filter micro-jitter.
-            // FIX #3: Cap smoothDt to 2 frames (33ms). The outer `dt` is
-            // already capped at 100ms (to prevent physics explosions after
-            // tab-switch), but at dt=100ms the smoothFactor becomes ~0.73,
-            // jumping the visual position 73% toward the target in one frame.
-            // Using a tighter 33ms cap keeps the lerp gradual regardless of
-            // how long the RAF loop was paused.
-            const BASE_ALPHA = 0.25;
-            const smoothDt = Math.min(dt, 33);
-            const smoothFactor = 1 - Math.pow(1 - BASE_ALPHA, smoothDt / 16.67);
-            visual.lat = visual.lat + (targetLat - visual.lat) * smoothFactor;
-            visual.lon = visual.lon + (targetLon - visual.lon) * smoothFactor;
-            visual.alt =
-              visual.alt + (entity.altitude - visual.alt) * smoothFactor;
-          }
-
-          // Clamp to target if very close (prevent micro-jitter)
-          if (
-            Math.abs(visual.lat - targetLat) < 0.000001 &&
-            Math.abs(visual.lon - targetLon) < 0.000001
-          ) {
-            visual.lat = targetLat;
-            visual.lon = targetLon;
-          }
-
-          visualStateRef.current.set(uid, visual);
-
-          const interpolatedEntity: CoTEntity = {
-            ...entity,
-            lon: visual.lon,
-            lat: visual.lat,
-            altitude: visual.alt,
-            // FIX #4: Normalize to [0, 360]. blendCourseRad can go negative
-            // during 0°/360° wraparound (the dAngle normalization keeps it in
-            // [-π, π] which maps to [-180°, 180°]). A negative course value
-            // passed to getAngle causes incorrect icon rotation direction.
-            course: dr
-              ? ((dr.blendCourseRad * 180) / Math.PI + 360) % 360
-              : entity.course,
-          };
-
+          visualStateRef.current.set(uid, newVisual);
           interpolated.push(interpolatedEntity);
 
           // Update Selected Entity Data (Live Sidebar) - Sync with interpolation
-          // This ensures the numbers in the sidebar move in perfect lockstep with the map
           const currentSelected = selectedEntityRef.current;
           if (
             currentSelected &&
             uid === currentSelected.uid &&
             onEntityLiveUpdate
           ) {
-            // Throttle to ~30Hz (every 2nd frame) to prevent React render saturation
-            // while providing silky smooth numerical updates.
             if (Math.floor(now / 33) % 2 === 0) {
               onEntityLiveUpdate(interpolatedEntity);
             }
@@ -581,303 +415,62 @@ export function useAnimationLoop({
       for (const [uid, sat] of satellitesRef.current.entries()) {
         if (!filterSatellite(sat, filters)) continue;
 
-        // Apply PVB for satellite
         const dr = drStateRef.current.get(uid);
-        let targetLat = sat.lat;
-        let targetLon = sat.lon;
+        const visual = visualStateRef.current.get(uid);
 
-        if (dr) {
-          const timeSinceUpdate = now - dr.serverTime;
-          const alpha = Math.min(
-            Math.max(timeSinceUpdate / dr.expectedInterval, 0),
-            1,
-          );
-          const dtSec = timeSinceUpdate / 1000;
+        const { visual: newVisual, interpolatedEntity } = interpolatePVB(
+          sat,
+          dr,
+          visual,
+          now,
+          dt
+        );
 
-          // 1. Server Projection
-          const R = 6371000;
-          const distServer = dr.serverSpeed * dtSec;
-          const dLatServer = ((distServer * Math.cos(dr.serverCourseRad)) / R) * (180 / Math.PI);
-          const dLonServer = ((distServer * Math.sin(dr.serverCourseRad)) / (R * Math.cos((dr.serverLat * Math.PI) / 180))) * (180 / Math.PI);
-          const serverProjLat = dr.serverLat + dLatServer;
-          const serverProjLon = dr.serverLon + dLonServer;
-
-          // 2. Client Projection
-          const blendSpeed = dr.blendSpeed + (dr.serverSpeed - dr.blendSpeed) * alpha;
-
-          let dAngle = dr.serverCourseRad - dr.blendCourseRad;
-          while (dAngle <= -Math.PI) dAngle += 2 * Math.PI;
-          while (dAngle > Math.PI) dAngle -= 2 * Math.PI;
-          const blendCourse = dr.blendCourseRad + dAngle * alpha;
-
-          const distClient = blendSpeed * dtSec;
-          const dLatClient = ((distClient * Math.cos(blendCourse)) / R) * (180 / Math.PI);
-          const dLonClient = ((distClient * Math.sin(blendCourse)) / (R * Math.cos((dr.blendLat * Math.PI) / 180))) * (180 / Math.PI);
-          const clientProjLat = dr.blendLat + dLatClient;
-          const clientProjLon = dr.blendLon + dLonClient;
-
-          // 3. Final Target
-          targetLat = clientProjLat + (serverProjLat - clientProjLat) * alpha;
-          targetLon = clientProjLon + (serverProjLon - clientProjLon) * alpha;
-        }
-
-        let visual = visualStateRef.current.get(uid);
-        if (!visual) {
-          visual = { lat: targetLat, lon: targetLon, alt: sat.altitude };
-          visualStateRef.current.set(uid, visual);
-        } else {
-          const BASE_ALPHA = 0.25;
-          const smoothDt = Math.min(dt, 33);
-          const smoothFactor = 1 - Math.pow(1 - BASE_ALPHA, smoothDt / 16.67);
-          visual.lat = visual.lat + (targetLat - visual.lat) * smoothFactor;
-          visual.lon = visual.lon + (targetLon - visual.lon) * smoothFactor;
-          visual.alt = visual.alt + (sat.altitude - visual.alt) * smoothFactor;
-        }
-
-        if (Math.abs(visual.lat - targetLat) < 0.000001 && Math.abs(visual.lon - targetLon) < 0.000001) {
-          visual.lat = targetLat;
-          visual.lon = targetLon;
-        }
-
-        visualStateRef.current.set(uid, visual);
-
-        filteredSatellites.push({
-          ...sat,
-          lon: visual.lon,
-          lat: visual.lat,
-          altitude: visual.alt,
-          course: dr ? ((dr.blendCourseRad * 180) / Math.PI + 360) % 360 : sat.course,
-        });
+        visualStateRef.current.set(uid, newVisual);
+        filteredSatellites.push(interpolatedEntity);
 
         // Live Sidebar Update
         if (selectedEntity?.uid === uid) {
-          const liveSatCount = {
-            ...sat,
-            lat: visual.lat,
-            lon: visual.lon,
-            altitude: visual.alt,
-            course: dr ? ((dr.blendCourseRad * 180) / Math.PI + 360) % 360 : sat.course
-          };
-          onEntityLiveUpdate?.(liveSatCount);
+          onEntityLiveUpdate?.(interpolatedEntity);
         }
       }
 
       const zoom = mapRef.current?.getMap()?.getZoom() ?? 0;
 
-      // JS8 station layers (bearing lines + dots + labels)
-      let js8Layers: any[] = [];
-      if (js8StationsRef && ownGridRef) {
-        const ownGrid = ownGridRef.current;
-        let ownLat = 0, ownLon = 0;
-        if (ownGrid) [ownLat, ownLon] = maidenheadToLatLon(ownGrid);
-        const selectedJS8Callsign =
-          selectedEntityRef.current?.type === "js8"
-            ? selectedEntityRef.current.callsign
-            : null;
-        js8Layers = buildJS8Layers(
-          Array.from(js8StationsRef.current.values()),
-          ownLat,
-          ownLon,
-          globeMode,
-          selectedJS8Callsign,
-          onEntitySelect,
-          setHoveredEntity,
-          setHoverPosition,
-          zoom,
-        );
-      }
-
-      // Repeater infrastructure layers (ham radio repeaters)
-      let repeaterLayers: any[] = [];
-      if (showRepeaters && rfSitesRef && rfSitesRef.current.length > 0) {
-        repeaterLayers = buildRFLayers(
-          rfSitesRef.current,
-          globeMode,
-          onEntitySelect,
-          setHoveredEntity,
-          setHoverPosition,
-          zoom,
-        );
-      }
-
-      // Submarine Cables & Stations Layers
-      const infraLayers = buildInfraLayers(
+      const layers = composeAllLayers({
+        interpolatedEntities: interpolated,
+        filteredSatellites,
+        js8Stations: js8StationsRef ? Array.from(js8StationsRef.current.values()) : [],
+        rfSites: rfSitesRef?.current || [],
+        h3Cells,
         cablesData,
         stationsData,
         outagesData,
-        (filters as any) || null,
-        setHoveredInfra || (() => { }),
-        setSelectedInfra,
-        currentSelected,
-        globeMode,
         worldCountriesData,
-        countryOutageMap
-      );
-
-      // KiwiSDR node marker layer (Radio Beacon)
-      const kiwiNode = kiwiNodeRef?.current;
-      const kiwiLayers: any[] = [];
-      if (kiwiNode && kiwiNode.lat !== 0 && kiwiNode.lon !== 0) {
-        // High-tech Radio Beacon design
-        const pulse = (Math.sin(now / 400) + 1) / 2; // 0 to 1
-        const breathing = (Math.sin(now / 1500) + 1) / 2; // slow breath
-
-        // 1. Outer broad glow (Radiating wave)
-        kiwiLayers.push(
-          new ScatterplotLayer({
-            id: 'kiwi-node-glow',
-            data: [kiwiNode],
-            getPosition: (d: any) => [d.lon, d.lat],
-            getFillColor: [0, 220, 255, 15 + (pulse * 25)],
-            getRadius: 15000 + (pulse * 10000),
-            radiusUnits: 'meters',
-            pickable: false,
-          })
-        );
-
-        // 2. Secondary rotating ring (Attention ring)
-        kiwiLayers.push(
-          new ScatterplotLayer({
-            id: 'kiwi-node-ring-outer',
-            data: [kiwiNode],
-            getPosition: (d: any) => [d.lon, d.lat],
-            getFillColor: [0, 0, 0, 0],
-            getLineColor: [0, 220, 255, 100 + (breathing * 100)],
-            getRadius: 10000,
-            radiusUnits: 'meters',
-            stroked: true,
-            getLineWidth: 800 + (pulse * 800),
-            lineWidthUnits: 'meters',
-            pickable: false,
-          })
-        );
-
-        // 3. Inner Signal Core (Rose 400 color from terminal)
-        kiwiLayers.push(
-          new ScatterplotLayer({
-            id: 'kiwi-node-core',
-            data: [kiwiNode],
-            getPosition: (d: any) => [d.lon, d.lat],
-            getFillColor: [251, 113, 133, 180 + (pulse * 75)],
-            getLineColor: [251, 113, 133, 200],
-            getRadius: 4000,
-            radiusUnits: 'meters',
-            stroked: true,
-            getLineWidth: 1200,
-            lineWidthUnits: 'meters',
-            pickable: true,
-          })
-        );
-
-        // 4. Premium Label with Pointer
-        kiwiLayers.push(
-          new TextLayer({
-            id: 'kiwi-node-label',
-            data: [kiwiNode],
-            getPosition: (d: any) => [d.lon, d.lat],
-            getText: (d: any) => `LIVE SDR\n${d.host}`,
-            getColor: [255, 255, 255, 240],
-            getSize: 10,
-            getTextAnchor: 'middle',
-            getAlignmentBaseline: 'bottom',
-            getPixelOffset: [0, -15],
-            fontFamily: 'Inter, monospace',
-            fontWeight: 700,
-            background: true,
-            getBorderWidth: 1.2,
-            getBorderColor: [251, 113, 133, 180],
-            getBackgroundColor: [0, 0, 0, 190],
-            backgroundPadding: [6, 3],
-            pickable: false,
-          })
-        );
-      }
-
-      const layers = [
-        // 0. Debug H3 Coverage Layer (absolute bottom of stack)
-        ...buildH3CoverageLayer(h3Cells, !!filters?.showH3Coverage),
-
-        // 0.25. Terminator Layer (always present, visibility internal to call)
-        getTerminatorLayer(!!filters?.showTerminator),
-
-        // Infra layers (cables, stations, outages) - Rendered in background below live data
-        ...infraLayers,
-
-        // 0.5. Orbital Layers
-        ...getOrbitalLayers({
-          satellites: filteredSatellites,
-          selectedEntity: currentSelected,
-          hoveredEntity: hoveredEntity,
-          now,
-          showHistoryTails: historyTailsRef.current,
-          showFootprints: filters?.showFootprints,
-          projectionMode: globeMode ? "globe" : "mercator",
-          zoom,
-          predictedGroundTrack: predictedGroundTrackRef?.current,
-          onEntitySelect,
-          onHover: (entity, x, y) => {
-            if (entity) {
-              setHoveredEntity(entity);
-              setHoverPosition({ x, y });
-            } else {
-              setHoveredEntity(null);
-              setHoverPosition(null);
-            }
-          },
-        }),
-
-        // 1. AOT Boundaries
-        ...buildAOTLayers(
-          aotShapes,
-          filters,
-          globeMode,
-          observerRef?.current,
-          currentMissionRef.current
-            ? {
-              lat: currentMissionRef.current.lat,
-              lon: currentMissionRef.current.lon,
-              radiusKm: (filters?.rfRadius || 300) * 1.852,
-            }
-            : null,
-        ),
-
-        // 2. Repeater infrastructure (rendered below entity icons for context)
-        ...repeaterLayers,
-
-        // KiwiSDR node marker (rendered above infra, below entity icons)
-        ...kiwiLayers,
-
-        // 3-4. Trail layers (history trails, gap bridges, selected trail)
-        ...buildTrailLayers(
-          interpolated,
-          currentSelected,
-          globeMode,
-          historyTailsRef.current,
-        ),
-
-        // 5+. Entity layers (stems, halos, icons, glow, selection ring, velocity vectors)
-        ...buildEntityLayers(
-          interpolated,
-          currentSelected,
-          globeMode,
-          enable3d,
-          velocityVectorsRef.current,
-          now,
-          onEntitySelect,
-          setHoveredEntity,
-          setHoverPosition,
-          selectedEntity,
-        ),
-
-        // 6. JS8 station layers (rendered above entity icons)
-        ...js8Layers,
-      ];
+        countryOutageMap,
+        currentSelected,
+        hoveredEntity,
+        filters,
+        globeMode: !!globeMode,
+        enable3d,
+        zoom,
+        now,
+        ownGrid: ownGridRef?.current || null,
+        kiwiNode: kiwiNodeRef?.current || null,
+        historyTails: historyTailsRef.current,
+        velocityVectors: velocityVectorsRef.current,
+        predictedGroundTrack: predictedGroundTrackRef?.current,
+        observer: observerRef?.current,
+        currentMission: currentMissionRef.current,
+        aotShapes,
+        onEntitySelect,
+        setHoveredEntity,
+        setHoverPosition,
+        setHoveredInfra: setHoveredInfra || (() => {}),
+        setSelectedInfra: setSelectedInfra || (() => {}),
+      });
 
       if (mapLoaded && overlayRef.current?.setProps) {
-        // Only update layers per frame. Do NOT pass projection or _full3d here —
-        // setting projection on every frame interrupts MapboxOverlay's internal
-        // camera sync with Mapbox, causing layers to drift when rotating the globe.
-        // projection/_full3d are set once at construction in the adapter's useEffect.
         overlayRef.current.setProps({ 
           layers,
           onHover: (info: any) => {

@@ -82,10 +82,6 @@ function computeTerminator(date: Date) {
   };
 }
 
-export interface TerminatorLayerProps {
-  visible: boolean;
-}
-
 export function getTerminatorLayer(visible: boolean) {
   // We use Date.now() rounded to nearest minute to avoid constant re-renders
   // For a pure layer creator function, we calculate the current terminator

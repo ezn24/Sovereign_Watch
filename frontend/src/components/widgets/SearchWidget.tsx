@@ -20,16 +20,7 @@ interface SearchResult {
     vesselClassification?: import('../../types').VesselClassification;
 }
 
-export const SHIP_TYPE_MAP: Record<number, string> = {
-    30: 'Fishing vessel',
-    35: 'Military operations',
-    37: 'Pleasure craft',
-    52: 'Tug',
-    55: 'Law enforcement',
-    60: 'Passenger ship',
-    70: 'Cargo ship',
-    80: 'Tanker'
-};
+import { SHIP_TYPE_MAP } from '../../constants/maritime';
 
 export const SearchWidget: React.FC<SearchWidgetProps> = ({ mapActions, onEntitySelect }) => {
     const [query, setQuery] = useState('');

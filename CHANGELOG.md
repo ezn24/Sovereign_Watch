@@ -1,3 +1,19 @@
+## [0.29.0] - 2026-03-14
+
+### Added
+- **Shared Maritime Constants**: Created `frontend/src/constants/maritime.ts` to centralize `SHIP_TYPE_MAP` and `NAV_STATUS_MAP`, eliminating duplication across `SearchWidget` and `SidebarRight`.
+- **Modular Interpolation Utility**: Extracted **Projective Velocity Blending (PVB)** logic into a reusable `interpolatePVB` utility in `frontend/src/utils/interpolation.ts`.
+- **Dedicated Filter Utility**: Extracted `filterEntity` and `filterSatellite` logic to `frontend/src/utils/filters.ts` for better reusability and cleaner data flow.
+- **Layer Composition Module**: Introduced `composeAllLayers` in `frontend/src/layers/composition.ts` to orchestrate the complex Deck.gl layer stack, significantly reducing boilerplate in the main animation loop.
+
+### Changed
+- **Animation Loop Refactor**: Major architectural cleanup of `useAnimationLoop.ts`, reducing its size from 924 to 516 lines while maintaining high-performance real-time rendering.
+- **Database Cleanup**: Removed redundant `migrate_*.sql` files and outdated `retention_policy.sql` as their contents are now fully integrated into the primary `init.sql` schema.
+
+### Fixed
+- **Test Suite Hygiene**: Prefixed unused mock variables with `_` in `test_cors.py`, `test_tracks_validation.py`, and `test_tracks_replay.py` to satisfy linting requirements and improve code clarity.
+- **Frontend Layer Exports**: Removed the unused `TerminatorLayerProps` interface from `TerminatorLayer.tsx`.
+
 ## [0.28.6] - 2026-03-14
 
 ### Fixed
