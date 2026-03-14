@@ -12,7 +12,7 @@ import websockets.exceptions
 from aiokafka import AIOKafkaProducer
 
 from classification import classify_vessel
-from utils import calculate_bbox, calculate_distance_nm
+from utils import calculate_bboxes, calculate_distance_nm
 
 # Configure Logging
 logging.basicConfig(
@@ -203,10 +203,10 @@ class MaritimePollerService:
         """Connect to AISStream.io WebSocket and subscribe with a MAX bounding box."""
         # Always use a 350nm bounding box for the actual stream connection to prevent 
         # frequent disconnects when the user just zooms/pans locally.
-        bbox = calculate_bbox(self.center_lat, self.center_lon, 350)
+        bboxes = calculate_bboxes(self.center_lat, self.center_lon, 350)
         subscription_message = {
             "APIKey": AISSTREAM_API_KEY,
-            "BoundingBoxes": [bbox],
+            "BoundingBoxes": bboxes,
             "FilterMessageTypes": [
                 "PositionReport",
                 "ShipStaticData",
@@ -215,7 +215,7 @@ class MaritimePollerService:
             ]
         }
 
-        logger.info(f"🌊 Connecting to AISStream.io with bbox: {bbox} (Radius: 350nm)")
+        logger.info(f"🌊 Connecting to AISStream.io with bboxes: {bboxes} (Radius: 350nm)")
         logger.debug(f"DEBUG: Subscription Message: {json.dumps(subscription_message)}")
 
         try:
@@ -425,7 +425,7 @@ class MaritimePollerService:
         try:
             # BUG-FIX: Await the send coroutine; key pins each vessel to a
             # consistent Kafka partition for ordered processing per MMSI.
-            await self.kafka_producer.send(
+            await self.kafka_producer.send_and_wait(
                 "ais_raw",
                 value=tak_event,
                 key=tak_event["uid"].encode("utf-8"),
@@ -473,12 +473,14 @@ class MaritimePollerService:
                 self.reconnect_event.clear()
 
                 # Inner message loop
+                message_task = None
+
                 while self.running and not self.reconnect_event.is_set():
                     try:
-                        # Use wait_for so we can check for reconnect_event periodically 
-                        # OR if we timeout, send a heartbeat ping.
-                        # We also check reconnect_event every 1s.
-                        message_task = asyncio.create_task(self.ws.recv())
+                        # Re-use message_task if it's still pending from a previous timeout
+                        if message_task is None or message_task.done():
+                            message_task = asyncio.create_task(self.ws.recv())
+
                         reconnect_task = asyncio.create_task(self.reconnect_event.wait())
                         
                         # Wait for either a message, a timeout (for ping), or a reconnect signal
@@ -494,6 +496,9 @@ class MaritimePollerService:
                             break
 
                         if message_task in done:
+                            # Cancel reconnect_task since we're done with this iteration
+                            reconnect_task.cancel()
+
                             # Connection is healthy — reset backoff once stable
                             if self.reconnect_attempts > 0 and self.connection_start_time:
                                 connected_for = (datetime.utcnow() - self.connection_start_time).total_seconds()
@@ -505,8 +510,6 @@ class MaritimePollerService:
                             message = message_task.result()
                             data = json.loads(message)
                             msg_type = data.get("MessageType")
-                            
-                            logger.debug(f"DEBUG: Received AIS message type: {msg_type}")
 
                             if msg_type == "PositionReport":
                                 tak_event = self.transform_to_tak(data)
@@ -541,8 +544,9 @@ class MaritimePollerService:
                                     logger.debug(f"Unhandled AISStream frame (type={msg_type}): {data}")
                         else:
                             # Timeout elapsed — the websockets library's ping_interval
-                            # already handles keepalives; just cancel pending tasks.
-                            for task in pending: task.cancel()
+                            # already handles keepalives. Cancel reconnect_task.
+                            # Do NOT cancel message_task so it can be reused on the next loop.
+                            reconnect_task.cancel()
 
                     except websockets.exceptions.ConnectionClosed:
                         logger.warning("🌊 AISStream connection closed by server")
@@ -567,7 +571,7 @@ class MaritimePollerService:
             now = datetime.utcnow()
             stale_mmsis = [
                 mmsi for mmsi, data in self.vessel_static_cache.items()
-                if (now - data["last_seen"]).total_seconds() > 1800
+                if (now - data["last_seen"]).total_seconds() > 7200  # 2 hours
             ]
             for mmsi in stale_mmsis:
                 del self.vessel_static_cache[mmsi]

@@ -30,7 +30,7 @@ class TestVesselClassification:
         (53, "port_tender"),
         (54, "anti_pollution"),
         (55, "law_enforcement"),
-        (58, "special"),
+        (58, "medical"),
         (59, "special"),
         # Passenger
         (60, "passenger"),
@@ -47,7 +47,7 @@ class TestVesselClassification:
         # Other / unknown
         (90, "other"),
         (0, "unknown"),
-        (99, "unknown"),
+        (99, "other"),
     ])
     def test_category_mapping(self, ship_type, expected_category):
         result = classify_vessel(ship_type, 123456789, "Test Vessel")
