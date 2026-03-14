@@ -1,4 +1,27 @@
-## [Unreleased]
+## [0.28.2] - 2026-03-13
+
+### Fixed
+
+- **RF Alias Endpoint**: Corrected `service=` keyword argument to `services=["ham"]` in the `/api/repeaters` backwards-compatibility alias; previously caused a `TypeError` at runtime on every call.
+- **Internet Outage Poller**: Removed an unreachable duplicate `except` block in `fetch_internet_outages()` that could never execute; only the first handler ran.
+- **Analysis Request Schema**: Removed unused `uid` field from `AnalyzeRequest` — the entity identifier is correctly sourced from the URL path parameter and the body field was validated but silently ignored.
+
+### Changed
+
+- **Dead Code Removal**: Deleted several unused code paths identified during backend code review:
+  - `teme_to_ecef_vectorized` in `sgp4_utils.py` — replaced by `teme_to_ecef` scalar variant, never imported.
+  - Intel Reports stub in `analysis.py` — commented-out embedding scaffolding and `intel_reports = []` placeholder removed along with the now-unused `json` import.
+  - `calculate_polling_points()` in `aviation_poller/service.py` — superseded by H3 sharding, no remaining call sites.
+  - `poll_point()` in `multi_source_poller.py` — superseded by the H3 `source_loop`/`_fetch` path, no remaining call sites.
+  - `Settings.LITELLM_MODEL` in `config.py` — `AI_MODEL_DEFAULT` in `system.py` is the actual source of truth; this setting was never read.
+- **Import Hygiene**: Moved inline `import math` to the top of `infra_poller/main.py`; removed unused `import sys` from `benchmark_search.py`; removed unused `List` from `multi_source_poller.py` imports.
+- **Redis Cleanup Guards**: Simplified `hasattr(x, 'aclose')` ternary guards in `database.py` and `aviation_poller/service.py` to direct `aclose()` calls — `redis.asyncio` has provided this method since v4.2 and the fallback is no longer needed.
+
+### Removed
+
+- **Infra Poller Debug Scripts**: Deleted 6 one-off HTTP probe scripts from `backend/ingestion/infra_poller/test/` (`debug_ioda_structure.py`, `test_ioda.py`, `test_ioda_events.py`, `test_ioda_events_refined.py`, `test_ioda_summary.py`, `test_ioda_summary_v2.py`) — these made live network calls and were not pytest-compatible unit tests.
+- **Orbital Pulse Test Directory**: Moved `benchmark_parsing.py` from `orbital_pulse/tests/` to the package root and removed the now-empty `tests/` directory.
+
 
 ### Changed
 
@@ -12,6 +35,7 @@
   - Consolidated five repeated inline `socket.socket()` UDP send blocks in `server.py` into a single `_udp_send()` helper, reducing boilerplate and centralising error handling.
   - Fixed type mismatch: `SET_KIWI` handler now correctly parses `freq` as `int` (was `float`), matching the `_start_kiwi_pipeline()` signature and validation logic.
   - Renamed root-level `test_kiwi.py` → `manual_test_kiwi.py` and `test_wvm.py` → `manual_test_wvm.py` to clearly distinguish live integration/smoke scripts from the pytest unit test suite in `tests/`.
+
 
 ## [0.28.1] - 2026-03-12
 
