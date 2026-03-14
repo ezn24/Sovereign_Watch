@@ -141,6 +141,20 @@ FAILOVER_MAX_CANDIDATES: int = 3
 
 
 # ===========================================================================
+# Utilities
+# ===========================================================================
+
+def _udp_send(msg: dict) -> None:
+    """Send a single UDP datagram to the JS8Call API port. Fire-and-forget."""
+    try:
+        tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        tx.sendto(json.dumps(msg).encode("utf-8") + b"\n", ("127.0.0.1", JS8CALL_UDP_SERVER_PORT))
+        tx.close()
+    except Exception as exc:
+        logger.warning("UDP send failed: %s", exc)
+
+
+# ===========================================================================
 # KiwiSDR Pipeline Management
 # ===========================================================================
 
@@ -504,16 +518,6 @@ def maidenhead_to_latlon(grid: str) -> tuple[float, float]:
         return 0.0, 0.0
 
 
-def haversine_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance between two points in kilometres (Haversine formula)."""
-    R = 6371.0
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
-    return 2 * R * math.asin(math.sqrt(a))
-
-
 def initial_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
     Initial compass bearing (degrees, 0–360) from point 1 to point 2.
@@ -531,7 +535,11 @@ def grid_distance_bearing(remote_grid: str, my_grid: str = MY_GRID) -> dict:
     """Return distance (km + miles) and bearing from MY_GRID to remote_grid."""
     my_lat, my_lon = maidenhead_to_latlon(my_grid)
     r_lat, r_lon = maidenhead_to_latlon(remote_grid)
-    km = haversine_distance_km(my_lat, my_lon, r_lat, r_lon)
+    phi1, phi2 = math.radians(my_lat), math.radians(r_lat)
+    dphi = math.radians(r_lat - my_lat)
+    dlambda_h = math.radians(r_lon - my_lon)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda_h / 2) ** 2
+    km = 2 * 6371.0 * math.asin(math.sqrt(a))
     bearing = initial_bearing(my_lat, my_lon, r_lat, r_lon)
     return {
         "lat": round(r_lat, 4),
@@ -829,11 +837,6 @@ async def ws_js8(websocket: WebSocket) -> None:
     remote = websocket.client
     logger.info("WebSocket connected: %s", remote)
 
-    # Prepare initial handshake data
-    callsign = "--"
-    grid = "----"
-    freq = "0"
-    
     # Send immediate simulated connect message
     callsign = os.getenv("JS8CALL_CALLSIGN", "N0CALL")
     grid = MY_GRID
@@ -853,13 +856,7 @@ async def ws_js8(websocket: WebSocket) -> None:
     })
 
     # Ask JS8Call to broadcast its STATUS via UDP immediately
-    try:
-        import socket
-        tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        tx.sendto(b'{"TYPE": "STATION.GET_STATUS","VALUE":"","PARAMS":{}}\n', ("127.0.0.1", JS8CALL_UDP_SERVER_PORT))
-        tx.close()
-    except Exception:
-        pass
+    _udp_send({"TYPE": "STATION.GET_STATUS", "VALUE": "", "PARAMS": {}})
 
     try:
         # Receive loop – handle commands from the frontend
@@ -893,14 +890,7 @@ async def ws_js8(websocket: WebSocket) -> None:
                 tx_target = target.upper()
                 tx_msg = f"{tx_target} {message}"
                 # Forward dynamically to JS8Call UDP port
-                try:
-                    import socket
-                    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    doc = {"TYPE": "TX.SEND_MESSAGE", "VALUE": tx_msg, "PARAMS": {}}
-                    tx.sendto(json.dumps(doc).encode("utf-8") + b"\n", ("127.0.0.1", JS8CALL_UDP_SERVER_PORT))
-                    tx.close()
-                except Exception as e:
-                    logger.warning("TX error: %s", e)
+                _udp_send({"TYPE": "TX.SEND_MESSAGE", "VALUE": tx_msg, "PARAMS": {}})
                 # Echo the sent message back so the UI can display it in the log
                 _enqueue_from_thread({
                     "type": "TX.SENT",
@@ -925,21 +915,8 @@ async def ws_js8(websocket: WebSocket) -> None:
                         "message": f"SET_MODE: invalid mode '{requested_mode}'. Valid: {sorted(_VALID_MODES)}",
                     })
                 else:
-                    try:
-                        import socket as _socket
-                        tx = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
-                        doc = {"TYPE": "MODE.SET_SPEED", "VALUE": requested_mode, "PARAMS": {}}
-                        tx.sendto(
-                            json.dumps(doc).encode("utf-8") + b"\n",
-                            ("127.0.0.1", JS8CALL_UDP_SERVER_PORT),
-                        )
-                        tx.close()
-                        logger.info("SET_MODE → %s", requested_mode)
-                    except Exception as exc:
-                        await websocket.send_json({
-                            "type": "ERROR",
-                            "message": f"SET_MODE failed: {exc}",
-                        })
+                    _udp_send({"TYPE": "MODE.SET_SPEED", "VALUE": requested_mode, "PARAMS": {}})
+                    logger.info("SET_MODE → %s", requested_mode)
 
             # ------------------------------------------------------------------
             # Action: SET_FREQ – change JS8Call dial frequency
@@ -948,17 +925,7 @@ async def ws_js8(websocket: WebSocket) -> None:
             elif action == "SET_FREQ":
                 freq = int(cmd.get("freq", 14074000))
                 # Forward dynamically to JS8Call UDP port
-                try:
-                    import socket
-                    tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                    doc = {"TYPE": "RIG.SET_FREQ", "VALUE": freq, "PARAMS": {}}
-                    tx.sendto(json.dumps(doc).encode("utf-8") + b"\n", ("127.0.0.1", JS8CALL_UDP_SERVER_PORT))
-                    tx.close()
-                except Exception as exc:
-                    await websocket.send_json({
-                        "type": "ERROR",
-                        "message": f"SET_FREQ failed: {exc}",
-                    })
+                _udp_send({"TYPE": "RIG.SET_FREQ", "VALUE": freq, "PARAMS": {}})
 
             # ------------------------------------------------------------------
             # Action: GET_STATIONS – force a station list refresh
@@ -1163,26 +1130,12 @@ async def ws_js8(websocket: WebSocket) -> None:
                         "message": "SET_STATION: must specify at least one of callsign or grid",
                     })
                 else:
-                    try:
-                        import socket as _socket
-                        tx = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
-                        if new_callsign:
-                            doc = {"TYPE": "STATION.SET_CALLSIGN", "VALUE": new_callsign, "PARAMS": {}}
-                            tx.sendto(
-                                json.dumps(doc).encode("utf-8") + b"\n",
-                                ("127.0.0.1", JS8CALL_UDP_SERVER_PORT),
-                            )
-                            logger.info("SET_STATION callsign → %s", new_callsign)
-                        if new_grid:
-                            doc = {"TYPE": "STATION.SET_GRID", "VALUE": new_grid, "PARAMS": {}}
-                            tx.sendto(
-                                json.dumps(doc).encode("utf-8") + b"\n",
-                                ("127.0.0.1", JS8CALL_UDP_SERVER_PORT),
-                            )
-                            logger.info("SET_STATION grid → %s", new_grid)
-                        tx.close()
-                    except Exception as exc:
-                        logger.warning("SET_STATION UDP send failed: %s", exc)
+                    if new_callsign:
+                        _udp_send({"TYPE": "STATION.SET_CALLSIGN", "VALUE": new_callsign, "PARAMS": {}})
+                        logger.info("SET_STATION callsign → %s", new_callsign)
+                    if new_grid:
+                        _udp_send({"TYPE": "STATION.SET_GRID", "VALUE": new_grid, "PARAMS": {}})
+                        logger.info("SET_STATION grid → %s", new_grid)
                     # Optimistic echo so the UI updates without waiting for JS8Call confirmation
                     _enqueue_from_thread({
                         "type": "STATION.STATUS",

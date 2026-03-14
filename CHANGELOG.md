@@ -1,3 +1,62 @@
+## [0.28.2] - 2026-03-13
+
+Front End Updates
+
+### Changed
+
+- **Frontend Code Cleanup**: Comprehensive dead code removal and refactor across the frontend codebase.
+  - **`useAnimationLoop.ts`**: Removed unused `useMemo` import; removed `mapToken` and `mapStyle` from hook options (never read inside the loop); removed dead `speedKts` computation that was calculated every frame then discarded; removed invalid `// eslint-disable-next-line react-hooks/purity` comment; extracted duplicated sea/air entity filter logic into a standalone `filterEntity()` helper; extracted duplicated satellite category classification into a standalone `filterSatellite()` helper, eliminating verbatim duplication between the orbital count pass and the rendered satellite pass.
+  - **`useEntityWorker.ts`**: Removed misleading `smoothedCourse` alias — the variable was assigned directly from `computedCourse` with no transformation, implying smoothing that no longer exists.
+  - **`useMissionLocations.ts`**: Removed `updateMission` — defined, memoised, and exported but never imported or called anywhere in the codebase.
+  - **`useRFSites.ts`**: Removed `rfSites` array state and `error` state from the hook; both were populated but never consumed by any component. The hook now returns only `{ rfSitesRef, loading }`.
+  - **`useMissionArea.ts`**: Removed 4 debug `console.log` statements that fired on every 2-second poll cycle and every mission change.
+  - **`useSystemHealth.ts`**: Removed dead `if (latency > 1000) status = 'degraded'` branch — unreachable because the preceding `latency > 200` condition already set the same value.
+  - **`useInfraData.ts`**: Removed duplicate consecutive `setOutagesData(fallbackEmpty)` call in the `catch` block.
+  - **`missionArea.ts`**: Replaced hardcoded `VITE_API_URL` base URL with relative `/api/config/location` paths, consistent with all other API modules.
+  - **`App.tsx`**: Collapsed two identical `<SidebarRight>` renders (one under `TACTICAL`, one under `ORBITAL`) into a single conditional render.
+  - **`TacticalMap.tsx` / `OrbitalMap.tsx`**: Removed `mapToken` and `mapStyle` props from `useAnimationLoop` calls after those options were removed from the hook interface.
+  - **`replayUtils.test.ts`**: Replaced trivial benchmark test (`expect(end - start).toBeGreaterThan(0)`) with a meaningful data-integrity assertion verifying all entities and point counts are preserved across a large dataset. Removed in-test `console.log`.
+  - **Multiple components**: Removed invalid `// eslint-disable-next-line react-hooks/purity` and `// eslint-disable-next-line react-hooks/set-state-in-effect` comments from `PassPredictorWidget.tsx`, `SearchWidget.tsx`, `SidebarRight.tsx`, `KiwiNodeBrowser.tsx`, and `TacticalMap.tsx` — these ESLint rule names do not exist.
+
+Backend Updates
+
+### Fixed
+
+- **RF Alias Endpoint**: Corrected `service=` keyword argument to `services=["ham"]` in the `/api/repeaters` backwards-compatibility alias; previously caused a `TypeError` at runtime on every call.
+- **Internet Outage Poller**: Removed an unreachable duplicate `except` block in `fetch_internet_outages()` that could never execute; only the first handler ran.
+- **Analysis Request Schema**: Removed unused `uid` field from `AnalyzeRequest` — the entity identifier is correctly sourced from the URL path parameter and the body field was validated but silently ignored.
+
+### Changed
+
+- **Dead Code Removal**: Deleted several unused code paths identified during backend code review:
+  - `teme_to_ecef_vectorized` in `sgp4_utils.py` — replaced by `teme_to_ecef` scalar variant, never imported.
+  - Intel Reports stub in `analysis.py` — commented-out embedding scaffolding and `intel_reports = []` placeholder removed along with the now-unused `json` import.
+  - `calculate_polling_points()` in `aviation_poller/service.py` — superseded by H3 sharding, no remaining call sites.
+  - `poll_point()` in `multi_source_poller.py` — superseded by the H3 `source_loop`/`_fetch` path, no remaining call sites.
+  - `Settings.LITELLM_MODEL` in `config.py` — `AI_MODEL_DEFAULT` in `system.py` is the actual source of truth; this setting was never read.
+- **Import Hygiene**: Moved inline `import math` to the top of `infra_poller/main.py`; removed unused `import sys` from `benchmark_search.py`; removed unused `List` from `multi_source_poller.py` imports.
+- **Redis Cleanup Guards**: Simplified `hasattr(x, 'aclose')` ternary guards in `database.py` and `aviation_poller/service.py` to direct `aclose()` calls — `redis.asyncio` has provided this method since v4.2 and the fallback is no longer needed.
+
+### Removed
+
+- **Infra Poller Debug Scripts**: Deleted 6 one-off HTTP probe scripts from `backend/ingestion/infra_poller/test/` (`debug_ioda_structure.py`, `test_ioda.py`, `test_ioda_events.py`, `test_ioda_events_refined.py`, `test_ioda_summary.py`, `test_ioda_summary_v2.py`) — these made live network calls and were not pytest-compatible unit tests.
+- **Orbital Pulse Test Directory**: Moved `benchmark_parsing.py` from `orbital_pulse/tests/` to the package root and removed the now-empty `tests/` directory.
+
+JS8CALL Updates
+
+### Changed
+
+- **JS8Call — Dead Code Removal**: Audited all files in the `js8call/` poller for dead code, unused symbols, and structural redundancies.
+  - Removed unused `import shlex` from `server.py` (was made redundant when `shell=True` was replaced with secure subprocess pipelines).
+  - Removed unused `import sys` from `manual_test_kiwi.py`.
+  - Removed unused `import traceback` from `tests/test_json.py`.
+  - Removed three dead dummy-variable assignments (`callsign`, `grid`, `freq`) that were immediately overwritten in the WebSocket handler.
+  - Removed dead `haversine_distance_km()` function from `server.py` — duplicate of logic already present in `kiwi_directory.py` and never called.
+  - Removed no-op `if closed_ok: pass` branch from `kiwi_client.py` receive loop.
+  - Consolidated five repeated inline `socket.socket()` UDP send blocks in `server.py` into a single `_udp_send()` helper, reducing boilerplate and centralising error handling.
+  - Fixed type mismatch: `SET_KIWI` handler now correctly parses `freq` as `int` (was `float`), matching the `_start_kiwi_pipeline()` signature and validation logic.
+  - Renamed root-level `test_kiwi.py` → `manual_test_kiwi.py` and `test_wvm.py` → `manual_test_wvm.py` to clearly distinguish live integration/smoke scripts from the pytest unit test suite in `tests/`.
+
 ## [0.28.1] - 2026-03-12
 
 ### Added

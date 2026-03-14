@@ -516,12 +516,10 @@ class KiwiClient:
             raise
         except BaseException as exc:
             logger.error("KiwiClient receive error: %s", repr(exc))
-            closed_ok  = _HAS_WEBSOCKETS and isinstance(exc, _wse.ConnectionClosedOK)
+            # Distinguish clean close from unexpected disconnect
             closed_err = _HAS_WEBSOCKETS and isinstance(exc, _wse.ConnectionClosedError)
-            if closed_ok:
-                pass
-            elif closed_err:
-                code = exc.code if hasattr(exc, "code") else 0
+            if closed_err:
+                code = exc.code if hasattr(exc, 'code') else 0
                 logger.warning("KiwiClient closed unexpectedly (code=%s)", code)
                 if not self._disconnecting and self._on_disconnect:
                     self._on_disconnect(code or 0)
