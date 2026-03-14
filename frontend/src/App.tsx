@@ -155,7 +155,7 @@ function App() {
       rfEmcommOnly: false,
       showCables: false,
       showLandingStations: false,
-      showOutages: false,
+      showOutages: true,
       cableOpacity: 0.6,
       showConstellation_Starlink: false,
       showH3Coverage: false,

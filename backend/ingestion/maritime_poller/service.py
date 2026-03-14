@@ -71,6 +71,9 @@ class MaritimePollerService:
         self.bbox_update_needed = False
         self._bbox_debounce_task: Optional[asyncio.Task] = None
         self.vessel_static_cache: Dict[int, dict] = {}
+        
+        # New: Event to signal that a reconnection is needed (e.g. area change)
+        self.reconnect_event = asyncio.Event()
 
     async def setup(self):
         """Initialize Kafka producer and Redis client."""
@@ -123,8 +126,8 @@ class MaritimePollerService:
     async def _schedule_bbox_reconnect(self):
         """Debounced helper: waits BBOX_DEBOUNCE_SECONDS, then signals a reconnect."""
         await asyncio.sleep(BBOX_DEBOUNCE_SECONDS)
-        logger.info(f"🔄 Bbox debounce elapsed — scheduling AISStream reconnect")
-        self.bbox_update_needed = True
+        logger.info(f"🔄 Bbox debounce elapsed — signalling AISStream reconnect")
+        self.reconnect_event.set()
 
     async def navigation_listener(self):
         """Background task listening for mission area updates from Redis."""
@@ -174,13 +177,6 @@ class MaritimePollerService:
                                 f"({self.center_lat}, {self.center_lon}) @ {self.radius_nm}nm"
                             )
 
-                            # ── Debounce ──────────────────────────────────────────────────
-                            # Cancel any pending reconnect, then schedule a fresh one.
-                            # Rapid preset clicks collapse into a single reconnect.
-                            if self._bbox_debounce_task and not self._bbox_debounce_task.done():
-                                self._bbox_debounce_task.cancel()
-                                logger.debug("🕐 Debounce reset — new mission update received")
-
                             self._bbox_debounce_task = asyncio.create_task(
                                 self._schedule_bbox_reconnect()
                             )
@@ -213,7 +209,8 @@ class MaritimePollerService:
             ]
         }
 
-        logger.info(f"🌊 Connecting to AISStream.io with bbox: {bbox}")
+        logger.info(f"🌊 Connecting to AISStream.io with bbox: {bbox} (Radius: 350nm)")
+        logger.debug(f"DEBUG: Subscription Message: {json.dumps(subscription_message)}")
 
         try:
             self.ws = await websockets.connect(
@@ -240,9 +237,12 @@ class MaritimePollerService:
         cache = self.vessel_static_cache[mmsi]
 
         if "Type" in msg: cache["type"] = msg["Type"]
+        elif "ShipType" in msg: cache["type"] = msg["ShipType"]
+
         if "ImoNumber" in msg: cache["imo"] = msg["ImoNumber"]
         if "CallSign" in msg: cache["callsign"] = msg["CallSign"]
         if "Name" in msg: cache["name"] = msg["Name"].strip()
+        elif "ShipName" in msg: cache["name"] = msg["ShipName"].strip()
 
         if "Dimension" in msg:
             dim = msg["Dimension"]
@@ -387,6 +387,9 @@ class MaritimePollerService:
                         "draught": cached.get("draught", 0),
                         "length": dim_a + dim_b,
                         "beam": dim_c + dim_d
+                    },
+                    "classification": {
+                        "category": classification["category"]
                     }
                 }
             }
@@ -396,156 +399,122 @@ class MaritimePollerService:
             logger.error(f"Failed to transform AIS message: {e}")
             return None
 
-    def on_send_error(self, future):
         """Callback for Kafka send errors."""
         try:
             future.result()
         except Exception as e:
-            logger.error(f"Failed to send to Kafka: {e}")
+            logger.error(f"❌ Failed to send to Kafka: {e}")
+
+    async def publish_tak_event(self, tak_event: dict):
+        """Unified helper to distance-filter and publish TAK events to Kafka."""
+        # Evaluate distance and drop if outside current dynamic mission radius
+        dist = calculate_distance_nm(
+            self.center_lat, 
+            self.center_lon, 
+            tak_event["point"]["lat"], 
+            tak_event["point"]["lon"]
+        )
+        
+        if dist > self.radius_nm:
+            return
+
+        # Send to Kafka
+        try:
+            # BUG-FIX: Await the send coroutine
+            await self.kafka_producer.send(
+                "ais_raw",
+                value=tak_event,
+            )
+            
+            # Log sparingly (every 100th message)
+            if hash(tak_event["uid"]) % 100 == 0:
+                logger.debug(f"🚢 Published vessel {tak_event['detail']['contact']['callsign']}")
+        except Exception as e:
+            logger.error(f"❌ Failed to publish to Kafka: {e}")
 
     async def stream_loop(self):
         """Main streaming loop - receives AIS messages and publishes to Kafka."""
         while self.running:
             try:
-                # Connect or reconnect if needed
-                if self.ws is None or (hasattr(self.ws, 'closed') and self.ws.closed) or self.bbox_update_needed:
-                    now = datetime.utcnow()
-                    
-                    # 1. Enforce a minimum interval between ANY reconnection attempt
-                    if self.last_reconnect_time:
-                        elapsed_since_last = (now - self.last_reconnect_time).total_seconds()
-                        if elapsed_since_last < MIN_RECONNECT_INTERVAL_SECONDS:
-                            wait_time = MIN_RECONNECT_INTERVAL_SECONDS - elapsed_since_last
-                            logger.info(f"⏳ Rate limit protection: Waiting {wait_time:.1f}s before next AISStream reconnect")
-                            await asyncio.sleep(wait_time)
-                            continue
+                # 1. (Re)connect
+                if not await self.connect_aisstream():
+                    await asyncio.sleep(BACKOFF_INITIAL_DELAY_SECONDS)
+                    continue
 
-                    # 2. Calculate exponential backoff delay with jitter
-                    if self.reconnect_attempts > 0:
-                        delay = min(
-                            BACKOFF_MAX_DELAY_SECONDS,
-                            BACKOFF_INITIAL_DELAY_SECONDS * (BACKOFF_FACTOR ** (self.reconnect_attempts - 1))
-                        )
-                        # Add +/- 10% jitter to prevent thundering herd
-                        jitter = delay * 0.1
-                        actual_delay = delay + random.uniform(-jitter, jitter)
+                self.reconnect_event.clear()
+
+                # Inner message loop
+                while self.running and not self.reconnect_event.is_set():
+                    try:
+                        # Use wait_for so we can check for reconnect_event periodically 
+                        # OR if we timeout, send a heartbeat ping.
+                        # We also check reconnect_event every 1s.
+                        message_task = asyncio.create_task(self.ws.recv())
+                        reconnect_task = asyncio.create_task(self.reconnect_event.wait())
                         
-                        logger.warning(f"🔄 AISStream retry backoff: attempt {self.reconnect_attempts}, waiting {actual_delay:.1f}s")
-                        await asyncio.sleep(actual_delay)
+                        # Wait for either a message, a timeout (for ping), or a reconnect signal
+                        done, pending = await asyncio.wait(
+                            [message_task, reconnect_task],
+                            timeout=20.0,
+                            return_when=asyncio.FIRST_COMPLETED
+                        )
 
-                    if self.ws:
-                        try:
-                            await self.ws.close()
-                        except:
-                            pass
+                        if self.reconnect_event.is_set():
+                            logger.info("🔄 Reconnect signal received - closing current stream")
+                            for task in pending: task.cancel()
+                            break
 
-                    self.last_reconnect_time = datetime.utcnow()
-                    if not await self.connect_aisstream():
-                        self.reconnect_attempts += 1
-                        continue
-
-                    # Connection successful
-                    self.connection_start_time = datetime.utcnow()
-                    self.bbox_update_needed = False
-                    # Note: We don't reset self.reconnect_attempts here; 
-                    # we do it after the connection proves it's stable.
-
-                # Receive messages
-                try:
-                    message = await asyncio.wait_for(self.ws.recv(), timeout=30.0)
-                    
-                    # Connection is behaving - check if we've reached the stability threshold
-                    if self.reconnect_attempts > 0 and self.connection_start_time:
-                        connected_duration = (datetime.utcnow() - self.connection_start_time).total_seconds()
-                        if connected_duration >= CONNECTION_STABILITY_THRESHOLD_SECONDS:
-                            logger.info(f"✅ AISStream connection stable for {connected_duration:.0f}s - resetting backoff counter")
-                            self.reconnect_attempts = 0
-                            self.connection_start_time = None
-                    
-                    data = json.loads(message)
-
-                    msg_type = data.get("MessageType")
-
-                    if msg_type == "PositionReport":
-                        tak_event = self.transform_to_tak(data)
-
-                        if tak_event:
-                            # Evaluate distance and drop if outside current dynamic mission radius
-                            dist = calculate_distance_nm(
-                                self.center_lat, 
-                                self.center_lon, 
-                                tak_event["point"]["lat"], 
-                                tak_event["point"]["lon"]
-                            )
+                        if message_task in done:
+                            message = message_task.result()
+                            data = json.loads(message)
+                            msg_type = data.get("MessageType")
                             
-                            if dist <= self.radius_nm:
-                                # Send to Kafka (non-blocking)
-                                asyncio.create_task(
-                                    self.kafka_producer.send(
-                                        "ais_raw",
-                                        value=tak_event,
-                                        key=tak_event["uid"].encode("utf-8")
-                                    )
-                                )
+                            logger.debug(f"DEBUG: Received AIS message type: {msg_type}")
 
-                                # Log sparingly (every 100th message)
-                                if hash(tak_event["uid"]) % 100 == 0:
-                                    logger.debug(f"🚢 Published vessel {tak_event['detail']['contact']['callsign']}")
-                    elif msg_type == "ShipStaticData":
-                        meta = data.get("MetaData", {})
-                        mmsi = meta.get("MMSI")
-                        msg_data = data.get("Message", {}).get("ShipStaticData", {})
-                        if mmsi and msg_data:
-                            self.handle_static_data(mmsi, msg_data)
-                    elif msg_type == "StaticDataReport":
-                        meta = data.get("MetaData", {})
-                        mmsi = meta.get("MMSI")
-                        msg_data = data.get("Message", {}).get("StaticDataReport", {})
-                        if mmsi and msg_data:
-                            if "ReportA" in msg_data:
-                                self.handle_static_data(mmsi, msg_data["ReportA"])
-                            if "ReportB" in msg_data:
-                                self.handle_static_data(mmsi, msg_data["ReportB"])
-                    elif msg_type == "StandardClassBPositionReport":
-                        tak_event = self.handle_class_b_position(data)
+                            if msg_type == "PositionReport":
+                                tak_event = self.transform_to_tak(data)
+                                if tak_event:
+                                    await self.publish_tak_event(tak_event)
+                            elif msg_type == "StandardClassBPositionReport":
+                                tak_event = self.handle_class_b_position(data)
+                                if tak_event:
+                                    await self.publish_tak_event(tak_event)
+                            elif msg_type == "ShipStaticData":
+                                meta = data.get("MetaData", {})
+                                mmsi = meta.get("MMSI")
+                                msg_data = data.get("Message", {}).get("ShipStaticData", {})
+                                if mmsi and msg_data:
+                                    self.handle_static_data(mmsi, msg_data)
+                            elif msg_type == "StaticDataReport":
+                                meta = data.get("MetaData", {})
+                                mmsi = meta.get("MMSI")
+                                msg_data = data.get("Message", {}).get("StaticDataReport", {})
+                                if mmsi and msg_data:
+                                    if "ReportA" in msg_data:
+                                        self.handle_static_data(mmsi, msg_data["ReportA"])
+                                    if "ReportB" in msg_data:
+                                        self.handle_static_data(mmsi, msg_data["ReportB"])
+                        else:
+                            # Timeout elapsed - send keepalive ping
+                            for task in pending: task.cancel()
+                            if self.ws:
+                                await self.ws.ping()
+                                logger.debug("💓 Sent keepalive ping to AISStream.io")
 
-                        if tak_event:
-                            dist = calculate_distance_nm(
-                                self.center_lat, 
-                                self.center_lon, 
-                                tak_event["point"]["lat"], 
-                                tak_event["point"]["lon"]
-                            )
-                            
-                            if dist <= self.radius_nm:
-                                # Send to Kafka (non-blocking)
-                                asyncio.create_task(
-                                    self.kafka_producer.send(
-                                        "ais_raw",
-                                        value=tak_event,
-                                        key=tak_event["uid"].encode("utf-8")
-                                    )
-                                )
-
-                                if hash(tak_event["uid"]) % 100 == 0:
-                                    logger.debug(f"🚢 Published Class B vessel {tak_event['detail']['contact']['callsign']}")
-
-                except asyncio.TimeoutError:
-                    # No message in 30s - send ping to keep connection alive
-                    if self.ws:
-                        try:
-                            await self.ws.ping()
-                        except:
-                            pass
-
-            except websockets.exceptions.ConnectionClosed:
-                logger.warning("🌊 AISStream connection closed, reconnecting...")
-                self.ws = None
-                await asyncio.sleep(1.0)
+                    except websockets.exceptions.ConnectionClosed:
+                        logger.warning("🌊 AISStream connection closed by server")
+                        break
+                    except Exception as e:
+                        logger.error(f"Error in message loop: {e}")
+                        await asyncio.sleep(1)
 
             except Exception as e:
                 logger.error(f"Error in stream loop: {e}")
                 await asyncio.sleep(1)
+            finally:
+                if self.ws:
+                    await self.ws.close()
+                    self.ws = None
 
 
     async def cleanup_cache(self):

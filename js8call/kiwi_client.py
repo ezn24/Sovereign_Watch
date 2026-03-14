@@ -26,6 +26,8 @@ import asyncio
 import logging
 import time
 from typing import Callable, Optional, Dict
+import struct
+import aiohttp
 
 try:
     import websockets
@@ -58,8 +60,9 @@ MODE_FILTERS: dict[str, tuple[int, int]] = {
     "nbfm": (-8000, 8000),
 }
 
-CONNECT_TIMEOUT    = 10  # seconds — WebSocket open timeout
+CONNECT_TIMEOUT    = 15  # seconds — WebSocket open timeout
 KEEPALIVE_INTERVAL = 5   # seconds — SET keepalive cadence
+MAX_REDIRECTS      = 3   # maximum redirect hops to follow
 
 
 # ---------------------------------------------------------------------------
@@ -167,19 +170,48 @@ class KiwiClient:
         uri = f"ws://{host}:{port}/{int(time.time() * 1000)}/SND"
         logger.info("KiwiClient connecting → %s", uri)
 
-        try:
-            ws = await websockets.connect(
-                uri,
-                open_timeout=CONNECT_TIMEOUT,
-                ping_interval=None,  # we handle keepalive manually
-            )
-        except Exception as exc:
-            logger.warning("KiwiClient connect failed: %s", exc)
-            raise
-
-        self._ws   = ws
+        self._ws   = None
         self._host = host
         self._port = port
+
+        # Follow redirects if necessary (common for proxied KiwiSDR nodes)
+        extra_headers = {
+            "Origin": f"http://{host}:{port}",
+            "User-Agent": "Mozilla/5.0 (SovereignWatch/1.0; NativeKiwiClient)"
+        }
+
+        current_uri = uri
+        for redirect_hop in range(MAX_REDIRECTS + 1):
+            try:
+                logger.info("KiwiClient connecting → %s (hop %d)", current_uri, redirect_hop)
+                
+                # Use aiohttp to follow redirects reliably for the handshake
+                http_uri = current_uri.replace("ws://", "http://").replace("wss://", "https://")
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(http_uri, headers=extra_headers, allow_redirects=False) as resp:
+                        if resp.status in (301, 302, 303, 307, 308):
+                            location = resp.headers.get("Location")
+                            if not location:
+                                raise RuntimeError(f"Redirect {resp.status} without Location")
+                            logger.info("KiwiClient redirect %d → %s", resp.status, location)
+                            if location.startswith("http"):
+                                location = location.replace("http", "ws", 1)
+                            current_uri = location
+                            continue
+                
+                # If not a redirect, or after following redirects, connect WebSocket
+                ws = await websockets.connect(
+                    current_uri,
+                    open_timeout=CONNECT_TIMEOUT,
+                    ping_interval=None,
+                    additional_headers=extra_headers
+                )
+                self._ws = ws
+                break
+            except Exception as exc:
+                if redirect_hop == MAX_REDIRECTS:
+                    logger.warning("KiwiClient connect failed after %d redirects: %s", MAX_REDIRECTS, exc)
+                raise
 
         await self._handshake(freq_khz, mode, password)
 
@@ -552,9 +584,41 @@ class KiwiClient:
           4. SET wf_speed=4           — rows/second; must be > 0 to receive frames
           5. SET wf_comp=0            — uncompressed pixel bytes
         """
-        wf_uri = f"ws://{host}:{port}/{int(time.time() * 1000)}/W/F"
+        uri = f"ws://{host}:{port}/{int(time.time() * 1000)}/W/F"
+        extra_headers = {
+            "Origin": f"http://{host}:{port}",
+            "User-Agent": "Mozilla/5.0 (SovereignWatch/1.0; NativeKiwiClient)"
+        }
+
+        current_uri = uri
         try:
-            ws = await websockets.connect(wf_uri, open_timeout=CONNECT_TIMEOUT, ping_interval=None)
+            ws = None
+            for _ in range(MAX_REDIRECTS + 1):
+                try:
+                    http_uri = current_uri.replace("ws://", "http://").replace("wss://", "https://")
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(http_uri, headers=extra_headers, allow_redirects=False) as resp:
+                            if resp.status in (301, 302, 303, 307, 308):
+                                location = resp.headers.get("Location")
+                                if not location: break
+                                if location.startswith("http"):
+                                    location = location.replace("http", "ws", 1)
+                                current_uri = location
+                                continue
+
+                    ws = await websockets.connect(
+                        current_uri,
+                        open_timeout=CONNECT_TIMEOUT,
+                        ping_interval=None,
+                        additional_headers=extra_headers
+                    )
+                    break
+                except Exception:
+                    continue
+
+            if not ws:
+                raise RuntimeError("Failed to connect to waterfall after redirects")
+
             self._wf_ws = ws
             await ws.send("SET auth t=kiwi p=")
             await ws.send(f"SET zoom={self._zoom} cf={self._freq_khz:.3f}")

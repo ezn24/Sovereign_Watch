@@ -25,6 +25,20 @@ Backend Updates
 - **RF Alias Endpoint**: Corrected `service=` keyword argument to `services=["ham"]` in the `/api/repeaters` backwards-compatibility alias; previously caused a `TypeError` at runtime on every call.
 - **Internet Outage Poller**: Removed an unreachable duplicate `except` block in `fetch_internet_outages()` that could never execute; only the first handler ran.
 - **Analysis Request Schema**: Removed unused `uid` field from `AnalyzeRequest` — the entity identifier is correctly sourced from the URL path parameter and the body field was validated but silently ignored.
+- **AIS Ingestion Pipeline**: Resolved a critical regression where AIS-sourced maritime vessels were not appearing on the Tactical Map.
+  - **Missing `await`**: The `publish_tak_event` coroutine was called without `await` in the main message loop, causing all Kafka sends to be silently dropped.
+  - **Interruptible Stream Loop**: Redesigned the main WebSocket receive loop to use `asyncio.wait` with a `reconnect_event`, allowing the poller to immediately react to mission area updates from Redis without blocking.
+  - **Classification Key Alignment**: The historian and Intelligence Feed expected a `classification` key on each TAK event; the poller was only emitting `vesselClassification`. Both keys are now populated for full pipeline compatibility.
+  - **`ShipType` Field Fix**: `StaticDataReport` (Class B, Message 24) messages use `ShipType` instead of `Type` for the vessel category. `handle_static_data` now checks both keys.
+  - **`ShipName` Fallback**: Added `ShipName` as a secondary lookup in `handle_static_data` for vessels whose static data does not carry a `Name` field.
+- **AIS Classification Heuristics**: Significantly expanded name-based vessel classification in `maritime_poller/classification.py` to reduce `[UNKNOWN]` tags in the Intelligence Stream.
+  - **Passenger/Ferries**: Added `WSF`, `FERRY`, `SPIRIT`, `QUEEN`, `BREEZE` patterns.
+  - **Tug/Towing**: Added `FOSS`, `PUSH`, `VALIANT`, `TITAN` patterns.
+  - **Military**: Added `CGC`, `RFA` patterns; broadened `USS` to include full prefix.
+  - **Pleasure Craft**: Added `MY `, `M/Y`, `SY ` patterns.
+  - **Law Enforcement**: Added `POLICE`, `SHERIFF`, `PATROL` patterns.
+  - **SAR**: Broadened match from `SAR ` to `SAR`.
+
 
 ### Changed
 

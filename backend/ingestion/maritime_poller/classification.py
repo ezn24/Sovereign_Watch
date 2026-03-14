@@ -3,14 +3,20 @@ from typing import Dict, Any
 def classify_vessel(ship_type: int, mmsi: int, name: str) -> Dict[str, Any]:
     category = "unknown"
     hazardous = False
+    name_upper = name.upper() if name else ""
 
+    # 1. Primary classification by AIS Ship Type
     if ship_type == 30:
         category = "fishing"
     elif ship_type in (31, 32, 52):
         category = "tug"
+    elif ship_type == 33:
+        category = "dredging"
+    elif ship_type == 34:
+        category = "diving"
     elif ship_type == 35:
         category = "military"
-    elif ship_type in (36, 37):
+    elif ship_type in (36, 37) or 170 <= ship_type <= 179:
         category = "pleasure"
     elif 40 <= ship_type <= 49:
         category = "hsc"
@@ -18,6 +24,10 @@ def classify_vessel(ship_type: int, mmsi: int, name: str) -> Dict[str, Any]:
         category = "pilot"
     elif ship_type == 51:
         category = "sar"
+    elif ship_type == 53:
+        category = "port_tender"
+    elif ship_type == 54:
+        category = "anti_pollution"
     elif ship_type == 55:
         category = "law_enforcement"
     elif ship_type in (58, 59):
@@ -28,6 +38,35 @@ def classify_vessel(ship_type: int, mmsi: int, name: str) -> Dict[str, Any]:
         category = "cargo"
     elif 80 <= ship_type <= 89:
         category = "tanker"
+    elif ship_type == 90:
+        category = "other"
+
+    # 2. Heuristics fallback for "unknown" or "other" types
+    if category in ("unknown", "other", "special"):
+        # Tug / Towing
+        if any(x in name_upper for x in ["TUG", "TOW", "PUSH", "FOSS", "VALIANT", "TITAN"]):
+            category = "tug"
+        # Passenger / Ferries
+        elif any(x in name_upper for x in ["FERRY", "WSF", "SPIRIT", "PASSENGER", "QUEEN", "BREEZE"]):
+            category = "passenger"
+        # Military
+        elif any(x in name_upper for x in ["USS ", "USNS", "CGC", "WARSHIP", "NAVY", "RFA"]):
+            category = "military"
+        # Pilot
+        elif any(x in name_upper for x in ["PILOT", "PLT"]):
+            category = "pilot"
+        # Fishing
+        elif any(x in name_upper for x in ["FISHING", "TRAWLER", "FV ", "F/V", "CRABBER"]):
+            category = "fishing"
+        # Search and Rescue
+        elif any(x in name_upper for x in ["RESCUE", "LIFEBOAT", "SAR"]):
+            category = "sar"
+        # Yachts / Pleasure
+        elif any(x in name_upper for x in ["YACHT", "MY ", "M/Y", "SY ", "S/V", "SV "]):
+            category = "pleasure"
+        # Law Enforcement
+        elif any(x in name_upper for x in ["POLICE", "SHERIFF", "PATROL"]):
+            category = "law_enforcement"
 
     if 1 <= (ship_type % 10) <= 4 and category in ("cargo", "tanker", "passenger", "hsc"):
         hazardous = True

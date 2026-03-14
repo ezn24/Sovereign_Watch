@@ -71,7 +71,7 @@ export function buildInfraLayers(
                     if (severity === 0) return [0, 0, 0, 0];
                     
                     // Heat map color based on severity
-                    const alpha = Math.min(200, 50 + (severity * 1.5));
+                    const alpha = Math.min(180, 80 + (severity * 1.2));
                     if (severity > 80) return [239, 68, 68, alpha]; // Red
                     if (severity > 50) return [249, 115, 22, alpha]; // Orange
                     return [234, 179, 8, alpha]; // Yellow
