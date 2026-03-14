@@ -102,7 +102,6 @@ interface ActiveKiwiConfig {
 
 interface ListeningPostProps {
   analyserNode: AnalyserNode | null;
-  isAudioPlaying: boolean;
   audioEnabled: boolean;
   enableAudio: () => void;
   volume: number;
@@ -121,7 +120,6 @@ interface ListeningPostProps {
 
 export default function ListeningPost({
   analyserNode,
-  isAudioPlaying,
   audioEnabled,
   enableAudio,
   volume,
@@ -148,6 +146,12 @@ export default function ListeningPost({
   const [agcOn,   setAgcOn]   = useState(true);  // AGC enabled by default
   const [wfSkip,  setWfSkip]  = useState(1);     // client-side frame skip (1=all,2=every other,…)
   const [sqn, setSqn] = useState(20);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+
+  // Reset disconnecting state if config cleared or changed
+  useEffect(() => {
+    setIsDisconnecting(false);
+  }, [activeKiwiConfig?.host]);
   const [sql, setSql] = useState(0);
   const [sqHysteresis, setSqHysteresis] = useState(10); // squelch hysteresis (UI units 0-50)
   const [nbEnabled, setNbEnabled] = useState(false);    // noise blanker on/off
@@ -481,17 +485,25 @@ export default function ListeningPost({
             </button>
             <button 
               onClick={() => {
-                if (bridgeConnected) sendAction({ action: 'DISCONNECT_KIWI' });
+                if (bridgeConnected) {
+                  setIsDisconnecting(true);
+                  sendAction({ action: 'DISCONNECT_KIWI' });
+                }
               }}
-              className="px-3 py-1.5 rounded text-[9px] font-bold uppercase bg-rose-600/20 border border-rose-500 text-rose-300 hover:bg-rose-500 hover:text-white transition-all shadow-[0_0_10px_rgba(244,63,94,0.1)]"
+              disabled={isDisconnecting}
+              className={`px-3 py-1.5 rounded text-[9px] font-bold uppercase transition-all shadow-[0_0_10px_rgba(244,63,94,0.1)] ${isDisconnecting ? 'bg-rose-900/40 border-rose-900 text-rose-700 cursor-not-allowed' : 'bg-rose-600/20 border border-rose-500 text-rose-300 hover:bg-rose-500 hover:text-white'}`}
             >
-              Stop
+              {isDisconnecting ? 'Stopping...' : 'Stop'}
             </button>
           </div>
 
           <div className="bg-black/80 border border-[#1a2b36] rounded px-3 py-1 pointer-events-auto text-cyan-500/80 font-bold group">
             <span className="text-[10px] text-slate-500 mr-2">RX SOURCE:</span>
-            {activeKiwiConfig?.host || 'NO_LINK'}
+            {isDisconnecting ? (
+              <span className="text-rose-400 animate-pulse">DISCONNECTING...</span>
+            ) : (
+              activeKiwiConfig?.host || 'NO_LINK'
+            )}
           </div>
         </div>
 

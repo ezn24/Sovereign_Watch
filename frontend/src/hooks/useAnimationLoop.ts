@@ -221,6 +221,21 @@ export function useAnimationLoop({
   const lastFrameTimeRef = useRef<number>(Date.now());
   const rafRef = useRef<number>();
 
+  const countryOutageMap = React.useMemo(() => {
+    if (!outagesData || !outagesData.features) return {};
+    const map: Record<string, any> = {};
+    outagesData.features.forEach((f: any) => {
+      const countryCode = f.properties?.country_code;
+      if (countryCode) {
+        const current = map[countryCode];
+        if (!current || (f.properties?.severity || 0) > (current.severity || 0)) {
+          map[countryCode] = f.properties;
+        }
+      }
+    });
+    return map;
+  }, [outagesData]);
+
   // Optional: Add H3 Coverage State in the hook
   const [h3Cells, setH3Cells] = React.useState<H3CellData[]>([]);
 
@@ -690,12 +705,13 @@ export function useAnimationLoop({
         cablesData,
         stationsData,
         outagesData,
-        filters,
+        (filters as any) || null,
         setHoveredInfra || (() => { }),
         setSelectedInfra,
         currentSelected,
         globeMode,
-        worldCountriesData
+        worldCountriesData,
+        countryOutageMap
       );
 
       // KiwiSDR node marker layer (Radio Beacon)

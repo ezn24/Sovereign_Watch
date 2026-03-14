@@ -800,8 +800,8 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
             <span className="text-mono-xs font-bold truncate text-white">
               {isSat
                 ? `NORAD ${entity.detail?.norad_id ?? entity.uid?.replace?.(/^SAT-/i, '') ?? '—'}`
-                : (isShip && entity.vesselClassification?.imo)
-                  ? `IMO ${entity.vesselClassification.imo}`
+                : (isShip && (entity.vesselClassification?.callsign?.trim() || entity.vesselClassification?.imo))
+                  ? (entity.vesselClassification?.callsign?.trim() || `IMO ${entity.vesselClassification?.imo}`)
                   : entity.classification?.registration || 'N/A'}
             </span>
           </div>

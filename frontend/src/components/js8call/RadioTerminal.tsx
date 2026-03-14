@@ -570,7 +570,6 @@ export default function RadioTerminal({
       {radioMode === 'LISTEN' ? (
         <ListeningPost
           analyserNode={analyserNode}
-          isAudioPlaying={listenPlaying}
           audioEnabled={audioEnabled}
           enableAudio={enableAudio}
           volume={volume}

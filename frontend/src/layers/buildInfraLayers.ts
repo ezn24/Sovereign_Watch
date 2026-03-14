@@ -36,24 +36,27 @@ export function buildInfraLayers(
     setSelectedInfra: ((info: unknown) => void) | undefined,
     selectedEntity: { uid: string } | null = null,
     globeMode: boolean = false,
-    worldCountriesData: { type: "FeatureCollection"; features: GeoJsonFeature[] } | null = null
+    worldCountriesData: { type: "FeatureCollection"; features: GeoJsonFeature[] } | null = null,
+    countryOutageMap: Record<string, any> | null = null
 ) {
     const layers = [];
 
     // Country Outage Shading Layer
-    if (worldCountriesData && outagesData && filters?.showOutages === true) {
-        // Create a map of country codes to their outage data
-        const countryOutageMap: Record<string, any> = {};
-        outagesData.features.forEach(f => {
-            const countryCode = f.properties?.country_code as string;
-            if (countryCode) {
-                // Keep the record with the highest severity if duplicates exist
-                const current = countryOutageMap[countryCode];
-                if (!current || (f.properties?.severity as number || 0) > (current.severity || 0)) {
-                    countryOutageMap[countryCode] = f.properties;
+    if (worldCountriesData && (outagesData || countryOutageMap) && filters?.showOutages === true) {
+        // Use pre-calculated map if available, otherwise build it (fallback)
+        const activeOutageMap = countryOutageMap || (outagesData ? (() => {
+            const map: Record<string, any> = {};
+            outagesData.features.forEach(f => {
+                const countryCode = f.properties?.country_code as string;
+                if (countryCode) {
+                    const current = map[countryCode];
+                    if (!current || (f.properties?.severity as number || 0) > (current.severity || 0)) {
+                        map[countryCode] = f.properties;
+                    }
                 }
-            }
-        });
+            });
+            return map;
+        })() : {});
 
         layers.push(
             new GeoJsonLayer({
@@ -65,7 +68,7 @@ export function buildInfraLayers(
                 getFillColor: (d: unknown) => {
                     const feature = d as GeoJsonFeature;
                     const iso2 = feature.properties?.["ISO3166-1-Alpha-2"] as string;
-                    const outage = countryOutageMap[iso2];
+                    const outage = activeOutageMap[iso2];
                     const severity = outage?.severity || 0;
                     
                     if (severity === 0) return [0, 0, 0, 0];
@@ -85,7 +88,7 @@ export function buildInfraLayers(
                 parameters: { depthTest: true, depthBias: 20.0 },
                 onHover: (info: any) => {
                     const iso2 = info.object?.properties?.["ISO3166-1-Alpha-2"];
-                    const outage = iso2 ? countryOutageMap[iso2] : null;
+                    const outage = iso2 ? activeOutageMap[iso2] : null;
                     
                     if (outage) {
                         // Synthesize an 'outage' entity for the tooltip preserving geometry
@@ -104,7 +107,7 @@ export function buildInfraLayers(
                 },
                 onClick: (info: any) => {
                     const iso2 = info.object?.properties?.["ISO3166-1-Alpha-2"];
-                    const outage = iso2 ? countryOutageMap[iso2] : null;
+                    const outage = iso2 ? activeOutageMap[iso2] : null;
                     
                     if (outage && setSelectedInfra) {
                         setSelectedInfra({

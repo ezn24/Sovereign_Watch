@@ -16,12 +16,10 @@ import { CoTEntity, JS8Station, MissionProps, RFSite } from "../../types";
 import { MapTooltip } from "./MapTooltip";
 import { MapContextMenu } from "./MapContextMenu";
 import { SaveLocationForm } from "./SaveLocationForm";
-import { useEntityWorker } from "../../hooks/useEntityWorker";
 import { useAnimationLoop } from "../../hooks/useAnimationLoop";
 import { useMissionArea } from "../../hooks/useMissionArea";
 import { useMapCamera } from "../../hooks/useMapCamera";
 import { getCompensatedCenter } from "../../utils/map/geoUtils";
-import { useInfraData } from "../../hooks/useInfraData";
 import { StarField } from "./StarField";
 import type { GroundTrackPoint } from "../../layers/OrbitalLayer";
 
@@ -124,6 +122,11 @@ interface TacticalMapProps {
     lon: number;
     radius_nm: number;
   } | null>;
+  // Infrastructure Data Props
+  cablesData: any;
+  stationsData: any;
+  outagesData: any;
+  worldCountriesData: any;
 }
 
 export function OrbitalMap({
@@ -157,9 +160,11 @@ export function OrbitalMap({
   prevCourseRef,
   alertedEmergencyRef,
   currentMissionRef,
+  cablesData,
+  stationsData,
+  outagesData,
+  worldCountriesData,
 }: TacticalMapProps) {
-  // Fetch infra data (Submarine cables, landing stations, outages, datacenters)
-  const { cablesData, stationsData, outagesData } = useInfraData();
 
   // State for UI interactions
   const [hoveredEntity, setHoveredEntity] = useState<CoTEntity | null>(null);
@@ -473,7 +478,6 @@ export function OrbitalMap({
     initialLon,
   });
 
-  // Animation Loop
   useAnimationLoop({
     entitiesRef,
     satellitesRef,
@@ -536,6 +540,7 @@ export function OrbitalMap({
     showRepeaters,
     predictedGroundTrackRef,
     observerRef,
+    worldCountriesData,
   });
 
   // Map Camera: projection, graticule, 3D terrain/fog

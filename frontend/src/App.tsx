@@ -16,6 +16,7 @@ import { usePassPredictions } from './hooks/usePassPredictions'
 import { processReplayData } from './utils/replayUtils'
 import { AlertsWidget } from './components/widgets/AlertsWidget'
 import { useEntityWorker } from './hooks/useEntityWorker'
+import { useInfraData } from './hooks/useInfraData'
 
 const NOOP = () => { };
 
@@ -95,6 +96,17 @@ function App() {
     prevCourseRef,
     alertedEmergencyRef
   } = useEntityWorker({ onEvent: addEvent, currentMissionRef });
+
+  // Infrastructure Data (Shared across TACTICAL/ORBITAL views)
+  const { cablesData, stationsData, outagesData } = useInfraData();
+  const [worldCountriesData, setWorldCountriesData] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/world-countries.json")
+      .then(res => res.json())
+      .then(data => setWorldCountriesData(data))
+      .catch(err => console.error("Failed to load world countries GeoJSON:", err));
+  }, []);
 
   const health = useSystemHealth();
   const {
@@ -654,6 +666,10 @@ function App() {
             prevCourseRef={prevCourseRef}
             alertedEmergencyRef={alertedEmergencyRef}
             currentMissionRef={currentMissionRef}
+            cablesData={cablesData}
+            stationsData={stationsData}
+            outagesData={outagesData}
+            worldCountriesData={worldCountriesData}
           />
 
           {/* Replay Controls Overlay */}
@@ -700,11 +716,11 @@ function App() {
           followMode={false}
           onFollowModeChange={NOOP}
           onEntityLiveUpdate={handleEntityLiveUpdate}
-          js8StationsRef={{ current: new Map() } as any}
-          ownGridRef={{ current: '' }}
-          rfSitesRef={{ current: [] }}
-          showRepeaters={false}
-          repeatersLoading={false}
+          js8StationsRef={js8StationsRef}
+          ownGridRef={js8OwnGridRef}
+          rfSitesRef={rfSitesRef}
+          showRepeaters={orbitalFilters.showRepeaters as boolean}
+          repeatersLoading={repeatersLoading}
           onSatellitesRefReady={(ref) => {
             orbitalSatellitesRef.current = ref;
           }}
@@ -716,6 +732,10 @@ function App() {
           prevCourseRef={prevCourseRef}
           alertedEmergencyRef={alertedEmergencyRef}
           currentMissionRef={currentMissionRef}
+          cablesData={cablesData}
+          stationsData={stationsData}
+          outagesData={outagesData}
+          worldCountriesData={worldCountriesData}
         />
       ) : (
         <div className="w-full h-full pt-14 overflow-hidden bg-slate-950">

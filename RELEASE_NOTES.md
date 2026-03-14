@@ -1,45 +1,38 @@
-# Release - v0.28.4 - Replay Filter Integrity
+# Release - v0.28.4 - Radio & Maritime Refinements
 
-This is a targeted bug-fix release restoring category filter behaviour during track replay for AIS vessels and ADS-B aircraft.
+This release focuses on tactical stability improvements for the Listening Post, enhanced maritime platform identification, and critical fixes for track replay integrity.
 
 ---
 
-## 🗂 Replay Category Filters Now Work for Ships and Aircraft
+## 📡 KiwiSDR Audio Stability & Restart Fix
 
-### What was broken
+Resolved critical issues in the **Listening Post** that caused inconsistent audio playback and "stuck" connections.
 
-When using the track replay timeline, all vessel and aircraft category filters (cargo, tanker, passenger, fishing, military, commercial, helicopter, drone, etc.) had no effect — every entity rendered on the map regardless of which filters were active. Live mode was unaffected.
+- **Infinite Loop Fix**: Eliminated a bug in the `useListenAudio` hook where the WebSocket connection would enter an infinite restart loop whenever the "Playing" state flickered.
+- **Improved Reconnection**: Refined `AudioContext` management to ensure the audio engine remains "warm" during temporary connection drops, enabling seamless reconnection.
+- **Resource Cleanup**: The backend now proactively terminates all associated audio processes (`pacat`) and socket streams on disconnect, preventing "phantom static" from playing after a station is stopped.
 
-### Root cause
+## 🛳️ Enhanced AIS Vessel Identification
 
-`processReplayData` (`replayUtils.ts`) reconstructs `CoTEntity` objects from historical database rows. It correctly mapped `meta.callsign` but never mapped `meta.classification`, which is where both the AIS poller and the ADS-B poller store their classification data.
+The **Right Sidebar** now provides faster situational awareness for maritime contacts by prioritizing the vessel's radio callsign.
 
-The animation loop's `filterEntity()` function reads category from two distinct top-level fields on the entity:
-- Ships → `entity.vesselClassification.category`
-- Aircraft → `entity.classification.affiliation` / `entity.classification.platform`
+- **Callsign Priority**: The **REGISTRATION** field now displays the vessel's callsign (e.g., `V7JJ2`) as the primary identifier, falling back to the IMO number if the callsign is unavailable.
+- **Trimmed Display**: Callsigns are automatically trimmed of trailing whitespace for a cleaner tactical look.
 
-Since neither field was ever populated in replay mode, `filterEntity()` skipped all category checks for every entity and let everything through.
+## 🗂️ Fixed: Replay Category Filters (Ships & Aircraft)
 
-### Fix
-
-`processReplayData` now maps `meta.classification` from the DB row into the correct top-level field based on entity type:
-
-| Entity type | Source | Destination |
-|---|---|---|
-| Ship (CoT type contains `S`) | `meta.classification.category` | `entity.vesselClassification.category` |
-| Aircraft | full `meta.classification` | `entity.classification` |
-
-Three new tests cover ship category mapping, aircraft classification mapping, and graceful handling of rows with no classification data.
+- Fixed a bug where maritime and aviation category filters (Cargo, Tanker, Military, etc.) were ignored during historical track replay.
+- Historical data now correctly maps vessel and aircraft classifications, ensuring that the Tactical Map filters correctly hide/show assets based on your selections in Replay mode.
 
 ---
 
 ## 📄 Upgrade Instructions
 
-No backend or database changes — frontend-only. For a clean pull:
+This release includes minor backend logic changes and frontend updates.
 
 ```bash
 git pull origin main
-docker compose up -d --build frontend
+docker compose up -d --build js8call frontend
 ```
 
 ---

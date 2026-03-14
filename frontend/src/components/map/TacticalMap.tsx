@@ -18,12 +18,10 @@ import { MapContextMenu } from "./MapContextMenu";
 import { SaveLocationForm } from "./SaveLocationForm";
 import { AltitudeLegend } from "./AltitudeLegend";
 import { SpeedLegend } from "./SpeedLegend";
-import { useEntityWorker } from "../../hooks/useEntityWorker";
 import { useAnimationLoop } from "../../hooks/useAnimationLoop";
 import { useMissionArea } from "../../hooks/useMissionArea";
 import { useMapCamera } from "../../hooks/useMapCamera";
 import { getCompensatedCenter } from "../../utils/map/geoUtils";
-import { useInfraData } from "../../hooks/useInfraData";
 import { StarField } from "./StarField";
 
 // Inline MapLibre style for ESRI World Imagery satellite tiles (no API key required)
@@ -124,6 +122,11 @@ interface TacticalMapProps {
     lon: number;
     radius_nm: number;
   } | null>;
+  // Infrastructure Data Props
+  cablesData: any;
+  stationsData: any;
+  outagesData: any;
+  worldCountriesData: any;
 }
 
 export function TacticalMap({
@@ -157,17 +160,11 @@ export function TacticalMap({
   prevCourseRef,
   alertedEmergencyRef,
   currentMissionRef,
+  cablesData,
+  stationsData,
+  outagesData,
+  worldCountriesData,
 }: TacticalMapProps) {
-  // Fetch infra data (Submarine cables, landing stations, outages, datacenters)
-  const { cablesData, stationsData, outagesData } = useInfraData();
-  const [worldCountriesData, setWorldCountriesData] = useState<any>(null);
-
-  useEffect(() => {
-    fetch("/world-countries.json")
-      .then(res => res.json())
-      .then(data => setWorldCountriesData(data))
-      .catch(err => console.error("Failed to load world countries GeoJSON:", err));
-  }, []);
 
   // State for UI interactions
   const [hoveredEntity, setHoveredEntity] = useState<CoTEntity | null>(null);
@@ -458,7 +455,6 @@ export function TacticalMap({
     initialLon,
   });
 
-  // Animation Loop
   useAnimationLoop({
     entitiesRef,
     satellitesRef,
@@ -483,9 +479,6 @@ export function TacticalMap({
     aotShapes,
     selectedEntity,
     filters,
-    cablesData,
-    stationsData,
-    outagesData,
     setHoveredInfra: handleHoveredInfra,
     setSelectedInfra: (info: any) => {
       if (!info || !info.object) return;
@@ -515,12 +508,12 @@ export function TacticalMap({
     onEntitySelect,
     onEntityLiveUpdate,
     onFollowModeChange,
-    js8StationsRef,
-    ownGridRef,
-    rfSitesRef,
     kiwiNodeRef,
     showRepeaters,
     worldCountriesData,
+    cablesData,
+    stationsData,
+    outagesData,
   });
 
   // Map Camera: projection, graticule, 3D terrain/fog

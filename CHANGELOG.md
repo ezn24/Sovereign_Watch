@@ -5,6 +5,11 @@
 - **Replay Category Filters Inoperative for AIS and ADS-B**: All vessel and aircraft category filters (cargo, tanker, passenger, military, commercial, etc.) were silently ignored during track replay. `processReplayData` in `replayUtils.ts` parsed `meta.callsign` from the database row but never mapped `meta.classification` to the entity's top-level classification fields. Since `filterEntity()` in `useAnimationLoop` reads from `entity.vesselClassification.category` (ships) and `entity.classification.affiliation/platform` (aircraft), every entity passed all filters regardless of user selection.
   - **Fix**: For ship entities (CoT type contains `'S'`), `meta.classification.category` is now mapped to `entity.vesselClassification.category`. For aircraft entities, the full `meta.classification` object (including `affiliation`, `platform`, `category`, etc.) is mapped to `entity.classification`. The live path was unaffected — `useEntityWorker` correctly reads these fields from the incoming WebSocket CoT message.
   - **Tests**: Added three new cases to `replayUtils.test.ts` covering AIS ship category mapping, ADS-B aircraft classification mapping, and graceful handling of rows with no `meta.classification`.
+- **KiwiSDR Audio Stability & Restart**: Resolved a critical infinite loop in the `useListenAudio` hook where the WebSocket connection was repeatedly torn down and restarted on "Playing" state changes.
+  - **Hook Refactor**: Removed `isPlaying` from effect dependencies and migrated the watchdog to functional state updates.
+  - **AudioContext Management**: Removed over-aggressive `suspend()` calls on temporary connection drops, ensuring the audio engine remains ready for immediate reconnection.
+  - **Backend Cleanup**: Integrated comprehensive cleanup in the `DISCONNECT_KIWI` action handler, explicitly closing audio/waterfall sockets and terminating the `pacat` bridge to prevent phantom audio leaks.
+- **AIS Vessel Identification**: The Right Sidebar now prioritizes displaying the vessel's radio callsign in the **REGISTRATION** field (falling back to IMO number), enabling faster platform identification for maritime contacts.
 
 ## [0.28.3] - 2026-03-13
 

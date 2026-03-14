@@ -429,6 +429,14 @@ def _kiwi_disconnect_callback(close_code: int) -> None:
     logger.warning(
         "KiwiClient disconnected unexpectedly (code=%d) — scheduling failover", close_code
     )
+    
+    # Cleanup pacat since the stream is dead
+    global _pacat_proc
+    if _pacat_proc and _pacat_proc.poll() is None:
+        logger.info("KIWI: Terminating pacat due to unexpected disconnect")
+        _pacat_proc.terminate()
+        _pacat_proc = None
+
     if _event_loop is not None:
         asyncio.run_coroutine_threadsafe(_async_failover("connection_lost"), _event_loop)
 
@@ -1108,6 +1116,32 @@ async def ws_js8(websocket: WebSocket) -> None:
                 else:
                     if _kiwi_native:
                         await _kiwi_native.disconnect()
+
+                # CRITICAL: Close all binary streaming clients (audio/waterfall) immediately.
+                # This ensures the browser doesn't keep playing buffered or "stuck" static.
+                logger.info("KIWI: Disconnecting all streaming clients (%d audio, %d wf)", 
+                            len(_audio_ws_clients), len(_waterfall_ws_clients))
+                
+                # We create a copy of the list to avoid modification during iteration issues, 
+                # although close() is async and we're just scheduling/awaiting.
+                for ws in list(_audio_ws_clients):
+                    try:
+                        asyncio.ensure_future(ws.close(code=1000, reason="SDR Disconnected"))
+                    except Exception: pass
+                _audio_ws_clients.clear()
+
+                for ws in list(_waterfall_ws_clients):
+                    try:
+                        asyncio.ensure_future(ws.close(code=1000, reason="SDR Disconnected"))
+                    except Exception: pass
+                _waterfall_ws_clients.clear()
+
+                # Terminate PulseAudio bridge to stop local system audio leak
+                if _pacat_proc and _pacat_proc.poll() is None:
+                    logger.info("KIWI: Terminating pacat bridge process %d", _pacat_proc.pid)
+                    _pacat_proc.terminate()
+                    _pacat_proc = None
+
                 _enqueue_from_thread({
                     "type": "KIWI.STATUS",
                     "connected": False,

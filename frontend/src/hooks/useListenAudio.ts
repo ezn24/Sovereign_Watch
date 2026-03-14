@@ -43,6 +43,7 @@ export function useListenAudio(active: boolean): UseListenAudioResult {
   const analyserRef    = useRef<AnalyserNode | null>(null);
   const gainRef        = useRef<GainNode | null>(null);
   const nextPlayRef    = useRef<number>(0);
+  const lastDataTsRef  = useRef<number>(0);
 
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [isConnected, setIsConnected]   = useState(false);
@@ -144,14 +145,30 @@ export function useListenAudio(active: boolean): UseListenAudioResult {
       ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
 
+      // Watchdog: If no data for 1s, stop the 'isPlaying' visual
+      const watchdog = setInterval(() => {
+        setIsPlaying((currentIsPlaying: boolean) => {
+          if (currentIsPlaying && Date.now() - lastDataTsRef.current > 1000) {
+            return false;
+          }
+          return currentIsPlaying;
+        });
+      }, 500);
+
       ws.onopen = () => {
         setIsConnected(true);
         nextPlayRef.current = 0;
+        lastDataTsRef.current = Date.now();
       };
 
       ws.onclose = () => {
         setIsConnected(false);
         setIsPlaying(false);
+        clearInterval(watchdog);
+        
+        // We no longer proactively suspend here. 
+        // Suspension is handled by the 'active' useEffect below or on component unmount.
+
         if (active) {
           reconnectTimeout = window.setTimeout(connect, 3000);
         }
@@ -161,6 +178,7 @@ export function useListenAudio(active: boolean): UseListenAudioResult {
 
       ws.onmessage = (evt) => {
         if (evt.data instanceof ArrayBuffer) {
+          lastDataTsRef.current = Date.now();
           handleAudioChunk(evt.data);
         }
       };

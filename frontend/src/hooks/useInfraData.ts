@@ -92,43 +92,61 @@ export const useInfraData = () => {
   const [outagesData, setOutagesData] = useState<any>(null);
   
   useEffect(() => {
-    const fetchRealData = async () => {
+    const fetchCables = async () => {
       try {
-        const [cablesRes, stationsRes, outagesRes] = await Promise.all([
-          fetch("/api/infra/cables").then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch("/api/infra/stations").then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch("/api/infra/outages").then(r => r.ok ? r.json() : null).catch(() => null)
-        ]);
-
-        if (cablesRes && cablesRes.features && cablesRes.features.length > 0) {
-          setCablesData(cablesRes);
+        const res = await fetch("/api/infra/cables");
+        const data = await res.json();
+        if (data && data.features && data.features.length > 0) {
+          setCablesData(data);
         } else {
           setCablesData(fallbackCables);
         }
+      } catch (err) {
+        console.warn("Cables fetch failed, using fallback:", err);
+        setCablesData(fallbackCables);
+      }
+    };
 
-        if (stationsRes && stationsRes.features && stationsRes.features.length > 0) {
-          setStationsData(stationsRes);
+    const fetchStations = async () => {
+      try {
+        const res = await fetch("/api/infra/stations");
+        const data = await res.json();
+        if (data && data.features && data.features.length > 0) {
+          setStationsData(data);
         } else {
           setStationsData(fallbackStations);
         }
+      } catch (err) {
+        console.warn("Stations fetch failed, using fallback:", err);
+        setStationsData(fallbackStations);
+      }
+    };
 
-        if (outagesRes) {
-          setOutagesData(outagesRes);
+    const fetchOutages = async () => {
+      try {
+        const res = await fetch("/api/infra/outages");
+        const data = await res.json();
+        if (data) {
+          setOutagesData(data);
         } else {
           setOutagesData(fallbackEmpty);
         }
-
       } catch (err) {
-        console.warn("Falling back to local cache or minimal data:", err);
-        setCablesData(fallbackCables);
-        setStationsData(fallbackStations);
+        console.warn("Outages fetch failed, using fallback:", err);
         setOutagesData(fallbackEmpty);
       }
     };
-    fetchRealData();
+
+    const fetchAll = () => {
+      fetchCables();
+      fetchStations();
+      fetchOutages();
+    };
+
+    fetchAll();
 
     // Refresh outages every 10 minutes from the backend (which caches every 30m)
-    const interval = setInterval(fetchRealData, 10 * 60 * 1000);
+    const interval = setInterval(fetchOutages, 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
