@@ -8,7 +8,7 @@ Sovereign Watch is transitioning from initial feature parity to a **Version 1.0 
 
 - **Strategic Vision**: Reclaiming data sovereignty through active, self-hosted multi-INT fusion.
 - **Current Status**: Phase 2 (Active). Core pipelines for Aviation (ADS-B), Maritime (AIS), and Orbital (TLE) are stable.
-- **Archive**: For a full list of completed milestones, see [COMPLETED_ARCHIVE.md](./agent_docs/tasks/COMPLETED_ARCHIVE.md).
+- **Archive**: For a full list of completed milestones, see [COMPLETED_ARCHIVE.md](./agent_docs/COMPLETED_ARCHIVE.md).
 
 ---
 
