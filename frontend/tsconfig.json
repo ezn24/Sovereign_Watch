@@ -13,13 +13,13 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "jsxImportSource": "react",
 
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "types": ["vite/client", "react", "react-dom"]
+    "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

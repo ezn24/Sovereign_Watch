@@ -25,40 +25,26 @@ The platform's "System of Systems" architecture is documented in detail within t
 
 ---
 
-## 3. Version 1.0 Release Candidate Requirements
+## 3. Backlog (P2)
 
-These core components and usability improvements define the transition to a full production v1.0 state.
-
-| ID         | Task Name            | Component | Description                                                                                                    |
-| :--------- | :------------------- | :-------- | :------------------------------------------------------------------------------------------------------------- |
-| **FE-14**  | Deep Linking         | Frontend  | **(Collaboration)**. Encode mission state (Lat/Lon/Zoom/Active Layers) into the URL hash for instant sharing.  |
-| **FE-15**  | Data Portability     | Frontend  | **(Collaboration)**. Export/Import active mission state (AOR, Layer Filters, Preferences) to JSON.             |
-| **FE-12**  | Settings UI          | Frontend  | **(Usability)**. Configure API keys and Poller internals via the UI instead of `.env` files.                   |
-| **AI-01**  | AI Analyst Panel     | Frontend  | **(Intelligence)**. Surface the existing `/api/analyze/{uid}` LLM capability into a dedicated frontend widget. |
-| **FE-22**  | Drone Tactical Layer | Frontend  | **(Tracking)**. Implement `DroneLayer.tsx` with rotor icons and `drone_class` color coding.                    |
-| **FE-25c** | PSAP / 911 Centers   | Frontend  | **(Tracking)**. Static GeoJSON markers for emergency dispatch centers.                                         |
-
----
-
-## 4. Backlog (P2)
-
-| ID            | Task Name             | Component | Description                                                           |
-| :------------ | :-------------------- | :-------- | :-------------------------------------------------------------------- |
-| **Ingest-11** | FCC ASR Tower Service | Data Eng  | FCC antenna structure DB -> bounding-box filtered endpoints.          |
-| **FE-25b**    | FCC Tower Layer       | Frontend  | Visual markers for communication towers by height and type.           |
-| **FE-10**     | Payload Eval          | Frontend  | Raw JSON inspector (Terminal Mode).                                   |
-| **FE-13**     | Mission Labels        | Frontend  | Floating text labels for coverage areas.                              |
-| **Ingest-07** | Drone Remote ID       | Data Eng  | OpenDroneID / FAA Remote ID SDR pipeline (Requires RTL-SDR hardware). |
+| ID            | Task Name             | Component | Description                                                                 |
+| :------------ | :-------------------- | :-------- | :-------------------------------------------------------------------------- |
+| **Ingest-11** | FCC ASR Tower Service | Data Eng  | FCC antenna structure DB -> bounding-box filtered endpoints.                |
+| **FE-25b**    | FCC Tower Layer       | Frontend  | Visual markers for communication towers by height and type.                 |
+| **FE-10**     | Payload Eval          | Frontend  | Raw JSON inspector (Terminal Mode).                                         |
+| **FE-13**     | Mission Labels        | Frontend  | Floating text labels for coverage areas.                                    |
+| **Ingest-07** | Drone Remote ID       | Data Eng  | OpenDroneID / FAA Remote ID SDR pipeline (Requires RTL-SDR hardware).       |
+| **FE-22**     | Drone Tactical Layer  | Frontend  | Implement `DroneLayer.tsx` with rotor icons and `drone_class` color coding. |
+| **FE-25c**    | PSAP / 911 Centers    | Frontend  | Static GeoJSON markers for emergency dispatch centers.                      |
 
 ---
 
-## 5. Future Scope (P3 — Phase 6+)
+## 4. Future Scope (P3)
 
-- **Concurrent Multi-Area Polling**: Support for multiple independent surveillance zones.
 - **Mission Analytics**: Heatmaps and density metrics over time.
 - **Multi-User Sync**: Real-time collaborative WebSocket mission synchronization.
 - **SGP4 WebGPU Physics**: Offloading orbital propagation to a headless compute worker.
 
 ---
 
-- **Last Updated**: 2026-03-14 (Refactored for focus).
+- **Last Updated**: 2026-03-15 (Refactored for focus).

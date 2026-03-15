@@ -29,7 +29,7 @@ export function buildEntityLayers(
         getWidth: 1.5,
         widthMinPixels: 1.5,
         pickable: false,
-        parameters: { depthTest: true, depthBias: -1.0 },
+        parameters: { depthTest: !!globeMode, depthBias: globeMode ? -1.0 : 0 },
       }),
       new ScatterplotLayer({
         id: `ground-shadows-${globeMode ? "globe" : "merc"}`,
@@ -79,7 +79,7 @@ export function buildEntityLayers(
       // wrapLongitude off in globe mode: billboard + wrapLongitude causes rendering artifacts in Deck.gl _full3d overlay
       wrapLongitude: !globeMode,
       // For MapLibre Globe, we need depthTest enabled to prevent bleeding through the Earth.
-      parameters: { depthTest: true, depthBias: -150.0 },
+      parameters: { depthTest: !!globeMode, depthBias: globeMode ? -150.0 : 0 },
       // Enable globe occlusion for MapLibre since it lacks Mapbox's built-in hiding
       extensions: [], // In DeckGL v9, globe occlusion is applied automatically if projection is globe, unless interleaved
 
@@ -146,7 +146,7 @@ export function buildEntityLayers(
         pickable: true,
         // wrapLongitude off in globe mode: native geographic polygons don't need it and it causes culling
         wrapLongitude: false,
-        parameters: { depthTest: true, depthBias: -200.0 },
+        parameters: { depthTest: !!globeMode, depthBias: globeMode ? -200.0 : 0 },
         onHover: (info: { object?: any; x: number; y: number }) => {
           if (info.object) {
             setHoveredEntity(info.object as CoTEntity);
@@ -201,7 +201,7 @@ export function buildEntityLayers(
         getColor: (d: any) => entityColor(d as CoTEntity),
         pickable: true,
         wrapLongitude: !globeMode,
-        parameters: { depthTest: true, depthBias: -100.0 },
+        parameters: { depthTest: !!globeMode, depthBias: globeMode ? -100.0 : 0 },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onHover: (info: { object?: any; x: number; y: number }) => {
           if (info.object) {
@@ -317,7 +317,7 @@ export function buildEntityLayers(
         capRounded: true,
         pickable: false,
         wrapLongitude: !globeMode,
-        parameters: { depthTest: true, depthBias: -250.0 },
+        parameters: { depthTest: !!globeMode, depthBias: globeMode ? -250.0 : 0 },
       }),
     );
   }

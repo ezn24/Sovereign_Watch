@@ -9,7 +9,8 @@ import {
     MoveVertical,
     ShieldAlert,
     ShieldCheck,
-    Moon
+    Moon,
+    HeartPulse
 } from 'lucide-react';
 
 import { SystemHealth } from '../../hooks/useSystemHealth';
@@ -17,6 +18,7 @@ import { IntelEvent } from '../../types';
 import { AlertsWidget } from '../widgets/AlertsWidget';
 import { AIEngineWidget } from '../widgets/AIEngineWidget';
 import { SystemSettingsWidget } from '../widgets/SystemSettingsWidget';
+import { SystemHealthWidget } from '../widgets/SystemHealthWidget';
 
 interface TopBarProps {
     filters: Record<string, boolean | string | number | string[]>;
@@ -42,6 +44,9 @@ interface TopBarProps {
     isSystemSettingsOpen?: boolean;
     onSystemSettingsClick?: () => void;
     onSystemSettingsClose?: () => void;
+    isSystemHealthOpen?: boolean;
+    onSystemHealthClick?: () => void;
+    onSystemHealthClose?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -52,7 +57,8 @@ export const TopBar: React.FC<TopBarProps> = ({
     isReplayMode, onToggleReplay,
     viewMode = 'TACTICAL', onViewChange,
     onAlertsClick, isAlertsOpen, alerts, onAlertsClose,
-    isSystemSettingsOpen, onSystemSettingsClick, onSystemSettingsClose
+    isSystemSettingsOpen, onSystemSettingsClick, onSystemSettingsClose,
+    isSystemHealthOpen, onSystemHealthClick, onSystemHealthClose
 }) => {
     const [time, setTime] = useState(new Date());
 
@@ -192,6 +198,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                     aria-label="Map Toggles"
                     className="flex items-center gap-2 px-2.5 py-1 bg-black/30 backdrop-blur-sm border border-white/5 rounded-lg shadow-inner"
                 >
+
                     {/* Core Status */}
                     <div className="relative">
                         <button 
@@ -274,6 +281,32 @@ export const TopBar: React.FC<TopBarProps> = ({
                             <MoveVertical size={15} aria-hidden="true" className={showVelocityVectors ? 'drop-shadow-[0_0_5px_rgba(0,255,65,0.5)]' : ''} />
                         </button>
                     )}
+
+                    {/* System Health Toggle */}
+                    <div className="relative">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onSystemHealthClick?.();
+                            }}
+                            className={`p-1 rounded-md transition-all duration-200 hover:scale-105 active:scale-95 shadow-[0_0_10px_rgba(0,255,65,0.1)] outline-none group
+                                ${isSystemHealthOpen ? 'bg-amber-500/20 text-amber-500 border border-amber-500/50 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'bg-hud-green/10 text-hud-green border border-hud-green/20 hover:bg-hud-green/20 focus-visible:ring-1 focus-visible:ring-hud-green'}
+                            `}
+                            title="System Health & Data Streams"
+                            aria-expanded={isSystemHealthOpen}
+                        >
+                            <HeartPulse size={15} className={isSystemHealthOpen ? "text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]" : "text-hud-green drop-shadow-[0_0_5px_rgba(0,255,65,0.5)]"} />
+
+                        </button>
+
+                        {/* System Health Widget Dropdown */}
+                        {isSystemHealthOpen && onSystemHealthClose && (
+                            <SystemHealthWidget
+                                isOpen={isSystemHealthOpen}
+                                onClose={onSystemHealthClose}
+                            />
+                        )}
+                    </div>
                 </div>
 
                 {/* AI Engine Widget */}

@@ -9,16 +9,31 @@ from core.database import db
 router = APIRouter()
 logger = logging.getLogger("SovereignWatch.System")
 
+import yaml
+
 # ---------------------------------------------------------------------------
-# AI model registry — mirrors litellm_config.yaml model_list.
-# Update here if models are added/removed from the YAML.
+# AI model registry — read from models.yaml at project root (mounted in Docker).
 # ---------------------------------------------------------------------------
-AVAILABLE_AI_MODELS = [
-    {"id": "deep-reasoner", "label": "Claude 3.5 Sonnet", "provider": "Anthropic", "local": False},
-    {"id": "public-flash",  "label": "Gemini 1.5 Flash",  "provider": "Google",    "local": False},
-    {"id": "secure-core",   "label": "LLaMA3 (Ollama)",   "provider": "Local",     "local": True},
-]
+MODELS_YAML_PATH = os.getenv("MODELS_YAML_PATH", "/app/models.yaml")
+
+def load_ai_models():
+    try:
+        with open(MODELS_YAML_PATH, "r") as f:
+            data = yaml.safe_load(f)
+            if data and "models" in data:
+                return data["models"]
+    except Exception as e:
+        logger.error(f"Failed to load {MODELS_YAML_PATH}: {e}")
+    # Fallback default
+    return [
+        {"id": "deep-reasoner", "label": "Claude 3.5 Sonnet", "provider": "Anthropic", "local": False},
+        {"id": "public-flash",  "label": "Gemini 1.5 Flash",  "provider": "Google",    "local": False},
+        {"id": "secure-core",   "label": "LLaMA3 (Ollama)",   "provider": "Local",     "local": True},
+    ]
+
+AVAILABLE_AI_MODELS = load_ai_models()
 _VALID_MODEL_IDS = {m["id"] for m in AVAILABLE_AI_MODELS}
+
 AI_MODEL_REDIS_KEY = "config:ai:active_model"
 AI_MODEL_DEFAULT = os.getenv("LITELLM_MODEL", "deep-reasoner")
 
@@ -106,9 +121,12 @@ async def get_ai_config():
         logger.error(f"Failed to get AI model config: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+    # Reload dynamically per request so changes to YAML take effect without restart
+    available_models = load_ai_models()
+
     return {
         "active_model": active or AI_MODEL_DEFAULT,
-        "available_models": AVAILABLE_AI_MODELS,
+        "available_models": available_models,
     }
 
 @router.get("/api/config/features")
@@ -123,13 +141,59 @@ async def get_features_config():
         )
     }
 
+@router.get("/api/config/streams")
+async def get_streams_config():
+    """Return the health and configuration status of various data streams."""
+    # Check Maritime (AISStream)
+    ais_key = os.getenv("AISSTREAM_API_KEY")
+    maritime_status = "Active" if ais_key and ais_key != "your_key_here" else "Missing Key"
+
+    # Check Orbital (Always active, no key required currently for Celestrak/SpaceTrack basic)
+    orbital_status = "Active"
+
+    # Check Aviation (Always active, no key required for ADS-B Exchange public/local)
+    aviation_status = "Active"
+
+    # Check RF/Repeaters
+    # Check RF sources
+    rb_key = os.getenv("REPEATERBOOK_API_TOKEN")
+    rb_status = "Active" if rb_key and rb_key != "your_token_here" else "Missing Key"
+
+    rr_key = os.getenv("RADIOREF_APP_KEY")
+    rr_user = os.getenv("RADIOREF_USERNAME")
+    rr_pass = os.getenv("RADIOREF_PASSWORD")
+    rr_status = "Active" if rr_key and rr_user and rr_pass and rr_key != "your_app_key_here" else "Missing Key"
+
+    # Public RF (ARD/NOAA NWR) - Always active as they don't require keys
+    rf_public_status = "Active"
+
+    # Check AI Analysis
+    anthropic = os.getenv("ANTHROPIC_API_KEY")
+    gemini = os.getenv("GEMINI_API_KEY")
+    ai_status = "Disabled"
+    if (anthropic and anthropic != "your_key_here") or (gemini and gemini != "your_key_here"):
+        ai_status = "Active"
+
+    return [
+        {"id": "aviation", "name": "Aviation Tracking", "status": aviation_status},
+        {"id": "maritime", "name": "Maritime AIS", "status": maritime_status},
+        {"id": "orbital", "name": "Orbital Assets", "status": orbital_status},
+        {"id": "repeaterbook", "name": "RepeaterBook", "status": rb_status},
+        {"id": "radioref", "name": "RadioReference", "status": rr_status},
+        {"id": "rf_public", "name": "Public RF Assets", "status": rf_public_status},
+        {"id": "ai", "name": "AI Analysis", "status": ai_status},
+    ]
+
 @router.post("/api/config/ai")
 async def set_ai_config(req: AIModelRequest):
     """Switch the active AI model used for track analysis."""
-    if req.model_id not in _VALID_MODEL_IDS:
+    available_models = load_ai_models()
+    valid_ids = {m["id"] for m in available_models}
+
+    if req.model_id not in valid_ids:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown model '{req.model_id}'. Valid options: {sorted(_VALID_MODEL_IDS)}"
+            detail=f"Unknown model '{req.model_id}'. Valid options: {sorted(valid_ids)}"
         )
 
     if not db.redis_client:
