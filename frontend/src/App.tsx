@@ -29,6 +29,7 @@ function App() {
   const [followMode, setFollowMode] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isSystemSettingsOpen, setIsSystemSettingsOpen] = useState(false);
+  const [isSystemHealthOpen, setIsSystemHealthOpen] = useState(false);
   const [isAIAnalystOpen, setIsAIAnalystOpen] = useState(false);
   const [aiAnalystAutoRun, setAiAnalystAutoRun] = useState(0);
 
@@ -622,6 +623,9 @@ function App() {
           isSystemSettingsOpen={isSystemSettingsOpen}
           onSystemSettingsClick={() => setIsSystemSettingsOpen(!isSystemSettingsOpen)}
           onSystemSettingsClose={() => setIsSystemSettingsOpen(false)}
+          isSystemHealthOpen={isSystemHealthOpen}
+          onSystemHealthClick={() => setIsSystemHealthOpen(!isSystemHealthOpen)}
+          onSystemHealthClose={() => setIsSystemHealthOpen(false)}
         />
       }
       leftSidebar={
