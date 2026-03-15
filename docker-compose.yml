@@ -195,8 +195,10 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
+      - MODELS_YAML_PATH=/app/models.yaml
     volumes:
       - ./backend/api:/app
+      - ./models.yaml:/app/models.yaml:ro
     networks:
       - backend-net
       - ai-net

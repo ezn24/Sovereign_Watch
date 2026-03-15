@@ -18,6 +18,7 @@ import { AlertsWidget } from './components/widgets/AlertsWidget'
 import { useEntityWorker } from './hooks/useEntityWorker'
 import { useInfraData } from './hooks/useInfraData'
 import { parseMissionHash, updateMissionHash } from './hooks/useMissionHash'
+import { AIAnalystPanel } from './components/widgets/AIAnalystPanel'
 
 const NOOP = () => { };
 
@@ -28,6 +29,8 @@ function App() {
   const [followMode, setFollowMode] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isSystemSettingsOpen, setIsSystemSettingsOpen] = useState(false);
+  const [isAIAnalystOpen, setIsAIAnalystOpen] = useState(false);
+  const [aiAnalystAutoRun, setAiAnalystAutoRun] = useState(0);
 
   // Global COT State Refs
   const currentMissionRef = useRef<{
@@ -563,6 +566,11 @@ function App() {
     events.filter(e => (e as any).type === 'alert').length,
     [events]);
 
+  const handleOpenAnalystPanel = useCallback(() => {
+    setIsAIAnalystOpen(true);
+    setAiAnalystAutoRun(Date.now());
+  }, []);
+
   const handleEntitySelect = useCallback((e: CoTEntity | null) => {
     setSelectedEntity(e);
     // Always stop following when selection changes (user must re-engage)
@@ -661,10 +669,17 @@ function App() {
                 mapActions.flyTo(selectedEntity.lat, selectedEntity.lon);
               }
             }}
+            onOpenAnalystPanel={handleOpenAnalystPanel}
           />
         ) : null
       }
     >
+      <AIAnalystPanel
+        entity={selectedEntity}
+        isOpen={isAIAnalystOpen}
+        onClose={() => setIsAIAnalystOpen(false)}
+        autoRunTrigger={aiAnalystAutoRun}
+      />
       {viewMode === 'TACTICAL' ? (
         <>
           <TacticalMap
