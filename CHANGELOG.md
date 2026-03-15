@@ -1,3 +1,25 @@
+## [0.29.1] - 2026-03-15
+
+### Added
+- **Detailed RF Health Monitoring**: The System Health widget now provides granular connectivity status for individual RF sources (JS8, NWR, ARD).
+- **Data Portability & Custom Presets**: Operators can now save, export, and import custom combinations of map layers as "Mission Presets" via the System Settings panel.
+- **Mission Quick-Presets**: Added one-click tactical configurations for "Air Only", "Sea Only", and "Full Intelligence" views.
+
+### Changed
+- **Sentinel Security Implementation**: Integrated a high-performance rate-limiting layer on the AI Analysis endpoint to mitigate potential API abuse.
+- **Internet Outage Polygon Optimization**: Implemented client-side coordinate simplification for internet outage polygons, reducing the memory footprint and improving frame rates during global outage events.
+- **System Health Toggle UI**: Refined the aesthetics of the system health toggles for a more integrated glassmorphism look.
+
+### Fixed
+- **AI Analyst Stability**: Resolved a critical overtriggering bug in the `AIAnalystPanel` where model analysis would fire multiple times per second due to unstable dependency arrays.
+- **Backend Environment Injection**: Fixed a race condition in the container entrypoint that occasionally prevented microservices from inheriting `.env` configuration.
+- **JSX Runtime Resolution**: Resolved a project-wide regression where the `react/jsx-runtime` module could not be found by the Vite build system.
+- **Map Layer Clipping**: Resolved a visual defect where infrastructure underlays (RF, Outages) would clip through the ground terrain in 3D and Globe views.
+- **Cascading Renders in System Health**: Fixed a performance bottleneck in the `SystemHealthWidget` where internal state updates were triggering unnecessary re-renders across the TopBar.
+- **AIS Ingestion Stability**: Fixed a missing await in the maritime poller's ingestion loop that caused dropped TAK events under high network throughput.
+- **RF Layer Visual States**: Fixed a bug where RF coverage halos would fail to update their color or radius after a mission area re-center.
+- **KiwiSDR Audio Recovery**: Improved audio stream resilience and connection redirect handling for HF Listening Post operations.
+
 ## [0.29.0] - 2026-03-14
 
 ### Added

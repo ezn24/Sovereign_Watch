@@ -24,6 +24,7 @@ const LOOKBACK_OPTIONS = [
 export const AIAnalystPanel: React.FC<AIAnalystPanelProps> = ({ entity, onClose, isOpen, autoRunTrigger }) => {
   const { text, isStreaming, error, generatedAt, run, reset } = useAnalysis();
   const { config: aiConfig, isSaving, selectModel } = useAIConfig();
+  const entityUid = entity?.uid;
 
   const [lookback, setLookback] = useState(24);
   const [copied, setCopied] = useState(false);
@@ -41,21 +42,25 @@ export const AIAnalystPanel: React.FC<AIAnalystPanelProps> = ({ entity, onClose,
 
   // Cancel stream on uid change or when closing
   useEffect(() => {
-    if (!isOpen || !entity) {
+    if (!isOpen || !entityUid) {
       reset();
-      setIsSettingsOpen(false);
     }
-  }, [entity?.uid, isOpen, reset]);
+  }, [entityUid, isOpen, reset]);
+
+  // Handle settings drawer reset during render instead of effect to avoid cascading renders
+  if (!isOpen && isSettingsOpen) {
+    setIsSettingsOpen(false);
+  }
+
+  const prevTriggerRef = useRef<number>(0);
 
   // Handle auto-run when triggered from the sidebar
   useEffect(() => {
-    if (isOpen && entity && autoRunTrigger && autoRunTrigger > 0) {
-      run(entity.uid, lookback);
+    if (isOpen && entityUid && autoRunTrigger && autoRunTrigger > 0 && autoRunTrigger !== prevTriggerRef.current) {
+      prevTriggerRef.current = autoRunTrigger;
+      run(entityUid, lookback);
     }
-    // We intentionally don't include lookback or run in dependencies to avoid re-triggering
-    // when user changes lookback AFTER it was opened.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRunTrigger, isOpen, entity]);
+  }, [autoRunTrigger, isOpen, entityUid, lookback, run]);
 
   const handleRun = () => {
     if (!entity) return;

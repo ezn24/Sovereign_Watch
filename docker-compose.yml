@@ -191,9 +191,17 @@ services:
     container_name: sovereign-backend
     environment:
       - DB_DSN=postgresql://postgres:${POSTGRES_PASSWORD:-password}@sovereign-timescaledb:5432/${POSTGRES_DB:-sovereign_watch}
+      - CENTER_LAT=${CENTER_LAT:-45.5152}
+      - CENTER_LON=${CENTER_LON:--122.6784}
+      - COVERAGE_RADIUS_NM=${COVERAGE_RADIUS_NM:-150}
       - LITELLM_MODEL=deep-reasoner
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AISSTREAM_API_KEY=${AISSTREAM_API_KEY}
+      - REPEATERBOOK_API_TOKEN=${REPEATERBOOK_API_TOKEN}
+      - RADIOREF_APP_KEY=${RADIOREF_APP_KEY}
+      - RADIOREF_USERNAME=${RADIOREF_USERNAME}
+      - RADIOREF_PASSWORD=${RADIOREF_PASSWORD}
       - ALLOWED_ORIGINS=http://localhost,http://127.0.0.1
       - MODELS_YAML_PATH=/app/models.yaml
     volumes:

@@ -18,12 +18,21 @@ export const SystemHealthWidget: React.FC<SystemHealthWidgetProps> = ({
 }) => {
     const [streams, setStreams] = useState<StreamStatus[]>([]);
     const [loading, setLoading] = useState(true);
+    const [prevOpen, setPrevOpen] = useState(isOpen);
+
+    // Adjust state when widget is opened
+    if (isOpen && !prevOpen) {
+        setPrevOpen(true);
+        setLoading(true);
+        setStreams([]);
+    } else if (!isOpen && prevOpen) {
+        setPrevOpen(false);
+    }
 
     useEffect(() => {
         if (!isOpen) return;
 
         let mounted = true;
-        setLoading(true);
 
         fetch('/api/config/streams')
             .then(res => res.json())
@@ -71,12 +80,12 @@ export const SystemHealthWidget: React.FC<SystemHealthWidgetProps> = ({
 
     return (
         <div
-            className="absolute top-[calc(100%+20px)] left-1/2 -translate-x-1/2 z-[100] w-[260px] animate-in slide-in-from-top-2 fade-in duration-200"
+            className="absolute top-[calc(100%+23px)] left-1/2 -translate-x-1/2 z-[100] w-[260px] animate-in slide-in-from-top-2 fade-in duration-200"
             onClick={(e) => e.stopPropagation()} // Prevent bubbling up to the toggle button
             role="dialog"
             aria-label="System Health Checker"
         >
-            <div className="bg-black/90 backdrop-blur-xl border border-hud-green/30 rounded-lg shadow-[0_0_15px_rgba(0,255,65,0.15)] overflow-hidden flex flex-col">
+            <div className="bg-black/90 backdrop-blur-xl border border-hud-green/30 rounded-lg  overflow-hidden flex flex-col">
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-hud-green/20 bg-hud-green/10">
