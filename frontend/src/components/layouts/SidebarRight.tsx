@@ -148,12 +148,14 @@ interface SidebarRightProps {
   entity: CoTEntity | null;
   onClose: () => void;
   onCenterMap?: () => void;
+  onOpenAnalystPanel?: () => void;
 }
 
 export const SidebarRight: React.FC<SidebarRightProps> = ({
   entity,
   onClose,
-  onCenterMap
+  onCenterMap,
+  onOpenAnalystPanel
 }) => {
   const [showInspector, setShowInspector] = useState(false);
 
@@ -263,7 +265,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
         {/* Footer */}
         <div className="p-3 border border-t-0 border-tactical-border bg-black/40 backdrop-blur-md rounded-b-sm flex flex-col gap-2">
           <div className="flex gap-2 w-full">
-            <AnalysisWidget uid={entity.uid} accentColor="text-indigo-400" compactMode={true} />
+            <AnalysisWidget accentColor="text-indigo-400" onOpenPanel={onOpenAnalystPanel} />
             <button
               onClick={() => setShowInspector(true)}
               className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded group transition-all"
@@ -410,7 +412,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
         {/* Footer */}
         <div className="p-3 border border-t-0 border-tactical-border bg-black/40 backdrop-blur-md rounded-b-sm flex flex-col gap-2">
           <div className="flex gap-2 w-full">
-            <AnalysisWidget uid={entity.uid} accentColor="text-teal-400" compactMode={true} />
+            <AnalysisWidget accentColor="text-teal-400" onOpenPanel={onOpenAnalystPanel} />
             <button
               onClick={() => setShowInspector(true)}
               className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded group transition-all"
@@ -596,7 +598,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
         {/* Footer */}
         <div className="p-3 border border-t-0 border-tactical-border bg-black/40 backdrop-blur-md rounded-b-sm flex flex-col gap-2">
           <div className="flex gap-2 w-full">
-            <AnalysisWidget uid={entity.uid} accentColor={accentColor} compactMode={true} />
+            <AnalysisWidget accentColor={accentColor} onOpenPanel={onOpenAnalystPanel} />
             <button
               onClick={() => setShowInspector(true)}
               className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded group transition-all"
@@ -945,7 +947,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       {/* 3. Footer Actions */}
       <div className="p-3 border border-t-0 border-tactical-border bg-black/40 backdrop-blur-md rounded-b-sm flex flex-col gap-2">
         <div className="flex items-stretch gap-2 w-full grid grid-cols-2">
-          <AnalysisWidget uid={entity.uid} accentColor={accentColor} compactMode={true} />
+          <AnalysisWidget accentColor={accentColor} onOpenPanel={onOpenAnalystPanel} />
 
           <button
             onClick={() => setShowInspector(true)}
