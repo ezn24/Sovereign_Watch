@@ -13,11 +13,21 @@
 | :--- | :--- | :--- |
 | **Node.js** | 20+ | Required for frontend tooling and LSP servers |
 | **npm** or **pnpm** | npm 10+ / pnpm 9+ | Project uses both; npm recommended for global installs |
-| **Python** | 3.11+ | Required for backend lint and unit tests on the host |
-| **Docker** | 24+ | Required to run the full application stack |
+| **Python** | 3.11+ | Required for backend lint, tests, and LSP on the host |
+| **Docker** | 24+ | Required for infrastructure services (DB, bus, cache) |
 | **Docker Compose** | v2 | Included with Docker Desktop |
 
-> Docker is only needed to **run** the application. Lint and unit tests work directly on the host — no containers required.
+**What runs where:**
+
+| Layer | Where | Why |
+| :--- | :--- | :--- |
+| TimescaleDB + PostGIS + pgvector | Always Docker | Three Postgres extensions with native system deps — impractical to install bare |
+| Redpanda (Kafka) | Always Docker | Complex native install; no benefit to running it outside a container |
+| Redis · nginx | Always Docker | Trivial to containerise; compose networking keeps them wired correctly |
+| Ingestion pollers | Always Docker | Depend on Redpanda being reachable on the compose network |
+| Frontend (Vite/React) | **Local recommended** | `node_modules` on the host gives editors full type resolution for Deck.gl, MapLibre, etc. HMR also tends to be more reliable without a bind-mount layer |
+| Backend API (FastAPI) | **Local recommended** | A local `.venv` gives Pylance/pyright access to FastAPI, asyncpg, pydantic types without Docker exec |
+| Lint · tests · LSP servers | Always local | Host tools only — no containers involved |
 
 ---
 
@@ -30,6 +40,33 @@ cp .env.example .env
 ```
 
 Edit `.env` with your credentials. At minimum you need an AISStream API key for maritime data and at least one AI API key for the analyst. See [Configuration Reference](./Configuration.md) for the full variable list.
+
+---
+
+## Local Dependencies (Recommended)
+
+Installing frontend and backend dependencies locally gives your editor full type resolution without requiring a running container. This is the difference between Pylance knowing that `db.pool` is an `asyncpg.Pool` vs. showing it as `Unknown`.
+
+**Frontend — install `node_modules` locally:**
+
+```bash
+cd frontend && npm install
+```
+
+Your editor can now resolve all Deck.gl, MapLibre, React, and Tailwind types from `frontend/node_modules/`. Vite HMR and `npm run lint` / `npm run test` also work directly from here.
+
+**Backend API — create a local virtual environment:**
+
+```bash
+cd backend/api
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Point your editor's Python interpreter at `backend/api/.venv`. Pylance and pyright then resolve FastAPI, asyncpg, pydantic, LiteLLM, and every other dependency from the venv rather than guessing.
+
+> The infrastructure services — TimescaleDB, Redpanda, Redis — still run in Docker. The API and frontend can start without them locally for lint and type-checking, but the app requires `docker compose up -d` to function end-to-end.
 
 ---
 
@@ -212,33 +249,33 @@ Any tool that supports the Model Context Protocol can use the project's LSP serv
 
 ### Frontend (TypeScript · React · Vite)
 
-Vite HMR is active whenever the frontend container is running — saves are reflected in the browser instantly with no restart.
+With `node_modules` installed locally (see [Local Dependencies](#local-dependencies-recommended)), all of these run directly on the host. Vite HMR is active whenever the frontend container is running — saves reflect in the browser instantly.
 
 ```bash
-# Lint
-cd frontend && npm run lint
+cd frontend
 
-# Unit tests (Vitest)
-cd frontend && npm run test
-
-# Type check only
-cd frontend && npx tsc --noEmit
+npm run lint          # ESLint
+npm run test          # Vitest unit tests
+npx tsc --noEmit      # Type check without building
 ```
 
 ---
 
 ### Backend API (Python · FastAPI)
 
-Uvicorn runs with `--reload` inside the container — saves to `backend/api/` restart the server automatically.
+With a local `.venv` active (see [Local Dependencies](#local-dependencies-recommended)), lint and tests run directly on the host. Uvicorn runs with `--reload` inside the container — saves to `backend/api/` restart the server automatically.
 
 ```bash
-# Lint (on host — no container needed)
-cd backend/api && ruff check .
+cd backend/api
+source .venv/bin/activate    # if not already active
 
-# Unit tests (on host)
-cd backend/api && python -m pytest
+ruff check .                 # lint
+python -m pytest             # unit tests
+```
 
-# Or inside the running container
+If you prefer to run inside the container:
+
+```bash
 docker compose exec sovereign-backend ruff check .
 docker compose exec sovereign-backend python -m pytest
 ```
