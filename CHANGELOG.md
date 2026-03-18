@@ -1,3 +1,14 @@
+## [0.35.1] - 2026-03-18
+
+### Changed
+
+- **AI Configuration Documentation**: Comprehensive overhaul of the AI triple-model architecture documentation, clarifying the roles of `secure-core`, `public-flash`, and `deep-reasoner` models.
+- **Environment Templates**: Updated `.env.example` with more descriptive comments and a complete set of LiteLLM and RF Pulse configuration variables.
+
+### Fixed
+
+- **Documentation Hygiene**: Corrected broken links and stabilized table formatting across the primary configuration and deployment guides.
+
 ## [0.35.0] - 2026-03-18
 
 ### Added
