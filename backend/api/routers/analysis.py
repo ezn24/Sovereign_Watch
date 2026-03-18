@@ -91,7 +91,7 @@ async def analyze_track(
         except Exception as e:
             logger.warning(f"Rate limiting failed: {e}")
 
-    # 1. Fetch Track History Summary & Metadata (Optimized Query)
+    # 1. Fetch Track History Summary & Metadata (Optimized Query from PR 136)
     track_query = """
         WITH raw_points AS (
             SELECT 
@@ -193,7 +193,7 @@ async def analyze_track(
             yield {"event": "error", "data": "No track data found for this entity within lookback period"}
         return EventSourceResponse(error_generator())
 
-    # 1.5 Fetch Nearby Intel Reports (Fusion)
+    # 1.5 Fetch Nearby Intel Reports (Fusion - from main)
     intel_context = ""
     if track_summary['centroid_geom']:
         intel_query = """
@@ -212,7 +212,7 @@ async def analyze_track(
         except Exception as e:
             logger.warning(f"Failed to fetch intel for analysis: {e}")
 
-    # 1.6 Derive trajectory displacement
+    # 1.6 Derive trajectory displacement (from PR 136)
     displacement_km: float | None = None
     if all(track_summary.get(k) is not None for k in ('start_lat', 'start_lon', 'end_lat', 'end_lon')):
         displacement_km = _haversine_km(
@@ -224,7 +224,8 @@ async def analyze_track(
     entity_type = track_summary.get('entity_type', 'u-u-U')
     schema_ctx = get_schema_context(entity_type if entity_type != "unknown" else None)
     
-    # Mode-based Personas
+    # Mode-based Personas (from main)
+    # Helper to decode CoT type
     parts = entity_type.split('-')
     affiliation_map = {'f': 'FRIENDLY', 'h': 'HOSTILE', 's': 'SUSPECT', 'n': 'NEUTRAL', 'u': 'UNKNOWN'}
     domain_map = {'A': 'AIR', 'S': 'SURFACE / MARITIME', 'G': 'GROUND', 's': 'SPACE / ORBITAL', 'p': 'INFRASTRUCTURE', 'K': 'SPACE / ORBITAL'}
@@ -269,7 +270,7 @@ ANALYTICAL GUIDANCE:
 - For displacement near zero with high point count: suspect loitering.
 """
 
-    # Build user content
+    # Build user content (Combined from main + PR 136)
     latest_meta = track_summary['latest_meta'] or "{}"
     if isinstance(latest_meta, str):
         try: latest_meta = json.loads(latest_meta)
