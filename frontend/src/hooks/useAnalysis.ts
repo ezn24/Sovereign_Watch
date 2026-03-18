@@ -60,7 +60,8 @@ export function useAnalysis(): UseAnalysisReturn {
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? ''; // keep incomplete trailing line
 
-        for (const line of lines) {
+        for (let line of lines) {
+          line = line.replace(/\r$/, '');
           if (line.startsWith('event: ')) {
             currentEventType = line.slice(7).trim();
           } else if (line.startsWith('data: ')) {
