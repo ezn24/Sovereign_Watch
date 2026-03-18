@@ -13,6 +13,7 @@
 | :-------------------------------------------- | :--------------------------------------------------- |
 | [Deployment & Upgrade Guide](./Deployment.md) | Install, configure, run, and upgrade Sovereign Watch |
 | [Configuration Reference](./Configuration.md) | Complete `.env` variable reference for every service |
+| [Development Setup Guide](./Development.md) | Editor/IDE setup, LSP config, AI coding tools, dev workflow |
 
 ### Intelligence Pollers
 
@@ -75,5 +76,6 @@ All inter-service data flows through the **TAK Protocol** — a simplified Curso
 
 ## Contributing
 
+See [Development Setup Guide](./Development.md) for editor, LSP, and AI tool configuration.
 See [AGENTS.md](../AGENTS.md) for the AI agent protocol and development rules.
 See [CLAUDE.md](../CLAUDE.md) for Claude Code-specific overrides.

@@ -1,17 +1,18 @@
 import logging
 import os
 import yaml
+import json
+import math
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Path, Request
 from sse_starlette.sse import EventSourceResponse
 from litellm import acompletion
 from models.schemas import AnalyzeRequest
 from core.database import db
 from routers.system import AI_MODEL_REDIS_KEY, AI_MODEL_DEFAULT
-from datetime import datetime, timezone, timedelta
 import numpy as np
 from sgp4.api import Satrec, jday
 from utils.sgp4_utils import teme_to_ecef, ecef_to_lla_vectorized
-import math
 from services.schema_context import get_schema_context
 
 router = APIRouter()
@@ -118,7 +119,7 @@ async def analyze_track(
             MAX(CASE WHEN row_end = 1 THEN lon END) as end_lon,
             MAX(CASE WHEN row_end = 1 THEN heading END) as last_heading,
             MAX(CASE WHEN row_end = 1 THEN type END) as entity_type,
-            MAX(CASE WHEN row_end = 1 THEN meta END) as latest_meta
+            MAX(CASE WHEN row_end = 1 THEN meta::text END) as latest_meta
         FROM raw_points
     """
     try:

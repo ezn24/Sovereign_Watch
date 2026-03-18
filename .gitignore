@@ -6,6 +6,7 @@ Thumbs.db
 
 # IDE files
 .vscode/
+!.vscode/settings.json
 .idea/
 *.sublime-project
 *.sublime-workspace
@@ -56,3 +57,7 @@ docs/research/
 **/dist/
 **/__pycache__/
 cache/
+
+# Vendored tool binaries — built locally from tools/mcp-language-server/build.sh
+# Binaries are architecture-specific and not committed to git.
+tools/bin/
