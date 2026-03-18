@@ -1,3 +1,14 @@
+## [0.37.0] - 2026-03-18
+
+### Added
+
+- **Semantic Intelligence Integration**: Added Model Context Protocol (MCP) support for specialized LSP servers.
+    - **Pyright (Backend)**: Enabled deep semantic analysis and "Go to Definition" capabilities across the multi-poller backend services.
+    - **tsserver (Frontend)**: Standardized TypeScript/React symbol resolution for the 30+ Deck.gl and HUD components.
+- **Architectural Visualization**: Integrated the `graph-it-live` MCP server to provide real-time dependency graphing and structural analysis of the codebase.
+- **Developer Tooling Isolation**: Introduced `docker-compose-tools.yml` to run MCP and LSP services in isolated containers, eliminating host-side dependencies for AI analysis.
+- **Enhanced IDE Standardization**: Updated `.gitignore` to explicitly preserve `.vscode/settings.json`, ensuring consistent formatting (Black/Prettier) and analysis paths across all contributors.
+
 ## [0.36.1] - 2026-03-18
 
 ### Fixed
