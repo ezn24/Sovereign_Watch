@@ -52,12 +52,15 @@ These three variables define your **monitoring area** and are consumed by the AD
 
 Sovereign Watch uses **LiteLLM** as a unified AI gateway, supporting local and cloud models simultaneously.
 
+> **Important:** For detailed information on the dual-layer configuration system (`models.yaml` vs. `litellm_config.yaml`), see the [AI & LLM Configuration Guide](./AI_Configuration.md).
+
 | Variable | Default | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `ANTHROPIC_API_KEY` | *(empty)* | For Claude | Anthropic API key for Claude 3.5 Sonnet (`deep-reasoner` model). |
 | `GEMINI_API_KEY` | *(empty)* | For Gemini | Google AI Studio API key for Gemini 1.5 Flash (`public-flash` model). |
 
 > The **LLaMA3** local model (`secure-core`) requires an Ollama instance accessible to the backend container. No API key needed, but requires GPU/CPU resources.
+
 
 ---
 
