@@ -15,9 +15,19 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # Install production dependencies only, using the exact lock file
-ENV UV_SYSTEM_PYTHON=1
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
 RUN uv sync --frozen --no-dev
+
+# Ensure the virtual environment's binaries are in the PATH
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 COPY . .
 
-CMD ["python", "main.py"]
+CMD ["uv", "run", "--no-sync", "python", "main.py"]
+
+
+
+

@@ -160,9 +160,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # -----------------------------------------------------------------------------
 # Layer 8: Python API middleware dependencies (pinned via uv lock file)
 # -----------------------------------------------------------------------------
-COPY pyproject.toml uv.lock /tmp/py-deps/
+COPY pyproject.toml /tmp/py-deps/
 ENV UV_SYSTEM_PYTHON=1
-RUN cd /tmp/py-deps && uv sync --frozen --no-dev && rm -rf /tmp/py-deps
+RUN cd /tmp/py-deps && uv pip install --system . && rm -rf /tmp/py-deps
+
 
 # -----------------------------------------------------------------------------
 # PulseAudio configuration: disable hardware detection

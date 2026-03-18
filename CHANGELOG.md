@@ -1,4 +1,14 @@
+## [0.34.1] - 2026-03-17
+
+### Fixed
+
+- **Docker Stability (uv Migration)**: Resolved critical "executable not found" errors after the migration to `uv` by moving the virtual environment to `/opt/venv` to prevent masking by host-mount volumes.
+- **Container Performance Tuning**: Enabled bytecode compilation (`UV_COMPILE_BYTECODE=1`) and disabled redundant startup sync checks (`--no-sync`), reducing cold-boot lag by 3-5 seconds.
+- **JS8Call Compatibility**: Relaxed Python version requirement to `3.10` to match the Ubuntu 22.04 base image, ensuring bridge stability.
+- **Build Context Sanitization**: Implemented global and per-service `.dockerignore` files to prevent large host-side `.venv` folders from breaking Windows→Docker build context transfers.
+
 ## [0.34.0] - 2026-03-17
+
 
 ### Added
 
