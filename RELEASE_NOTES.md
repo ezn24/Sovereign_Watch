@@ -1,43 +1,29 @@
-# Release - v0.37.0 - Semantic Intelligence & Architectural Visualization
+# Release Notes - v0.37.1 (Situational Intelligence)
 
-## High-Level Summary
+## Multi-Domain AI Analyst Integration
 
-This feature release significantly enhances the project's **Developer Experience (DX)** and **AI-Analyst capabilities**. By integrating the **Model Context Protocol (MCP)** with specialized Language Servers (LSPs) for both Python and TypeScript, we've enabled deep semantic awareness across the entire codebase—eliminating text-search guesses and replacing them with bulletproof symbol resolution. Additionally, we've integrated **graph-it-live** to provide real-time architectural insights.
+v0.37.1 marks a critical advancement in our AI Analyst's cognitive capabilities, moving from simple telemetry summary to **true multi-domain situational awareness**. By fusing cross-referenced datasets at the analysis prompt level, the AI can now assess not just *where* a target is, but its **intent** relative to global infrastructure and the orbital sensor environment.
 
-## Key Features
+### 🦾 Key Capabilities:
 
-- **Semantic Intelligence Integration**: Added full MCP support for specialized LSP servers.
-    - **Pyright (Backend)**: Enabled deep semantic analysis and "Go to Definition" capabilities for all poller-based ingestion services.
-    - **tsserver (Frontend)**: Automated TypeScript symbol resolution for the 30+ Tactical Map and HUD components.
-- **Architectural Visualization**: Integrated the **graph-it-live** MCP server, providing real-time dependency graphing to understand the relationship between our 15+ microservices and the React frontend.
-- **Tooling Isolation**: Introduced `docker-compose-tools.yml` to run all MCP and LSP infrastructure in isolated containers—no more manual host-side dependency installs.
-- **IDE Reliability**: Standardized `.gitignore` and `.vscode/settings.json` to ensure code formatting (Black/Prettier) and analysis paths stay consistent for every developer on the team.
+1. **Behavioral Trajectory Insight**:
+   - The AI Analyst now receives a detailed 10-point waypoint history (Lat/Lon, Alt, Speed, Time).
+   - This prevents "average-velocity" masking and helps the AI detect loitering, course shifts, and rendezvous behaviors.
 
-## Technical Details
+2. **Infrastructure Proximity Awareness**:
+   - **RF Pulse Correlation**: Automatically identifies if a target is hovering within 10km of a critical radio repeater or signal site.
+   - **Submarine Cable Intelligence**: Cross-references targets with world-wide undersea landing stations (cached in Redis), flagging potential security threats to global connectivity.
 
-- **Protocol Bridge**: Implemented `isaacphi/mcp-language-server` to bridge Docker-based LSPs into the AI agent context.
-- **Service Specialization**: Split analysis services into `mcp-lsp` (Pyright) and `mcp-tsserver` (TypeScript) in our tools stack.
-- **Multi-Source Support**: Updated `.mcp.json` to concurrently support multiple specialized servers.
+3. **Orbital Domain Fusion**:
+   - **Overpass Detection**: The Analyst now "looks up." Using integrated SGP4 propagation, the AI determines if active INTEL-category satellites are currently overpassing the target's position.
+   - This provides the Analyst with the context of whether a target is being shadowed by an orbital sensor.
 
-## Upgrade Instructions
+4. **Synthetic Satellite Telemetry**:
+   - Added a fallback synthesis mode for satellites using TLE-based SGP4 propagation. This ensures that even without real-time telemetry, the Analyst can provide high-fidelity assessments based on predicted orbits.
 
-1. **Pull the latest changes**:
-   ```bash
-   git pull origin dev
-   ```
+### 🛠️ Stability:
+- Fixed a JSON decoding issue that caused the Analyst to crash when processing waypoint historical data from the database.
+- Improved the LiteLLM dynamic model mapping to correctly handle environment-injected API keys from `litellm_config.yaml`.
 
-2. **Initialize the Tools stack**:
-   ```bash
-   docker compose -f docker-compose-tools.yml build
-   ```
-
-3. **Verify MCP status**:
-   ```bash
-   # Check Pyright status
-   docker compose -f docker-compose-tools.yml run --rm mcp-lsp
-   ```
-
-4. **Restart core services**:
-   ```bash
-   docker compose up -d
-   ```
+---
+*For a full list of changes, see the [CHANGELOG.md](CHANGELOG.md).*

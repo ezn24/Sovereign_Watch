@@ -1,3 +1,17 @@
+## [0.37.1] - 2026-03-18
+
+### Added
+
+- **Multi-Domain Situational Intelligence**: Enhanced the AI Analyst with deep contextual awareness for fusion analysis.
+    - **Behavioral Trajectory Analysis**: The AI now receives the last 10 waypoints (lat/lon, alt, speed, time) for tracking complex patterns like loitering and interceptions.
+    - **Infrastructure Correlation**: Automated spatial cross-referencing with nearby RF Sites (within 10km) and Submarine Cable landing stations (within 20km).
+    - **Orbital Sensor Awareness**: Integrated real-time SGP4 propagation to identify active INTEL-category satellite overpasses during a target's operational window.
+    - **Satellite Fallback Synthesis**: Implemented on-demand trajectory synthesis for satellites using TLE-based SGP4 propagation when analytical telemetry is required.
+
+### Fixed
+
+- **Analysis Pipeline Reliability**: Resolved a critical `JSONDecodeError` in the waypoint history processing by implementing rigorous JSON string decoding in the unified analysis router.
+
 ## [0.37.0] - 2026-03-18
 
 ### Added
