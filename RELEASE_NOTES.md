@@ -1,26 +1,32 @@
-# Release - v0.35.0 - Oracle & Orbit
+# Release - v0.35.1 - AI Documentation & Env Refinement
 
 ## High-Level Summary
 
-This release significantly enhances the platform's distributed intelligence fusion capabilities and orbital monitoring reliability. Key additions include a multi-mode AI Analyst supporting Tactical, OSINT, and SAR specializations, along with a major performance and stability overhaul for the global tracking telemetry system.
+This patch release focuses on strengthening the project's documentation and environment configuration, specifically targeting the newly implemented triple-model AI architecture. It ensures that operators have clear guidance on configuring and deploying the `secure-core` (local), `public-flash` (Gemini), and `deep-reasoner` (Claude) models, while also providing a more robust `.env.example` template for easier system stand-up.
 
 ## Key Features
 
-- **Specialized AI Analysis (Oracle)**: The AI Analyst now features selectable modes (Tactical, OSINT, SAR), allowing operators to tailor automated intelligence assessments to specific mission profiles.
-- **Orbital Tracking Performance**: Implemented an isolated filter state for the Orbital Map view, ensuring that even with 1,500+ active satellites, map performance remains fluid and counts remain stable.
-- **Stability & Reliability**: Squashed a persistent flicker bug in the global track counts and ensured the AI Analyst triggers reliably across all map view modes.
+- **AI Triple-Model Documentation**: A complete overhaul of the configuration guides to clearly explain the fail-closed routing and data sovereignty policies of the local AI core.
+- **Enhanced Environment Templates**: `.env.example` now includes comprehensive coverage for all LiteLLM and RF Pulse variables, reducing the "guesswork" for new deployments.
+- **Documentation Hygiene**: Fixed multiple broken internal links and stabilized table layouts for better readability across various Markdown viewers.
 
 ## Technical Details
 
-- **Backend**: Enhanced `@router.post("/api/analyze/{uid}")` to handle mode-specific personas and synthesized satellite tracks from TLE data if no historical tracks are stored.
-- **Frontend**: Transitioned high-frequency map data threading to a more stable prop-memoization pattern to reduce React reconciliation overhead.
-- **Documentation**: New [AI Configuration Guide](./Documentation/AI_Configuration.md) added to support developers extending LiteLLM-based capabilities.
+- **Version Bump**: UI bumped to `0.35.1`.
+- **Config Schema**: Added explicit environment variables for `ANTHROPIC_MODEL`, `GEMINI_MODEL`, and `OPEN_API_MODEL` to allow finer control over model versions without changing the underlying backend code.
+- **Documentation**: Unified the formatting of intelligence poller tables across the entire `Documentation/` directory.
 
 ## Upgrade Instructions
 
-Run the following commands to pull the latest changes and rebuild the environment:
+1. **Pull the latest changes**:
+   ```bash
+   git pull origin dev
+   ```
 
-```bash
-git pull origin main
-docker compose up -d --build
-```
+2. **Update your `.env` file**:
+   Check `.env.example` for new variables related to AI model strings and ensure your local configuration matches the new triple-layer architecture.
+
+3. **Rebuild and Restart**:
+   ```bash
+   docker compose up -d --build
+   ```
