@@ -488,6 +488,16 @@ function App() {
       // Process and Index Data
       replayCacheRef.current = processReplayData(data);
       setReplayRange({ start: start.getTime(), end: end.getTime() });
+
+      // Sync the ref (animation loop source-of-truth) to the new start time.
+      // Without this, changing duration while playing leaves replayTimeRef.current
+      // at the old window position so the loop never restarts from the correct point.
+      replayTimeRef.current = start.getTime();
+      // Reset the rAF delta timer so the first frame of the restarted loop does
+      // not compute a massive dt from the previous animation session and
+      // instantly skip past replayRange.end, stopping playback immediately.
+      lastReplayFrameRef.current = 0;
+
       setReplayTime(start.getTime());
       updateReplayFrame(start.getTime());
 
@@ -497,7 +507,7 @@ function App() {
     } catch (err) {
       console.error("Replay load failed:", err);
     }
-  }, [historyDuration]);
+  }, [historyDuration, updateReplayFrame]);
 
   const updateReplayFrame = useCallback((time: number) => {
     const frameMap = new Map<string, CoTEntity>();
