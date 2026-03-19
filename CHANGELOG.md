@@ -1,3 +1,33 @@
+## [0.38.0] - 2026-03-19
+
+### Added
+
+- **OpenSky Network Supplemental Source**: Integrated OpenSky v1 REST API support into the aviation poller as an optional supplemental source alongside ADSBx-compatible providers.
+  - Added async OAuth2-capable client in `backend/ingestion/aviation_poller/opensky_client.py`.
+  - Added center+radius to WGS-84 bounding-box conversion (`nm_radius_to_bbox`).
+  - Added state-vector translation from OpenSky positional arrays/units into ADSBx-compatible dictionaries consumed by existing normalization and TAK paths.
+- **Global ICAO24 Watchlist**: Added Redis ZSET-backed watchlist manager in `backend/ingestion/aviation_poller/opensky_watchlist.py`.
+  - Supports permanent and TTL-based entries.
+  - Supports batched active-entry queries for global OpenSky polling.
+  - Includes background cleanup for expired entries.
+- **Service Integration**: Added OpenSky loops and watchlist integration to `backend/ingestion/aviation_poller/service.py`.
+  - Added independent bbox loop and watchlist loop.
+  - Added automatic watchlist seeding from mission-area detections for configured affiliation types.
+  - Added environment-configurable watchlist batch size and seed TTL.
+
+### Changed
+
+- **Docker Compose Wiring**: Added OpenSky environment variables to `adsb-poller` in `docker-compose.yml` so OpenSky behavior is fully configurable in containerized deployments.
+- **Release Documentation**: Updated release notes and operational guidance for OpenSky rollout.
+
+### Fixed
+
+- **OpenSky Auth Resilience**: Hardened token-refresh failure handling in `backend/ingestion/aviation_poller/opensky_client.py`.
+  - Falls back cleanly to anonymous mode when credential-based token retrieval fails.
+  - Adds backoff for token-refresh retries to avoid repeated 401 log storms.
+  - Improves diagnostics with clearer token refresh failure context.
+- **Credential Hygiene**: Trimmed `OPENSKY_CLIENT_ID` and `OPENSKY_CLIENT_SECRET` values in `backend/ingestion/aviation_poller/service.py` to prevent hidden whitespace causing auth failures.
+
 ## [0.37.2] - 2026-03-19
 
 ### Security

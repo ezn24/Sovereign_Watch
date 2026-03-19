@@ -1,38 +1,62 @@
-# Release - v0.37.2 - Hardened Replay
+# Release - v0.38.0 - OpenSky Global Tracking
 
 ## Summary
 
-v0.37.2 is a focused patch release that closes a **critical security vulnerability**, stabilizes the Replay Historian introduced in v0.37.1, and improves developer tooling and accessibility. Operators should upgrade immediately due to the rate-limit fix.
+v0.38.0 introduces OpenSky Network integration as an optional supplemental aviation source, including a global ICAO24 watchlist that can continue tracking target aircraft beyond the local mission area.
+
+This release adds:
+- OpenSky OAuth2/anonymous API client support.
+- OpenSky state-vector translation into the existing ADS-B normalization pipeline.
+- Redis-backed watchlist tracking with TTL and auto-seeding.
+- Docker Compose wiring for all OpenSky runtime environment variables.
+- Hardened authentication failure handling with anonymous fallback and retry backoff.
 
 ---
 
-## Security Fix (Upgrade Required)
+## New Capabilities
 
-### [CRITICAL] DoS & Cost-Exhaustion: Missing Rate Limit on Analysis Endpoint (PR #150)
+### OpenSky Supplemental Ingestion
 
-A missing rate limit on the `/api/analysis` endpoint allowed any client to submit unbounded AI inference requests, creating a vector for both service disruption and runaway LLM API costs. A per-IP request limit is now enforced on all analysis requests.
+The aviation poller can now query OpenSky in parallel with ADSBx-compatible sources:
+- Bounding-box OpenSky polling for mission-area coverage.
+- Global watchlist polling for specific ICAO24 targets (no bbox restriction).
 
-**Impact**: Without this fix, an unauthenticated actor could exhaust inference quotas or degrade service response times for all users.
+OpenSky native state vectors are translated to the existing ADS-B shape before
+classification and TAK emission, so downstream systems required no interface
+changes.
+
+### Global ICAO24 Watchlist
+
+Introduced a Redis-backed watchlist manager:
+- O(log N) add/remove operations.
+- Expiry-aware active-entry queries.
+- Permanent entries for manually pinned aircraft.
+- Auto-seeding from mission-area detections (default: military/government/drone).
+
+### Auth Failure Hardening
+
+OpenSky token behavior has been hardened:
+- Startup mode now reflects effective auth state.
+- Invalid OAuth credentials fall back to anonymous mode.
+- Token-refresh failures use retry backoff to avoid log storms.
+- Credential env values are whitespace-trimmed before use.
 
 ---
 
-## Key Fixes
+## Configuration
 
-### Replay Historian: Initialization Crash
+The `adsb-poller` compose service now accepts the full OpenSky configuration set:
+- `OPENSKY_ENABLED`
+- `OPENSKY_CLIENT_ID`
+- `OPENSKY_CLIENT_SECRET`
+- `OPENSKY_RATE_LIMIT_PERIOD`
+- `OPENSKY_WATCHLIST_ENABLED`
+- `OPENSKY_WATCHLIST_AUTO_SEED`
+- `OPENSKY_WATCHLIST_SEED_TYPES`
+- `OPENSKY_WATCHLIST_TTL_DAYS`
+- `OPENSKY_WATCHLIST_BATCH_SIZE`
 
-Resolved an `Uncaught ReferenceError: Cannot access 'updateReplayFrame' before initialization` that crashed the application on load. The `updateReplayFrame` callback was declared after `loadReplayData` which referenced it — a JavaScript temporal dead zone violation introduced when the historian was merged. The declaration order has been corrected.
-
-### Replay Playback Time-Range & Missing Tracks (PR #149)
-
-Fixed incorrect time-range boundary selection in the replay query that caused recently active tracks to be absent from playback. Playback now correctly initializes at the start of the selected window and includes all tracks active during the period.
-
-### MCP LSP Configuration: Docker / Local-Binary Dual-Path (PR #148)
-
-Resolved broken LSP MCP server startup for environments without Docker. Wrapper scripts now auto-detect Docker availability and fall back to the local binary seamlessly. Relative workspace paths are used in `.mcp.json` to ensure portability across developer machines.
-
-### Accessibility: Accordion Toggles now Semantic Buttons (PR #151)
-
-`<div>` elements used as accordion toggles have been replaced with `<button>` elements. This satisfies WCAG 2.1 keyboard navigation and screen reader requirements and eliminates browser accessibility warnings.
+See [.env.example](.env.example) for recommended defaults and descriptions.
 
 ---
 
@@ -42,13 +66,26 @@ Resolved broken LSP MCP server startup for environments without Docker. Wrapper 
 # Pull latest changes
 git pull origin dev
 
-# Rebuild and restart all services
-docker compose up -d --build
+# Set OpenSky values in .env (optional for anonymous mode)
+# OPENSKY_ENABLED=true
+# OPENSKY_WATCHLIST_ENABLED=true
+# OPENSKY_CLIENT_ID=...
+# OPENSKY_CLIENT_SECRET=...
 
-# Verify backend is running
-docker compose ps
+# Rebuild and restart the aviation poller
+docker compose up -d --build adsb-poller
+
+# Verify service health / logs
+docker compose logs -f adsb-poller
 ```
 
 ---
 
-*For a full list of changes, see [CHANGELOG.md](CHANGELOG.md).*
+## Verification Snapshot
+
+- OpenSky targeted lint/tests: passed
+- `tests/test_opensky_client.py` and `tests/test_opensky_watchlist.py`: 55 passed
+
+---
+
+For a full change list, see [CHANGELOG.md](CHANGELOG.md).
