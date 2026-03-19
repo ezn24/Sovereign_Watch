@@ -13,29 +13,13 @@
       }
     },
     "pyright": {
-      "command": "docker",
-      "args": [
-        "compose",
-        "-f",
-        "docker-compose-tools.yml",
-        "run",
-        "--rm",
-        "-i",
-        "mcp-lsp"
-      ],
+      "command": "bash",
+      "args": ["./tools/mcp-language-server/run-pyright.sh"],
       "env": {}
     },
     "tsserver": {
-      "command": "docker",
-      "args": [
-        "compose",
-        "-f",
-        "docker-compose-tools.yml",
-        "run",
-        "--rm",
-        "-i",
-        "mcp-tsserver"
-      ],
+      "command": "bash",
+      "args": ["./tools/mcp-language-server/run-tsserver.sh"],
       "env": {}
     }
   }

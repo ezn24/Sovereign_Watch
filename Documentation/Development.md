@@ -74,7 +74,28 @@ Point your editor's Python interpreter at `backend/api/.venv`. Pylance and pyrig
 
 Language Server Protocol gives your editor (and AI coding tools) **semantic understanding** of the codebase — exact symbol definitions, all call sites, accurate type information — instead of text-search guesses. On memory-constrained hardware like the Jetson Nano (4 GB RAM), it also eliminates expensive full-repo grep scans.
 
-**`mcp-language-server` is a Go binary, not an npm package.** It is vendored in `tools/bin/` and must be built from pinned source. Do not run `npm install -g mcp-language-server` — that package name resolves to something unrelated on the npm registry.
+`.mcp.json` uses wrapper scripts (`tools/mcp-language-server/run-*.sh`) that automatically select the right backend at startup:
+
+```
+Docker daemon reachable? ──yes──▶ docker compose run  (pinned LSP versions in image)
+                         ──no───▶ ./tools/bin/mcp-language-server  (local binary fallback)
+```
+
+### Windows (Docker Desktop)
+
+Docker Desktop provides the daemon, so the wrapper scripts take the Docker path automatically. The only requirement is that `bash` is on your PATH — Git for Windows (Git Bash) satisfies this.
+
+**No Go install or binary build required.** Build the Docker image once:
+
+```bash
+docker compose -f docker-compose-tools.yml build mcp-lsp
+```
+
+Then restart Claude Code (or your MCP-capable tool) — done.
+
+### Linux / macOS without Docker
+
+The wrappers fall back to a locally built binary. This is a one-time setup:
 
 **Step 1 — build the MCP bridge binary (requires `git` and `go 1.24+`):**
 
@@ -82,7 +103,9 @@ Language Server Protocol gives your editor (and AI coding tools) **semantic unde
 ./tools/mcp-language-server/build.sh
 ```
 
-This clones the upstream repo at the pinned tag, verifies the commit hash, builds a static binary, and writes it to `tools/bin/mcp-language-server`. The pinned version, expected commit, and sha256 are in `tools/mcp-language-server/VERSION`. If you cannot install Go, see the Docker alternative in `tools/mcp-language-server/Dockerfile`.
+This clones `isaacphi/mcp-language-server` at the pinned tag, verifies the commit hash, and writes the binary to `tools/bin/mcp-language-server`. The pinned version, expected commit, and SHA-256 are in `tools/mcp-language-server/VERSION`.
+
+> **Do not** run `npm install -g mcp-language-server` — that package name resolves to something unrelated on the npm registry.
 
 **Step 2 — install the TypeScript and Python LSP servers globally:**
 
@@ -94,7 +117,17 @@ npm install -g typescript typescript-language-server
 npm install -g pyright
 ```
 
-These three pieces only need to be installed once per machine. `.mcp.json` points at `./tools/bin/mcp-language-server` and is already committed — no further config is needed.
+These only need to be installed once per machine. Restart Claude Code after setup.
+
+### Linux with Docker
+
+The Docker path is used automatically if the daemon is running. Build the image once:
+
+```bash
+docker compose -f docker-compose-tools.yml build mcp-lsp
+```
+
+If the daemon is not running at session start, the wrapper falls back to the local binary (follow the Linux/macOS steps above to have a fallback available).
 
 ---
 
@@ -184,12 +217,12 @@ Point your editor's Python LSP at `pyrightconfig.json` and its TypeScript LSP at
 
 ### Claude Code
 
-No setup required. Two files are auto-loaded at session start:
+No setup required beyond completing [LSP Server Installation](#lsp-server-installation-one-time) above. Two files are auto-loaded at session start:
 
 | File | Purpose |
 | :--- | :--- |
 | `CLAUDE.md` | Session rules, verification commands, git workflow |
-| `.mcp.json` | Auto-registers `mcp-language-server` — enables `goToDefinition`, `findReferences`, `hover`, `rename` as Claude tools |
+| `.mcp.json` | Registers `pyright` and `tsserver` MCP servers via wrapper scripts — enables `goToDefinition`, `findReferences`, `hover`, `rename` as Claude tools |
 
 See [CLAUDE.md](../CLAUDE.md) for session-specific instructions and the LSP tool preference table.
 

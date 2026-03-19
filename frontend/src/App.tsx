@@ -471,34 +471,6 @@ function App() {
   const lastReplayFrameRef = useRef<number>(0);
   const animationFrameRef = useRef<number>();
 
-  const loadReplayData = useCallback(async (hoursOverride?: number) => {
-    try {
-      const hours = hoursOverride || historyDuration;
-      const end = new Date();
-      const start = new Date(end.getTime() - 1000 * 60 * 60 * hours); // Use selected hours
-
-      console.log(`Loading replay data (${hours}h): ${start.toISOString()} - ${end.toISOString()}`);
-
-      const res = await fetch(`/api/tracks/replay?start=${start.toISOString()}&end=${end.toISOString()}&limit=10000`);
-      if (!res.ok) throw new Error('Failed to fetch history');
-
-      const data = await res.json();
-      console.log(`Loaded ${data.length} historical points`);
-
-      // Process and Index Data
-      replayCacheRef.current = processReplayData(data);
-      setReplayRange({ start: start.getTime(), end: end.getTime() });
-      setReplayTime(start.getTime());
-      updateReplayFrame(start.getTime());
-
-      setReplayMode(true);
-      setIsPlaying(true);
-
-    } catch (err) {
-      console.error("Replay load failed:", err);
-    }
-  }, [historyDuration]);
-
   const updateReplayFrame = useCallback((time: number) => {
     const frameMap = new Map<string, CoTEntity>();
 
@@ -530,6 +502,44 @@ function App() {
     }
     setReplayEntities(frameMap);
   }, []);
+
+  const loadReplayData = useCallback(async (hoursOverride?: number) => {
+    try {
+      const hours = hoursOverride || historyDuration;
+      const end = new Date();
+      const start = new Date(end.getTime() - 1000 * 60 * 60 * hours); // Use selected hours
+
+      console.log(`Loading replay data (${hours}h): ${start.toISOString()} - ${end.toISOString()}`);
+
+      const res = await fetch(`/api/tracks/replay?start=${start.toISOString()}&end=${end.toISOString()}&limit=10000`);
+      if (!res.ok) throw new Error('Failed to fetch history');
+
+      const data = await res.json();
+      console.log(`Loaded ${data.length} historical points`);
+
+      // Process and Index Data
+      replayCacheRef.current = processReplayData(data);
+      setReplayRange({ start: start.getTime(), end: end.getTime() });
+
+      // Sync the ref (animation loop source-of-truth) to the new start time.
+      // Without this, changing duration while playing leaves replayTimeRef.current
+      // at the old window position so the loop never restarts from the correct point.
+      replayTimeRef.current = start.getTime();
+      // Reset the rAF delta timer so the first frame of the restarted loop does
+      // not compute a massive dt from the previous animation session and
+      // instantly skip past replayRange.end, stopping playback immediately.
+      lastReplayFrameRef.current = 0;
+
+      setReplayTime(start.getTime());
+      updateReplayFrame(start.getTime());
+
+      setReplayMode(true);
+      setIsPlaying(true);
+
+    } catch (err) {
+      console.error("Replay load failed:", err);
+    }
+  }, [historyDuration, updateReplayFrame]);
 
   const replayTimeRef = useRef<number>(Date.now());
 

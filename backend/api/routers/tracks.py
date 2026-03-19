@@ -331,7 +331,12 @@ async def replay_tracks(start: str, end: str, limit: int = 1000):
             WHERE time >= $1 AND time <= $2
             ORDER BY entity_id, time_bucket($4::interval, time), time DESC
         ) s
-        ORDER BY time ASC
+        -- ORDER BY time DESC so that LIMIT $3 retains the NEWEST rows rather
+        -- than the oldest.  Without this, a dense deployment with many entities
+        -- fills the row budget with the earliest portion of the window and the
+        -- most recent tracks are silently dropped.  The frontend re-sorts each
+        -- entity's history array ascending before binary-search playback.
+        ORDER BY time DESC
         LIMIT $3
     """
     try:
