@@ -1,5 +1,5 @@
 import pytest
-from backend.ingestion.aviation_poller.classification import classify_aircraft, MILITARY_OPERATORS, GOV_OPERATORS
+from classification import classify_aircraft, MILITARY_OPERATORS, GOV_OPERATORS
 
 class TestADSBClassification:
 

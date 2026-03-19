@@ -34,13 +34,12 @@ async def manager():
 # ---------------------------------------------------------------------------
 async def test_initialize_region_cell_count(manager):
     """
-    initialize_region for a 150nm zone (k=12) should seed 469 cells.
-    3n(n+1)+1 for n=12 → 3*12*13+1 = 469.
+    initialize_region for a 150nm zone now uses Resolution-2 sizing:
+    k = floor(278 / 158) = 1, so grid_disk seeds 7 cells.
     """
     await manager.initialize_region(CENTER_LAT, CENTER_LON, RADIUS_KM)
     count = await manager.redis.zcard(manager.KEY_QUEUE)
-    # k = floor(278/22) = 12 → exactly 469 cells
-    assert count == 469
+    assert count == 7
 
 
 # ---------------------------------------------------------------------------
@@ -145,16 +144,16 @@ async def test_get_cell_center_radius(manager):
 
 
 # ---------------------------------------------------------------------------
-# 7. Resolution-4 cell area sanity check
+# 7. Resolution-2 cell area sanity check
 # ---------------------------------------------------------------------------
-async def test_resolution_4_cell_area():
+async def test_resolution_2_cell_area():
     """
-    H3 Resolution-4 cells must be in the expected area range (~1770 km²).
+    H3 Resolution-2 cells must be in the expected area range (~86,800 km²).
     Uses h3.average_hexagon_area which does not require a Redis fixture.
     """
     avg_area_km2 = h3.average_hexagon_area(H3PriorityManager.RESOLUTION, unit="km^2")
-    # Res-4 average is ~1770 km². Allow generous tolerance for pentagons.
-    assert 1_000 < avg_area_km2 < 2_500
+    # Res-2 average is ~86,800 km². Allow generous tolerance for pentagons.
+    assert 80_000 < avg_area_km2 < 95_000
 
 
 # ---------------------------------------------------------------------------
