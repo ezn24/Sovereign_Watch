@@ -124,7 +124,7 @@ export const MissionNavigator: React.FC<MissionNavigatorProps> = ({
                     </button>
                     <button
                       onClick={() => onDeleteMission(mission.id)}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-red-400/60 hover:text-red-400 hover:bg-white/5 transition-all p-2 rounded-r focus-visible:ring-1 focus-visible:ring-red-400 outline-none flex items-center justify-center"
+                      className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 focus-visible:opacity-100 text-red-400/60 hover:text-red-400 hover:bg-white/5 transition-all p-2 rounded-r focus-visible:ring-1 focus-visible:ring-red-400 outline-none flex items-center justify-center"
                       aria-label={`Delete mission ${mission.name}`}
                     >
                       <Trash2 size={12} aria-hidden="true" />

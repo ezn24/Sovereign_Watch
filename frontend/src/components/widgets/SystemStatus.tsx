@@ -120,18 +120,20 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
                   <ChevronRight size={14} className="text-white/40" aria-hidden="true" />
                 </div>
               </button>
-              <div className="border-l border-white/10 p-2" onClick={(e) => e.stopPropagation()}>
-                <input type="checkbox" className="sr-only" checked={filters.showRepeaters} onChange={() => onFilterChange('showRepeaters', !filters.showRepeaters)} />
-                <div
-                  className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showRepeaters ? 'bg-emerald-400' : 'bg-white/10 hover:bg-white/20'}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFilterChange('showRepeaters', !filters.showRepeaters);
-                  }}
-                >
+              <button
+                className="border-l border-white/10 p-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFilterChange('showRepeaters', !filters.showRepeaters);
+                }}
+                aria-label="Toggle RF Infrastructure"
+                aria-pressed={filters.showRepeaters}
+              >
+                <input type="checkbox" className="sr-only" checked={filters.showRepeaters} onChange={() => onFilterChange('showRepeaters', !filters.showRepeaters)} tabIndex={-1} />
+                <div className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showRepeaters ? 'bg-emerald-400' : 'bg-white/10 hover:bg-white/20'}`}>
                   <div className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${filters.showRepeaters ? 'left-3.5' : 'left-0.5'}`} />
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Sub-filters for RF Infrastructure */}
@@ -242,26 +244,28 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
                 </div>
               </button>
 
-              <div className="border-l border-white/10 p-2" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="border-l border-white/10 p-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const isAnyOn = filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true;
+                  onFilterChange('showCables', !isAnyOn);
+                  onFilterChange('showLandingStations', false); // Default to off on master toggle
+                  onFilterChange('showOutages', !isAnyOn);
+                }}
+                aria-label="Toggle Global Network"
+                aria-pressed={filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true}
+              >
                 <input type="checkbox" className="sr-only" checked={filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true} onChange={() => {
                   const isAnyOn = filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true;
                   onFilterChange('showCables', !isAnyOn);
                   onFilterChange('showLandingStations', false); // Default to off on master toggle
                   onFilterChange('showOutages', !isAnyOn);
-                }} />
-                <div
-                  className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true ? 'bg-cyan-400' : 'bg-white/10 hover:bg-white/20'}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const isAnyOn = filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true;
-                    onFilterChange('showCables', !isAnyOn);
-                    onFilterChange('showLandingStations', false); // Default to off on master toggle
-                    onFilterChange('showOutages', !isAnyOn);
-                  }}
-                >
+                }} tabIndex={-1} />
+                <div className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true ? 'bg-cyan-400' : 'bg-white/10 hover:bg-white/20'}`}>
                   <div className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true ? 'left-3.5' : 'left-0.5'}`} />
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Sub-filters for Infra */}
