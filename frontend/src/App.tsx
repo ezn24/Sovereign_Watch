@@ -471,6 +471,38 @@ function App() {
   const lastReplayFrameRef = useRef<number>(0);
   const animationFrameRef = useRef<number>();
 
+  const updateReplayFrame = useCallback((time: number) => {
+    const frameMap = new Map<string, CoTEntity>();
+
+    // For each entity, find the state at 'time'
+    for (const [uid, history] of replayCacheRef.current) {
+      // Binary search or simple scan?
+      // History is sorted. Find last point <= time.
+      // Simple scan from right for now (assuming linear playback usually)
+      // But random seek needs binary search.
+      // Let's do simple findLast equivalent.
+      let found: CoTEntity | null = null;
+      let low = 0, high = history.length - 1;
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        if ((history[mid].time || 0) <= time) {
+          found = history[mid]; // Candidate
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+
+      if (found) {
+        // Stale check for replay? e.g. if point is > 5 mins old, don't show?
+        if (time - (found.time || 0) < 600000) { // 10 mins — matches max 5-min bucket size used by adaptive replay query
+          frameMap.set(uid, found);
+        }
+      }
+    }
+    setReplayEntities(frameMap);
+  }, []);
+
   const loadReplayData = useCallback(async (hoursOverride?: number) => {
     try {
       const hours = hoursOverride || historyDuration;
@@ -508,38 +540,6 @@ function App() {
       console.error("Replay load failed:", err);
     }
   }, [historyDuration, updateReplayFrame]);
-
-  const updateReplayFrame = useCallback((time: number) => {
-    const frameMap = new Map<string, CoTEntity>();
-
-    // For each entity, find the state at 'time'
-    for (const [uid, history] of replayCacheRef.current) {
-      // Binary search or simple scan?
-      // History is sorted. Find last point <= time.
-      // Simple scan from right for now (assuming linear playback usually)
-      // But random seek needs binary search.
-      // Let's do simple findLast equivalent.
-      let found: CoTEntity | null = null;
-      let low = 0, high = history.length - 1;
-      while (low <= high) {
-        const mid = Math.floor((low + high) / 2);
-        if ((history[mid].time || 0) <= time) {
-          found = history[mid]; // Candidate
-          low = mid + 1;
-        } else {
-          high = mid - 1;
-        }
-      }
-
-      if (found) {
-        // Stale check for replay? e.g. if point is > 5 mins old, don't show?
-        if (time - (found.time || 0) < 600000) { // 10 mins — matches max 5-min bucket size used by adaptive replay query
-          frameMap.set(uid, found);
-        }
-      }
-    }
-    setReplayEntities(frameMap);
-  }, []);
 
   const replayTimeRef = useRef<number>(Date.now());
 
