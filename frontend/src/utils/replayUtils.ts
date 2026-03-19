@@ -48,9 +48,13 @@ export function processReplayData(data: any[]): Map<string, CoTEntity[]> {
     cache.get(entity.uid)?.push(entity);
   });
 
-  // Note: Data from backend is already sorted by time (ORDER BY time ASC).
-  // Since we push to entity lists in order, each entity list is naturally sorted.
-  // No need for client-side sorting.
+  // The backend now returns rows ORDER BY time DESC (newest first) so that the
+  // LIMIT always preserves the most recent data rather than the oldest.  Each
+  // entity list must be sorted ascending here so that the binary search in
+  // updateReplayFrame finds the correct snapshot for a given playback time.
+  for (const history of cache.values()) {
+    history.sort((a, b) => (a.time ?? 0) - (b.time ?? 0));
+  }
 
   return cache;
 }
