@@ -128,6 +128,8 @@ interface TacticalMapProps {
   stationsData: any;
   outagesData: any;
   worldCountriesData: any;
+  towersData?: any[];
+  onBoundsChange?: (bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number } | null) => void;
   showTerminator?: boolean;
 }
 
@@ -166,6 +168,8 @@ export function TacticalMap({
   stationsData,
   outagesData,
   worldCountriesData,
+  towersData,
+  onBoundsChange,
 }: TacticalMapProps) {
 
   // State for UI interactions
@@ -517,6 +521,7 @@ export function TacticalMap({
     cablesData,
     stationsData,
     outagesData,
+    towersData,
   });
 
   // Map Camera: projection, graticule, 3D terrain/fog
@@ -644,6 +649,17 @@ export function TacticalMap({
           }
           onLoad={handleMapLoad}
           onMove={(evt: any) => {
+            if (onBoundsChange && evt.target && evt.target.getBounds) {
+              const bounds = evt.target.getBounds();
+              if (bounds && typeof bounds.getSouth === 'function') {
+                onBoundsChange({
+                  minLat: bounds.getSouth(),
+                  maxLat: bounds.getNorth(),
+                  minLon: bounds.getWest(),
+                  maxLon: bounds.getEast()
+                });
+              }
+            }
             // If user interacts (drags/pans), disable Follow Mode to prevent fighting.
             if (
               evt.originalEvent &&

@@ -196,3 +196,19 @@ BEGIN
     LIMIT 5;
 END;
 $$ LANGUAGE plpgsql;
+-- TABLE: infra_towers (FCC ULS Data)
+CREATE TABLE IF NOT EXISTS infra_towers (
+    id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    fcc_id     TEXT UNIQUE, -- ULS Registration Number
+    type       TEXT,        -- e.g. 'TOWER', 'MAST', 'POLE'
+    owner      TEXT,        -- Owner Name
+    status     TEXT,        -- e.g. 'Constructed', 'Granted'
+    height_m   DOUBLE PRECISION,
+    elevation_m DOUBLE PRECISION,
+    lat        DOUBLE PRECISION NOT NULL,
+    lon        DOUBLE PRECISION NOT NULL,
+    geom       GEOMETRY(POINT, 4326),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_infra_towers_geom ON infra_towers USING GIST (geom);

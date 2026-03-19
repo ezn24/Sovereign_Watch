@@ -51,3 +51,54 @@ async def get_infra_outages():
         logger.error(f"Failed to fetch infra outages: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+
+@router.get("/api/infra/towers")
+async def get_infra_towers(
+    min_lat: float, min_lon: float, max_lat: float, max_lon: float, limit: int = 2000
+):
+    """Returns FCC Towers within a bounding box as GeoJSON."""
+    if not db.pool:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    # Clamping bbox roughly around CONUS/Global
+    min_lat = max(-90.0, min(90.0, min_lat))
+    max_lat = max(-90.0, min(90.0, max_lat))
+    min_lon = max(-180.0, min(180.0, min_lon))
+    max_lon = max(-180.0, min(180.0, max_lon))
+
+    query = """
+    SELECT json_build_object(
+        'type', 'FeatureCollection',
+        'features', COALESCE(json_agg(
+            json_build_object(
+                'type', 'Feature',
+                'geometry', ST_AsGeoJSON(geom)::json,
+                'properties', json_build_object(
+                    'id', id,
+                    'fcc_id', fcc_id,
+                    'type', type,
+                    'owner', owner,
+                    'status', status,
+                    'height_m', height_m,
+                    'elevation_m', elevation_m
+                )
+            )
+        ), '[]'::json)
+    )
+    FROM (
+        SELECT id, fcc_id, type, owner, status, height_m, elevation_m, geom
+        FROM infra_towers
+        WHERE geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+        LIMIT $5
+    ) as sub;
+    """
+
+    try:
+        async with db.pool.acquire() as conn:
+            result = await conn.fetchval(query, min_lon, min_lat, max_lon, max_lat, limit)
+            if not result:
+                return {"type": "FeatureCollection", "features": []}
+            return json.loads(result)
+    except Exception as e:
+        logger.error(f"Error fetching FCC towers: {e}")
+        raise HTTPException(status_code=500, detail="Database error")

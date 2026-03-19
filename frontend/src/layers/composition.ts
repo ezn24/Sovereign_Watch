@@ -9,6 +9,7 @@ import { buildTrailLayers } from "./buildTrailLayers";
 import { buildEntityLayers } from "./buildEntityLayers";
 import { buildH3CoverageLayer } from "./buildH3CoverageLayer";
 import { getTerminatorLayer } from "../components/map/TerminatorLayer";
+import { buildTowerLayer } from "./buildTowerLayer";
 import { maidenheadToLatLon } from "../utils/map/geoUtils";
 
 interface LayerCompositionOptions {
@@ -20,6 +21,7 @@ interface LayerCompositionOptions {
   cablesData: any;
   stationsData: any;
   outagesData: any;
+  towersData?: any[];
   worldCountriesData: any;
   countryOutageMap: Record<string, any>;
   currentSelected: CoTEntity | null;
@@ -54,6 +56,7 @@ export function composeAllLayers(options: LayerCompositionOptions) {
     cablesData,
     stationsData,
     outagesData,
+    towersData,
     worldCountriesData,
     countryOutageMap,
     currentSelected,
@@ -208,6 +211,7 @@ export function composeAllLayers(options: LayerCompositionOptions) {
     ),
     ...repeaterLayers,
     ...kiwiLayers,
+    buildTowerLayer(towersData || [], filters?.showTowers ?? false),
     ...buildTrailLayers(
       interpolatedEntities,
       currentSelected,

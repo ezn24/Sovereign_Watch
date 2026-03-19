@@ -18,6 +18,7 @@ import { processReplayData } from './utils/replayUtils'
 import { useEntityWorker } from './hooks/useEntityWorker'
 import { useInfraData } from './hooks/useInfraData'
 import { parseMissionHash, updateMissionHash } from './hooks/useMissionHash'
+import { useTowers } from './hooks/useTowers'
 import { AIAnalystPanel } from './components/widgets/AIAnalystPanel'
 import { GlobalTerminalWidget } from './components/widgets/GlobalTerminalWidget'
 import { useMissionArea } from './hooks/useMissionArea'
@@ -28,6 +29,7 @@ function App() {
 
   const [trackCounts, setTrackCounts] = useState({ air: 0, sea: 0, orbital: 0 });
   const [selectedEntity, setSelectedEntity] = useState<CoTEntity | null>(null);
+  const [mapBounds, setMapBounds] = useState<{ minLat: number; maxLat: number; minLon: number; maxLon: number } | null>(null);
   const [followMode, setFollowMode] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isSystemSettingsOpen, setIsSystemSettingsOpen] = useState(false);
@@ -178,6 +180,7 @@ function App() {
 
   // Infrastructure Data (Shared across TACTICAL/ORBITAL views)
   const { cablesData, stationsData, outagesData } = useInfraData();
+  const { towers, isLoading: towersLoading } = useTowers(mapBounds);
   const [worldCountriesData, setWorldCountriesData] = useState<any>(null);
 
   useEffect(() => {
@@ -809,6 +812,8 @@ function App() {
             outagesData={outagesData}
             worldCountriesData={worldCountriesData}
             showTerminator={showTerminator}
+            towersData={towers}
+            onBoundsChange={setMapBounds}
           />
 
           {/* Replay Controls Overlay */}
@@ -888,6 +893,8 @@ function App() {
           worldCountriesData={worldCountriesData}
           showTerminator={showTerminator}
           drStateRef={drStateRef}
+          towersData={towers}
+          onBoundsChange={setMapBounds}
         />
       ) : (
         <div className="w-full h-full pt-14 overflow-hidden bg-slate-950">
