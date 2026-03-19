@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CoTEntity } from '../../types';
+import { CoTEntity, HistorySegment } from '../../types';
 import { Compass } from '../widgets/Compass';
 import { PolarPlotWidget } from '../widgets/PolarPlotWidget';
+import { TrackHistoryPanel } from '../widgets/TrackHistoryPanel';
 import { Crosshair, Map as MapIcon, Network, Radio, Shield, Signal, Terminal } from 'lucide-react';
 import { TimeTracked } from './TimeTracked';
 import { PayloadInspector } from '../widgets/PayloadInspector';
@@ -172,20 +173,24 @@ interface SidebarRightProps {
   onClose: () => void;
   onCenterMap?: () => void;
   onOpenAnalystPanel?: () => void;
+  onHistoryLoaded?: (segments: HistorySegment[]) => void;
 }
 
 export const SidebarRight: React.FC<SidebarRightProps> = ({
   entity,
   onClose,
   onCenterMap,
-  onOpenAnalystPanel
+  onOpenAnalystPanel,
+  onHistoryLoaded,
 }) => {
   const [showInspector, setShowInspector] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [prevUid, setPrevUid] = useState<string | undefined>(entity?.uid);
 
   if (entity?.uid !== prevUid) {
     setPrevUid(entity?.uid);
     setShowInspector(false);
+    setShowHistory(false);
   }
 
   if (!entity) return null;
@@ -796,7 +801,14 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
               <Crosshair size={12} />
               CENTER_VIEW
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-b from-white/10 to-transparent hover:from-white/20 hover:to-white/5 border border-white/10 py-1.5 rounded text-[10px] font-bold tracking-widest text-white/70 transition-all active:scale-[0.98]">
+            <button
+              onClick={() => setShowHistory(h => !h)}
+              className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded text-[10px] font-bold tracking-widest transition-all active:scale-[0.98] ${
+                showHistory
+                  ? 'bg-gradient-to-b from-hud-green/30 to-hud-green/10 border border-hud-green/50 text-hud-green shadow-[0_0_10px_rgba(0,255,65,0.15)]'
+                  : 'bg-gradient-to-b from-white/10 to-transparent hover:from-white/20 hover:to-white/5 border border-white/10 text-white/70'
+              }`}
+            >
               <MapIcon size={12} />
               TRACK_LOG
             </button>
@@ -939,6 +951,17 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
             {!isSat && <Compass heading={entity.course} size={180} accentColor={accentBase} />}
           </div>
         </section>
+
+        {/* Track History Panel — aircraft only, toggled by TRACK_LOG button */}
+        {showHistory && !isSat && !isShip && (
+          <>
+            <div className="h-px bg-white/5 w-full" />
+            <TrackHistoryPanel
+              entity={entity}
+              onHistoryLoaded={onHistoryLoaded ?? (() => {})}
+            />
+          </>
+        )}
       </div>
 
       {/* 3. Footer Actions */}
