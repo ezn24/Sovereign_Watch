@@ -8,6 +8,7 @@ from aiokafka import AIOKafkaProducer
 import redis.asyncio as redis
 
 from multi_source_poller import MultiSourcePoller
+from opensky_client import OpenSkyClient, nm_radius_to_bbox
 from classification import classify_aircraft
 from arbitration import Arbitrator
 from utils import safe_float, parse_altitude
@@ -25,6 +26,16 @@ COVERAGE_RADIUS_NM = int(os.getenv("COVERAGE_RADIUS_NM", "150"))
 
 # Cleanup config
 ARBITRATION_CLEANUP_INTERVAL = int(os.getenv("ARBITRATION_CLEANUP_INTERVAL", "30"))
+
+# OpenSky config (optional supplemental source)
+OPENSKY_ENABLED = os.getenv("OPENSKY_ENABLED", "false").lower() == "true"
+OPENSKY_CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID", "")
+OPENSKY_CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET", "")
+# rate_limit_period override in seconds (0 = use client default)
+_OPENSKY_RATE_PERIOD_RAW = os.getenv("OPENSKY_RATE_LIMIT_PERIOD", "0")
+OPENSKY_RATE_LIMIT_PERIOD: Optional[float] = (
+    float(_OPENSKY_RATE_PERIOD_RAW) if float(_OPENSKY_RATE_PERIOD_RAW) > 0 else None
+)
 
 logger = logging.getLogger("poller_service")
 
@@ -45,6 +56,17 @@ class PollerService:
         # H3 adaptive polling manager (Ingest-13)
         self.h3_manager = H3PriorityManager(REDIS_URL)
 
+        # Optional OpenSky supplemental source
+        self.opensky_client: Optional[OpenSkyClient] = (
+            OpenSkyClient(
+                client_id=OPENSKY_CLIENT_ID,
+                client_secret=OPENSKY_CLIENT_SECRET,
+                rate_limit_period=OPENSKY_RATE_LIMIT_PERIOD,
+            )
+            if OPENSKY_ENABLED
+            else None
+        )
+
     async def setup(self):
         await self.poller.start()
         self.producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP)
@@ -57,6 +79,13 @@ class PollerService:
         
         # Check for existing active mission from Redis
         await self.load_active_mission()
+
+        # Start optional OpenSky client
+        if self.opensky_client:
+            await self.opensky_client.start()
+            logger.info("OpenSky supplemental source enabled")
+        else:
+            logger.info("OpenSky supplemental source disabled (set OPENSKY_ENABLED=true to enable)")
 
         # Start H3 manager and seed the poll queue for the current mission area
         await self.h3_manager.start()
@@ -82,6 +111,8 @@ class PollerService:
         logger.info("Shutting down...")
         self.running = False
         await self.poller.close()
+        if self.opensky_client:
+            await self.opensky_client.close()
         await self.h3_manager.close()
         await self.producer.stop()
         if self.pubsub:
@@ -182,6 +213,50 @@ class PollerService:
                 logger.error(f"CRITICAL error in {source.name} loop: {e}")
                 await asyncio.sleep(5)
 
+    async def opensky_loop(self):
+        """
+        Independent polling loop for the OpenSky Network supplemental source.
+
+        Unlike the H3-sharded ADSBx loops, OpenSky uses a single bounding-box
+        query that covers the entire mission AOR at once.  The loop fires at
+        the pace of OpenSkyClient._limiter (rate_limit_period), which is set
+        conservatively so the daily credit budget is never exhausted:
+
+          - Authenticated (CLIENT_ID + SECRET set): ~1 req / 22 s
+          - Anonymous  (no credentials):            ~1 req / 300 s
+
+        Aircraft returned by fetch_bbox() are already in ADSBx-compatible dict
+        format (see opensky_client.translate_state_vector) and flow straight
+        into process_aircraft_batch() → arbitrator → Kafka.
+        """
+        if not self.opensky_client:
+            return
+
+        logger.info("OpenSky loop started")
+
+        while self.running:
+            try:
+                if not self.opensky_client.is_healthy():
+                    wait = max(0.0, self.opensky_client.cooldown_until - time.time())
+                    logger.debug("opensky in cooldown — waiting %.0fs", wait)
+                    await asyncio.sleep(min(wait, 30.0))
+                    continue
+
+                lamin, lomin, lamax, lomax = nm_radius_to_bbox(
+                    self.center_lat, self.center_lon, self.radius_nm
+                )
+
+                aircraft = await self.opensky_client.fetch_bbox(lamin, lomin, lamax, lomax)
+
+                if aircraft:
+                    await self.process_aircraft_batch(
+                        aircraft, self.center_lat, self.center_lon
+                    )
+
+            except Exception as exc:
+                logger.error("opensky_loop error: %s", exc)
+                await asyncio.sleep(5)
+
     async def loop(self):
         """Main Orchestration Loop - Spawns concurrent source tasks."""
         logger.info(f"Initializing Parallel Ingestion - Center: ({self.center_lat}, {self.center_lon}), Radius: {self.radius_nm}nm")
@@ -191,6 +266,10 @@ class PollerService:
 
         # Add background cleanup task
         tasks.append(asyncio.create_task(self.cleanup_loop()))
+
+        # Add optional OpenSky loop
+        if self.opensky_client:
+            tasks.append(asyncio.create_task(self.opensky_loop()))
 
         for i in range(len(self.poller.sources)):
             # Stagger loop starts slightly to prevent bursty network traffic
