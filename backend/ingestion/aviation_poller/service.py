@@ -30,8 +30,8 @@ ARBITRATION_CLEANUP_INTERVAL = int(os.getenv("ARBITRATION_CLEANUP_INTERVAL", "30
 
 # OpenSky config (optional supplemental source)
 OPENSKY_ENABLED = os.getenv("OPENSKY_ENABLED", "false").lower() == "true"
-OPENSKY_CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID", "")
-OPENSKY_CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET", "")
+OPENSKY_CLIENT_ID = os.getenv("OPENSKY_CLIENT_ID", "").strip()
+OPENSKY_CLIENT_SECRET = os.getenv("OPENSKY_CLIENT_SECRET", "").strip()
 # rate_limit_period override in seconds (0 = use client default)
 _OPENSKY_RATE_PERIOD_RAW = os.getenv("OPENSKY_RATE_LIMIT_PERIOD", "0")
 OPENSKY_RATE_LIMIT_PERIOD: Optional[float] = (

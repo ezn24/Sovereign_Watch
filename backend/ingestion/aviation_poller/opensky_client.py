@@ -200,6 +200,8 @@ class OpenSkyClient:
         # OAuth2 token cache
         self._access_token: Optional[str] = None
         self._token_expires_at: float = 0.0
+        # Backoff token retries when credentials are invalid to avoid log spam.
+        self._next_token_retry_at: float = 0.0
 
         self._session: Optional[aiohttp.ClientSession] = None
 
@@ -212,9 +214,16 @@ class OpenSkyClient:
         )
         if self._authenticated:
             await self._refresh_token()
+
+        auth_mode = "authenticated" if self._access_token else "anonymous"
+        if self._authenticated and not self._access_token:
+            logger.warning(
+                "OpenSky credentials were provided but token retrieval failed; "
+                "falling back to anonymous access until refresh succeeds"
+            )
         logger.info(
             "OpenSkyClient ready — %s, rate_limit_period=%.0fs",
-            "authenticated" if self._authenticated else "anonymous",
+            auth_mode,
             self.rate_limit_period,
         )
 
@@ -267,21 +276,44 @@ class OpenSkyClient:
                 data=data,
                 timeout=aiohttp.ClientTimeout(total=10.0),
             ) as resp:
-                resp.raise_for_status()
+                if resp.status >= 400:
+                    body = (await resp.text()).strip().replace("\n", " ")
+                    body_preview = body[:240] if body else "<empty body>"
+                    logger.error(
+                        "OpenSky token refresh failed: HTTP %d (%s)",
+                        resp.status,
+                        body_preview,
+                    )
+                    logger.error(
+                        "Verify OPENSKY_CLIENT_ID/OPENSKY_CLIENT_SECRET are valid "
+                        "OAuth2 client credentials for opensky-network"
+                    )
+                    self._access_token = None
+                    self._token_expires_at = 0.0
+                    self._next_token_retry_at = time.time() + 300.0
+                    return
+
                 payload = await resp.json()
                 self._access_token = payload["access_token"]
                 expires_in = int(payload.get("expires_in", 300))
                 # Refresh 30 s before expiry
                 self._token_expires_at = time.time() + expires_in - 30
+                self._next_token_retry_at = 0.0
                 logger.info("OpenSky token refreshed (expires in %ds)", expires_in)
         except Exception as exc:
             logger.error("OpenSky token refresh failed: %s", exc)
             self._access_token = None
             self._token_expires_at = 0.0
+            self._next_token_retry_at = time.time() + 300.0
 
     async def _ensure_token(self) -> None:
         """Refresh the token if it has expired or is about to."""
-        if self._authenticated and time.time() >= self._token_expires_at:
+        now = time.time()
+        if not self._authenticated:
+            return
+        if now < self._next_token_retry_at:
+            return
+        if now >= self._token_expires_at:
             await self._refresh_token()
 
     def _auth_headers(self) -> Dict[str, str]:
