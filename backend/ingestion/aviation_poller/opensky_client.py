@@ -292,6 +292,66 @@ class OpenSkyClient:
     # ------------------------------------------------------------------
     # Fetch
     # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Internal fetch helper
+    # ------------------------------------------------------------------
+    async def _fetch_states(self, params: Dict) -> Optional[Dict]:
+        """
+        Shared HTTP GET to /api/states/all with rate-limiting, auth, and
+        error handling.  Returns the parsed JSON payload or None on failure.
+        Callers are responsible for extracting 'states' from the result.
+        """
+        if not self._session:
+            raise RuntimeError("Client not started; call start() first")
+
+        await self._ensure_token()
+
+        async with self._limiter:
+            fetched_at = time.time()
+            try:
+                async with self._session.get(
+                    _STATES_URL,
+                    params=params,
+                    headers=self._auth_headers(),
+                    timeout=aiohttp.ClientTimeout(total=15.0),
+                ) as resp:
+                    if resp.status == 429:
+                        logger.warning("opensky: rate limited (429)")
+                        self.penalize()
+                        return None
+
+                    if resp.status == 401:
+                        logger.warning("opensky: auth error (401) — refreshing token")
+                        await self._refresh_token()
+                        return None
+
+                    resp.raise_for_status()
+                    payload = await resp.json()
+
+            except (
+                asyncio.TimeoutError,
+                aiohttp.ServerConnectionError,
+                aiohttp.ClientConnectorError,
+                aiohttp.ServerDisconnectedError,
+            ) as exc:
+                logger.warning("opensky: transport error: %s", exc)
+                self.penalize()
+                return None
+            except aiohttp.ClientResponseError as exc:
+                logger.error("opensky: HTTP error %d: %s", exc.status, exc)
+                self.penalize()
+                return None
+
+        self.reset_cooldown()
+        # Attach fetch timestamp so translate_state_vector() can compute
+        # seen_pos/seen correctly even when called after this method returns.
+        if payload is not None:
+            payload["_fetched_at"] = fetched_at
+        return payload
+
+    # ------------------------------------------------------------------
+    # Bounding-box query (local/regional coverage)
+    # ------------------------------------------------------------------
     async def fetch_bbox(
         self,
         lamin: float,
@@ -306,57 +366,18 @@ class OpenSkyClient:
 
         Returns an empty list on rate-limit or error.
         """
-        if not self._session:
-            raise RuntimeError("Client not started; call start() first")
-
-        await self._ensure_token()
-
         params = {
             "lamin": lamin,
             "lomin": lomin,
             "lamax": lamax,
             "lomax": lomax,
         }
+        payload = await self._fetch_states(params)
+        if payload is None:
+            return []
 
-        async with self._limiter:
-            fetched_at = time.time()
-            try:
-                async with self._session.get(
-                    _STATES_URL,
-                    params=params,
-                    headers=self._auth_headers(),
-                    timeout=aiohttp.ClientTimeout(total=15.0),
-                ) as resp:
-                    if resp.status == 429:
-                        logger.warning("opensky: rate limited (429)")
-                        self.penalize()
-                        return []
-
-                    if resp.status == 401:
-                        logger.warning("opensky: auth error (401) — refreshing token")
-                        await self._refresh_token()
-                        return []
-
-                    resp.raise_for_status()
-                    payload = await resp.json()
-
-            except (
-                asyncio.TimeoutError,
-                aiohttp.ServerConnectionError,
-                aiohttp.ClientConnectorError,
-                aiohttp.ServerDisconnectedError,
-            ) as exc:
-                logger.warning("opensky: transport error: %s", exc)
-                self.penalize()
-                return []
-            except aiohttp.ClientResponseError as exc:
-                logger.error("opensky: HTTP error %d: %s", exc.status, exc)
-                self.penalize()
-                return []
-
-        self.reset_cooldown()
-
-        raw_states = (payload or {}).get("states") or []
+        fetched_at = payload["_fetched_at"]
+        raw_states = payload.get("states") or []
         aircraft = []
         for sv in raw_states:
             translated = translate_state_vector(sv, fetched_at)
@@ -364,7 +385,47 @@ class OpenSkyClient:
                 aircraft.append(translated)
 
         logger.debug(
-            "opensky: fetched %d airborne contacts (bbox %.2f/%.2f → %.2f/%.2f)",
+            "opensky: bbox fetched %d airborne contacts (%.2f/%.2f → %.2f/%.2f)",
             len(aircraft), lamin, lomin, lamax, lomax,
+        )
+        return aircraft
+
+    # ------------------------------------------------------------------
+    # ICAO24 watchlist query (global coverage for specific aircraft)
+    # ------------------------------------------------------------------
+    async def fetch_icao_list(self, icao24s: List[str]) -> List[Dict]:
+        """
+        Query OpenSky for specific aircraft by ICAO24 hex address, globally.
+
+        Unlike fetch_bbox() this is not restricted to any geographic area —
+        it will find a watched aircraft wherever it is in the world.
+
+        ``icao24s`` must be lowercase hex strings.  OpenSky accepts them as a
+        comma-separated ``icao24`` query param.  Callers should chunk large
+        watchlists into batches of ≤ 100 entries to stay within URL length
+        limits.
+
+        Returns an empty list on rate-limit, error, or empty watchlist.
+        """
+        if not icao24s:
+            return []
+
+        params = {"icao24": ",".join(icao24s)}
+        payload = await self._fetch_states(params)
+        if payload is None:
+            return []
+
+        fetched_at = payload["_fetched_at"]
+        raw_states = payload.get("states") or []
+        aircraft = []
+        for sv in raw_states:
+            translated = translate_state_vector(sv, fetched_at)
+            if translated is not None:
+                translated["_source"] = "opensky_watchlist"
+                aircraft.append(translated)
+
+        logger.debug(
+            "opensky: watchlist fetched %d/%d airborne contacts",
+            len(aircraft), len(icao24s),
         )
         return aircraft
