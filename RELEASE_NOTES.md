@@ -1,29 +1,54 @@
-# Release Notes - v0.37.1 (Situational Intelligence)
+# Release - v0.37.2 - Hardened Replay
 
-## Multi-Domain AI Analyst Integration
+## Summary
 
-v0.37.1 marks a critical advancement in our AI Analyst's cognitive capabilities, moving from simple telemetry summary to **true multi-domain situational awareness**. By fusing cross-referenced datasets at the analysis prompt level, the AI can now assess not just *where* a target is, but its **intent** relative to global infrastructure and the orbital sensor environment.
-
-### 🦾 Key Capabilities:
-
-1. **Behavioral Trajectory Insight**:
-   - The AI Analyst now receives a detailed 10-point waypoint history (Lat/Lon, Alt, Speed, Time).
-   - This prevents "average-velocity" masking and helps the AI detect loitering, course shifts, and rendezvous behaviors.
-
-2. **Infrastructure Proximity Awareness**:
-   - **RF Pulse Correlation**: Automatically identifies if a target is hovering within 10km of a critical radio repeater or signal site.
-   - **Submarine Cable Intelligence**: Cross-references targets with world-wide undersea landing stations (cached in Redis), flagging potential security threats to global connectivity.
-
-3. **Orbital Domain Fusion**:
-   - **Overpass Detection**: The Analyst now "looks up." Using integrated SGP4 propagation, the AI determines if active INTEL-category satellites are currently overpassing the target's position.
-   - This provides the Analyst with the context of whether a target is being shadowed by an orbital sensor.
-
-4. **Synthetic Satellite Telemetry**:
-   - Added a fallback synthesis mode for satellites using TLE-based SGP4 propagation. This ensures that even without real-time telemetry, the Analyst can provide high-fidelity assessments based on predicted orbits.
-
-### 🛠️ Stability:
-- Fixed a JSON decoding issue that caused the Analyst to crash when processing waypoint historical data from the database.
-- Improved the LiteLLM dynamic model mapping to correctly handle environment-injected API keys from `litellm_config.yaml`.
+v0.37.2 is a focused patch release that closes a **critical security vulnerability**, stabilizes the Replay Historian introduced in v0.37.1, and improves developer tooling and accessibility. Operators should upgrade immediately due to the rate-limit fix.
 
 ---
-*For a full list of changes, see the [CHANGELOG.md](CHANGELOG.md).*
+
+## Security Fix (Upgrade Required)
+
+### [CRITICAL] DoS & Cost-Exhaustion: Missing Rate Limit on Analysis Endpoint (PR #150)
+
+A missing rate limit on the `/api/analysis` endpoint allowed any client to submit unbounded AI inference requests, creating a vector for both service disruption and runaway LLM API costs. A per-IP request limit is now enforced on all analysis requests.
+
+**Impact**: Without this fix, an unauthenticated actor could exhaust inference quotas or degrade service response times for all users.
+
+---
+
+## Key Fixes
+
+### Replay Historian: Initialization Crash
+
+Resolved an `Uncaught ReferenceError: Cannot access 'updateReplayFrame' before initialization` that crashed the application on load. The `updateReplayFrame` callback was declared after `loadReplayData` which referenced it — a JavaScript temporal dead zone violation introduced when the historian was merged. The declaration order has been corrected.
+
+### Replay Playback Time-Range & Missing Tracks (PR #149)
+
+Fixed incorrect time-range boundary selection in the replay query that caused recently active tracks to be absent from playback. Playback now correctly initializes at the start of the selected window and includes all tracks active during the period.
+
+### MCP LSP Configuration: Docker / Local-Binary Dual-Path (PR #148)
+
+Resolved broken LSP MCP server startup for environments without Docker. Wrapper scripts now auto-detect Docker availability and fall back to the local binary seamlessly. Relative workspace paths are used in `.mcp.json` to ensure portability across developer machines.
+
+### Accessibility: Accordion Toggles now Semantic Buttons (PR #151)
+
+`<div>` elements used as accordion toggles have been replaced with `<button>` elements. This satisfies WCAG 2.1 keyboard navigation and screen reader requirements and eliminates browser accessibility warnings.
+
+---
+
+## Upgrade Instructions
+
+```bash
+# Pull latest changes
+git pull origin dev
+
+# Rebuild and restart all services
+docker compose up -d --build
+
+# Verify backend is running
+docker compose ps
+```
+
+---
+
+*For a full list of changes, see [CHANGELOG.md](CHANGELOG.md).*

@@ -1,3 +1,16 @@
+## [0.37.2] - 2026-03-19
+
+### Security
+
+- **[CRITICAL] Rate Limit on AI Analysis Endpoint** (PR #150): Fixed a missing rate limit on the `/api/analysis` endpoint that exposed the application to DoS and LLM cost-exhaustion attacks. A per-IP limit is now enforced to prevent unbounded inference requests.
+
+### Fixed
+
+- **Replay Historian: Temporal Dead Zone Crash**: Resolved an `Uncaught ReferenceError` (`Cannot access 'updateReplayFrame' before initialization`) in `App.tsx` caused by `loadReplayData` referencing `updateReplayFrame` before its `const` declaration. The callback is now correctly hoisted above its consumers.
+- **Replay Playback Time-Range** (PR #149): Corrected time-range selection logic and resolved a bug where recently active tracks were missing from replay playback.
+- **MCP LSP Configuration** (PR #148): Fixed LSP MCP servers to support a Docker/local-binary dual-path. Wrapper scripts now auto-select the correct backend, and relative workspace paths are used in `.mcp.json` args to ensure portability.
+- **Accessibility: Accordion Toggle Buttons** (PR #151): Converted non-semantic `<div>` toggle elements to `<button>` elements across accordion components, satisfying WCAG 2.1 keyboard-navigation and screen-reader requirements.
+
 ## [0.37.1] - 2026-03-18
 
 ### Added
