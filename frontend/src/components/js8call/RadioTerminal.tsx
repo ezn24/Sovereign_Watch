@@ -51,9 +51,12 @@ import WebSDRDiscovery from './WebSDRDiscovery';
 import ListeningPost from './ListeningPost';
 import WebSDRPanel from './WebSDRPanel';
 import { useListenAudio } from '../../hooks/useListenAudio';
-import { 
-  JS8_BAND_PRESETS, 
-  JS8_SPEED_MODES 
+import {
+  JS8_BAND_PRESETS,
+  JS8_SPEED_MODES,
+  GHOSTNET_FREQ_PRESETS,
+  GHOSTNET_GROUPS,
+  GHOSTNET_SCHEDULE,
 } from '../../constants/js8Presets';
 import type { JS8SpeedMode } from '../../constants/js8Presets';
 
@@ -200,7 +203,7 @@ export default function RadioTerminal({
   // Radio operating mode: JS8 decode terminal vs. live audio listening post vs. WebSDR
   const [radioMode, setRadioMode] = useState<'JS8' | 'LISTEN' | 'WEBSDR'>('JS8');
 
-  const [txTarget, setTxTarget] = useState('@ALLCALL');
+  const [txTarget, setTxTarget] = useState('@GHOSTNET');
   const [txMessage, setTxMessage] = useState('');
   const [txPending, setTxPending] = useState(false);
 
@@ -223,6 +226,9 @@ export default function RadioTerminal({
   const [isEditingGrid, setIsEditingGrid] = useState(false);
   const [tempGrid, setTempGrid] = useState('');
   const [tempFreq, setTempFreq] = useState('');
+
+  // Station sidebar tab: heard stations vs GhostNet schedule
+  const [sidebarTab, setSidebarTab] = useState<'stations' | 'schedule'>('stations');
 
   // Live UTC clock for the status bar
   const [utcTime, setUtcTime] = useState(() => new Date().toUTCString().slice(17, 25));
@@ -337,6 +343,21 @@ export default function RadioTerminal({
         port: sharedActiveKiwiConfig.port,
         freq: freqKhz,
         mode: sharedActiveKiwiConfig.mode,
+      });
+    }
+  }, [bridgeConnected, sharedActiveKiwiConfig, sendAction]);
+
+  // Tune to a GhostNet frequency preset
+  const handleGhostNetFreq = useCallback((freqKhz: number, mode: string) => {
+    if (!bridgeConnected) return;
+    setKiwiConfig(prev => ({ ...prev, freq: freqKhz, mode }));
+    if (sharedActiveKiwiConfig) {
+      sendAction({
+        action: 'SET_KIWI',
+        host: sharedActiveKiwiConfig.host,
+        port: sharedActiveKiwiConfig.port,
+        freq: freqKhz,
+        mode,
       });
     }
   }, [bridgeConnected, sharedActiveKiwiConfig, sendAction]);
@@ -626,6 +647,46 @@ export default function RadioTerminal({
         {/* Divider */}
         <div className="w-px h-4 bg-slate-800 shrink-0" />
 
+        {/* GhostNet frequency presets */}
+        <div className="flex items-center gap-1 shrink-0">
+          <span className="text-[10px] text-amber-600/80 uppercase tracking-widest mr-1 shrink-0 font-bold">GhostNet</span>
+          {GHOSTNET_FREQ_PRESETS.map((preset) => {
+            const isActive = sharedActiveKiwiConfig?.freq === preset.freqKhz;
+            const colorMap = {
+              weekly: isActive
+                ? 'bg-amber-500/20 border border-amber-500/50 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
+                : 'bg-amber-500/10 border border-amber-500/25 text-amber-400/80 hover:bg-amber-500/20 hover:border-amber-500/45 hover:text-amber-300',
+              bridge: isActive
+                ? 'bg-sky-500/20 border border-sky-500/50 text-sky-300 shadow-[0_0_8px_rgba(14,165,233,0.25)]'
+                : 'bg-sky-500/10 border border-sky-500/20 text-sky-400/70 hover:bg-sky-500/20 hover:border-sky-500/40 hover:text-sky-300',
+              rtty: isActive
+                ? 'bg-violet-500/20 border border-violet-500/50 text-violet-300 shadow-[0_0_8px_rgba(139,92,246,0.25)]'
+                : 'bg-black/30 border border-violet-500/20 text-violet-400/60 hover:bg-violet-500/15 hover:border-violet-500/40 hover:text-violet-300',
+              voice: isActive
+                ? 'bg-rose-500/20 border border-rose-500/50 text-rose-300 shadow-[0_0_8px_rgba(244,63,94,0.25)]'
+                : 'bg-black/30 border border-rose-500/20 text-rose-400/60 hover:bg-rose-500/15 hover:border-rose-500/40 hover:text-rose-300',
+            };
+            return (
+              <button
+                key={`${preset.label}-${preset.freqKhz}`}
+                onClick={() => handleGhostNetFreq(preset.freqKhz, preset.mode)}
+                disabled={!bridgeConnected}
+                title={`${(preset.freqKhz / 1000).toFixed(3)} MHz ${preset.mode.toUpperCase()} — ${preset.note}`}
+                className={`
+                  px-2 py-0.5 rounded text-[11px] font-mono font-semibold transition-all duration-150
+                  disabled:opacity-30 disabled:cursor-not-allowed
+                  ${colorMap[preset.type]}
+                `}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-4 bg-slate-800 shrink-0" />
+
         {/* Speed mode selector */}
         <div className="flex items-center gap-1 shrink-0">
           <span className="text-[10px] text-slate-600 uppercase tracking-widest mr-1 shrink-0">Speed</span>
@@ -700,32 +761,121 @@ export default function RadioTerminal({
           </div>
         </main>
 
-        {/* HEARD STATIONS – right sidebar */}
+        {/* RIGHT SIDEBAR */}
         <aside className="w-72 bg-black/30 backdrop-blur-md border-l border-white/10 hidden md:flex flex-col shrink-0 relative z-10 shadow-[-5px_0_15px_rgba(0,0,0,0.2)]">
-          <div className="p-3 border-b border-white/10 bg-black/40 shadow-sm relative">
-            {/* Subtle glow on top of sidebar */}
+          {/* Sidebar tab bar */}
+          <div className="flex border-b border-white/10 bg-black/40 shrink-0 relative">
             <div className="absolute top-0 right-0 w-32 h-1 bg-indigo-500/30 blur-md pointer-events-none" />
-            <h2 className="text-xs font-bold text-indigo-300/80 uppercase tracking-widest flex items-center gap-2 drop-shadow-[0_0_2px_rgba(99,102,241,0.2)]">
-              <Activity className="w-4 h-4 text-indigo-400" />
-              Heard Stations
-              <span className="ml-auto text-indigo-200/50 font-mono font-normal">[{sortedStations.length}]</span>
-            </h2>
+            <button
+              onClick={() => setSidebarTab('stations')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all duration-150 ${
+                sidebarTab === 'stations'
+                  ? 'text-indigo-300 border-b-2 border-indigo-500 bg-indigo-500/10'
+                  : 'text-slate-600 hover:text-slate-400 border-b-2 border-transparent'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              Heard
+              <span className="font-mono font-normal opacity-60">[{sortedStations.length}]</span>
+            </button>
+            <button
+              onClick={() => setSidebarTab('schedule')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all duration-150 ${
+                sidebarTab === 'schedule'
+                  ? 'text-amber-300 border-b-2 border-amber-500 bg-amber-500/10'
+                  : 'text-slate-600 hover:text-slate-400 border-b-2 border-transparent'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              GhostNet
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-            {sortedStations.length === 0 ? (
-              <div className="text-center p-4 text-slate-600 italic text-xs">
-                Listening for heartbeats…
+
+          {sidebarTab === 'stations' ? (
+            <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+              {sortedStations.length === 0 ? (
+                <div className="text-center p-4 text-slate-600 italic text-xs">
+                  Listening for heartbeats…
+                </div>
+              ) : (
+                sortedStations.map((s) => (
+                  <StationCard key={s.callsign} station={s} isNew={false} />
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-2">
+              {/* Groups to monitor */}
+              <div className="mb-3">
+                <p className="text-[9px] text-amber-600/70 uppercase tracking-widest font-bold mb-1.5 px-0.5">Monitor Groups</p>
+                <div className="space-y-0.5">
+                  {GHOSTNET_GROUPS.map(g => (
+                    <div key={g.id} className="flex items-start gap-2 px-2 py-1.5 rounded bg-black/20 border border-white/5">
+                      <span className="font-mono font-bold text-amber-300 text-[11px] shrink-0">{g.id}</span>
+                      <span className="text-[10px] text-slate-500 leading-tight">{g.note}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ) : (
-              sortedStations.map((s) => (
-                <StationCard
-                  key={s.callsign}
-                  station={s}
-                  isNew={false}
-                />
-              ))
-            )}
-          </div>
+
+              {/* Net schedule */}
+              {(['THU', 'SAT'] as const).map(day => (
+                <div key={day} className="mb-3">
+                  <p className="text-[9px] text-amber-600/70 uppercase tracking-widest font-bold mb-1.5 px-0.5">
+                    {day === 'THU' ? 'Thursday — Weekly Nets' : 'Saturday — Data Bridges'}
+                  </p>
+                  <div className="space-y-0.5">
+                    {GHOSTNET_SCHEDULE.filter(e => e.day === day).map((entry, i) => {
+                      const nowH = new Date().getUTCHours();
+                      const nowDay = new Date().getUTCDay(); // 0=Sun,4=Thu,6=Sat
+                      const isToday = (day === 'THU' && nowDay === 4) || (day === 'SAT' && nowDay === 6);
+                      const isActive = isToday && nowH >= entry.startHourZ && nowH < entry.endHourZ;
+                      return (
+                        <div
+                          key={i}
+                          className={`px-2 py-1.5 rounded border text-[10px] transition-all ${
+                            isActive
+                              ? 'bg-amber-500/15 border-amber-500/40 shadow-[0_0_6px_rgba(245,158,11,0.15)]'
+                              : 'bg-black/20 border-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className={`font-bold font-mono ${isActive ? 'text-amber-300' : 'text-slate-300'}`}>
+                              {entry.region}
+                            </span>
+                            {isActive && (
+                              <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider animate-pulse">
+                                ACTIVE
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <span className="font-mono">{entry.timeUtc}</span>
+                            <span>·</span>
+                            <span>{entry.band}</span>
+                            {entry.js8Khz && (
+                              <button
+                                onClick={() => handleGhostNetFreq(entry.js8Khz!, 'usb')}
+                                disabled={!bridgeConnected}
+                                title={`Tune to ${(entry.js8Khz / 1000).toFixed(3)} MHz`}
+                                className="text-amber-500/60 hover:text-amber-400 font-mono text-[10px] disabled:opacity-30 transition-colors"
+                              >
+                                {(entry.js8Khz / 1000).toFixed(3)}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <p className="text-[9px] text-slate-700 text-center mt-2 px-1 leading-tight">
+                All times UTC · GhostNet v1.5 © S2 Underground
+              </p>
+            </div>
+          )}
         </aside>
         </>
       )}
@@ -737,14 +887,38 @@ export default function RadioTerminal({
         {/* Subtle glow underneath footer */}
         <div className="absolute bottom-0 left-0 w-full h-1/2 bg-indigo-500/5 blur-xl pointer-events-none" />
         
+        {/* Group quick-select */}
+        <div className="flex items-center gap-1.5 px-5 pt-2 relative z-10">
+          <span className="text-[9px] text-slate-700 uppercase tracking-widest font-bold shrink-0">Quick</span>
+          {GHOSTNET_GROUPS.map(g => (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => setTxTarget(g.id)}
+              title={g.note}
+              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all duration-150 ${
+                txTarget === g.id
+                  ? g.id === '@GSTFLASH'
+                    ? 'bg-rose-500/25 border border-rose-500/50 text-rose-300'
+                    : 'bg-amber-500/20 border border-amber-500/45 text-amber-300'
+                  : g.id === '@GSTFLASH'
+                    ? 'bg-black/30 border border-rose-500/20 text-rose-500/60 hover:text-rose-400 hover:border-rose-500/40'
+                    : 'bg-black/30 border border-white/10 text-slate-500 hover:text-slate-300 hover:border-white/20'
+              }`}
+            >
+              {g.id}
+            </button>
+          ))}
+        </div>
+
         {/* TX form */}
-        <form onSubmit={handleSend} className="flex items-center gap-3 px-5 py-3 relative z-10">
+        <form onSubmit={handleSend} className="flex items-center gap-3 px-5 py-2 relative z-10">
           <span className="text-slate-500 font-semibold text-xs tracking-wider">TO</span>
           <input
             type="text"
             value={txTarget}
             onChange={(e) => setTxTarget(e.target.value.toUpperCase())}
-            placeholder="@ALLCALL"
+            placeholder="@GHOSTNET"
             maxLength={20}
             disabled={!bridgeConnected}
             className="
