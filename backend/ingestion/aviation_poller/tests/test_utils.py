@@ -1,6 +1,5 @@
 import pytest
-import math
-from backend.ingestion.aviation_poller.utils import haversine_m, safe_float, parse_altitude
+from utils import haversine_m, safe_float, parse_altitude
 
 class TestAviationUtils:
 

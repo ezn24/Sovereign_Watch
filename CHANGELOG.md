@@ -1,3 +1,72 @@
+## [0.39.1] - 2026-03-19
+
+### Fixed
+
+- **RadioReference Ingestion**: Resolved a critical crash in the `rf_pulse` poller when RadioReference credentials were provided.
+  - Fixed Zeep `TransportError` (HTTP 403) by explicitly injecting `SovereignWatch/1.0` User-Agent headers into both async and sync WSDL fetch contexts.
+  - Removed calls to the deprecated `getAuthToken` method and appended `&v=9` to the WSDL URL to ensure access to the current API schema.
+  - Stubbed out the hallucinated `getCountrySystemList` method to prevent unhandled `AttributeError` exceptions, stabilizing the poller while a proper trunked-system fetch strategy is designed.
+
+## [0.39.0] - 2026-03-19
+
+### Added
+
+- **Global Watchlist Management**: Added watchlist functionality for tracking specific ICAO24s globally, bypassing spatial filters.
+  - **Frontend UI**: Added a comprehensive watchlist management panel to `SystemSettingsWidget` with add/remove capability and visual indicators for permanent vs. expiring entries.
+  - **Frontend API**: Created `watchlist.ts` API client for GET/POST/DELETE operations and integrated polling into the `useEntityWorker` hook matching a 30-second sync interval.
+  - **Backend APIs**: Added three new REST endpoints to `system.py`: `GET /api/watchlist` to return active entries, `POST /api/watchlist` to add/refresh entries with optional TTL, and `DELETE /api/watchlist/{icao24}` to remove entries.
+  - **Persistence**: Powered by a Redis sorted set (`opensky:watchlist`) using timestamps as scores, with a far-future sentinel value (01-Jan-3000) for permanent entries.
+
+### Changed
+
+- **UI Refinements**:
+  - Moved the Track Log widget in the Right Sidebar to appear centrally before the Positional Telemetry section for improved visibility.
+  - Ensured specific actions like the Track Log button are expressly hidden for maritime vessels (AIS) where log functions are unsupported.
+  - Unified dynamic styling of the `CENTER_VIEW` / `TRACK_LOG` buttons and Compass widget to properly reflect physical agent colors (e.g., `sea-accent` for ships).
+
+## [0.38.0] - 2026-03-19
+
+### Added
+
+- **OpenSky Network Supplemental Source**: Integrated OpenSky v1 REST API support into the aviation poller as an optional supplemental source alongside ADSBx-compatible providers.
+  - Added async OAuth2-capable client in `backend/ingestion/aviation_poller/opensky_client.py`.
+  - Added center+radius to WGS-84 bounding-box conversion (`nm_radius_to_bbox`).
+  - Added state-vector translation from OpenSky positional arrays/units into ADSBx-compatible dictionaries consumed by existing normalization and TAK paths.
+- **Global ICAO24 Watchlist**: Added Redis ZSET-backed watchlist manager in `backend/ingestion/aviation_poller/opensky_watchlist.py`.
+  - Supports permanent and TTL-based entries.
+  - Supports batched active-entry queries for global OpenSky polling.
+  - Includes background cleanup for expired entries.
+- **Service Integration**: Added OpenSky loops and watchlist integration to `backend/ingestion/aviation_poller/service.py`.
+  - Added independent bbox loop and watchlist loop.
+  - Added automatic watchlist seeding from mission-area detections for configured affiliation types.
+  - Added environment-configurable watchlist batch size and seed TTL.
+
+### Changed
+
+- **Docker Compose Wiring**: Added OpenSky environment variables to `adsb-poller` in `docker-compose.yml` so OpenSky behavior is fully configurable in containerized deployments.
+- **Release Documentation**: Updated release notes and operational guidance for OpenSky rollout.
+
+### Fixed
+
+- **OpenSky Auth Resilience**: Hardened token-refresh failure handling in `backend/ingestion/aviation_poller/opensky_client.py`.
+  - Falls back cleanly to anonymous mode when credential-based token retrieval fails.
+  - Adds backoff for token-refresh retries to avoid repeated 401 log storms.
+  - Improves diagnostics with clearer token refresh failure context.
+- **Credential Hygiene**: Trimmed `OPENSKY_CLIENT_ID` and `OPENSKY_CLIENT_SECRET` values in `backend/ingestion/aviation_poller/service.py` to prevent hidden whitespace causing auth failures.
+
+## [0.37.2] - 2026-03-19
+
+### Security
+
+- **[CRITICAL] Rate Limit on AI Analysis Endpoint** (PR #150): Fixed a missing rate limit on the `/api/analysis` endpoint that exposed the application to DoS and LLM cost-exhaustion attacks. A per-IP limit is now enforced to prevent unbounded inference requests.
+
+### Fixed
+
+- **Replay Historian: Temporal Dead Zone Crash**: Resolved an `Uncaught ReferenceError` (`Cannot access 'updateReplayFrame' before initialization`) in `App.tsx` caused by `loadReplayData` referencing `updateReplayFrame` before its `const` declaration. The callback is now correctly hoisted above its consumers.
+- **Replay Playback Time-Range** (PR #149): Corrected time-range selection logic and resolved a bug where recently active tracks were missing from replay playback.
+- **MCP LSP Configuration** (PR #148): Fixed LSP MCP servers to support a Docker/local-binary dual-path. Wrapper scripts now auto-select the correct backend, and relative workspace paths are used in `.mcp.json` args to ensure portability.
+- **Accessibility: Accordion Toggle Buttons** (PR #151): Converted non-semantic `<div>` toggle elements to `<button>` elements across accordion components, satisfying WCAG 2.1 keyboard-navigation and screen-reader requirements.
+
 ## [0.37.1] - 2026-03-18
 
 ### Added

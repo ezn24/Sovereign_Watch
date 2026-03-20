@@ -31,9 +31,11 @@ export const LayerFilters: React.FC<LayerFiltersProps> = ({ filters, onFilterCha
         {/* Aircraft Filter Group */}
         <div className="flex flex-col gap-1">
           <div className={`group flex items-center justify-between rounded border transition-all ${filters.showAir ? 'border-air-accent/30 bg-air-accent/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}>
-            <div
-              className="flex flex-1 items-center justify-between p-2 cursor-pointer"
+            <button
+              className="flex flex-1 items-center justify-between p-2 cursor-pointer text-left focus-visible:ring-1 focus-visible:ring-hud-green outline-none w-full"
               onClick={() => setAirExpanded(!airExpanded)}
+              aria-expanded={airExpanded}
+              aria-label="Toggle Aircraft Filter Group"
             >
               <div className="flex items-center gap-2">
                 <Plane size={14} className={filters.showAir ? 'text-air-accent' : 'text-white/20'} />
@@ -42,19 +44,21 @@ export const LayerFilters: React.FC<LayerFiltersProps> = ({ filters, onFilterCha
               <div className="w-4 flex justify-center transition-transform duration-200 shrink-0" style={{ transform: airExpanded ? 'rotate(90deg)' : 'none' }}>
                 <ChevronRight size={14} className="text-white/40" />
               </div>
-            </div>
+            </button>
 
-            <div
-              className="border-l border-white/10 p-2 cursor-pointer flex items-center"
+            <button
+              className="border-l border-white/10 p-2 flex items-center focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
               onClick={(e) => {
                 e.stopPropagation();
                 onFilterChange('showAir', !filters.showAir);
               }}
+              aria-label="Toggle all Air filters"
+              aria-pressed={filters.showAir}
             >
               <div className={`h-3 w-6 shrink-0 rounded-full transition-colors duration-200 ease-in-out relative ${filters.showAir ? 'bg-air-accent' : 'bg-white/10 hover:bg-white/20'}`}>
                 <div className={`absolute top-0.5 h-2 w-2 transform rounded-full bg-black transition duration-200 ease-in-out ${filters.showAir ? 'left-3.5' : 'left-0.5'}`} />
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Sub-filters for Air */}
@@ -168,9 +172,11 @@ export const LayerFilters: React.FC<LayerFiltersProps> = ({ filters, onFilterCha
         {/* Vessel Filter */}
         <div className="flex flex-col gap-1">
           <div className={`group flex items-center justify-between rounded border transition-all ${filters.showSea ? 'border-sea-accent/30 bg-sea-accent/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}>
-            <div
-              className="flex flex-1 items-center justify-between p-2 cursor-pointer"
+            <button
+              className="flex flex-1 items-center justify-between p-2 cursor-pointer text-left focus-visible:ring-1 focus-visible:ring-hud-green outline-none w-full"
               onClick={() => setSeaExpanded(!seaExpanded)}
+              aria-expanded={seaExpanded}
+              aria-label="Toggle Vessel Filter Group"
             >
               <div className="flex items-center gap-2">
                 <Ship size={14} className={filters.showSea ? 'text-sea-accent' : 'text-white/20'} />
@@ -179,19 +185,21 @@ export const LayerFilters: React.FC<LayerFiltersProps> = ({ filters, onFilterCha
               <div className="w-4 flex justify-center transition-transform duration-200 shrink-0" style={{ transform: seaExpanded ? 'rotate(90deg)' : 'none' }}>
                 <ChevronRight size={14} className="text-white/40" />
               </div>
-            </div>
+            </button>
 
-            <div
-              className="border-l border-white/10 p-2 cursor-pointer flex items-center"
+            <button
+              className="border-l border-white/10 p-2 flex items-center focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
               onClick={(e) => {
                 e.stopPropagation();
                 onFilterChange('showSea', !filters.showSea);
               }}
+              aria-label="Toggle all Sea filters"
+              aria-pressed={filters.showSea}
             >
               <div className={`h-3 w-6 shrink-0 rounded-full transition-colors duration-200 ease-in-out relative ${filters.showSea ? 'bg-sea-accent' : 'bg-white/10 hover:bg-white/20'}`}>
                 <div className={`absolute top-0.5 h-2 w-2 transform rounded-full bg-black transition duration-200 ease-in-out ${filters.showSea ? 'left-3.5' : 'left-0.5'}`} />
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Sub-filters for Sea */}
@@ -348,9 +356,11 @@ export const LayerFilters: React.FC<LayerFiltersProps> = ({ filters, onFilterCha
           )}
         </div>        {/* ORBITAL / SATELLITES */}
         <div className={`group flex items-center justify-between rounded border transition-all ${filters.showSatellites ? 'border-purple-400/30 bg-purple-400/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}>
-          <div
-            className="flex flex-1 items-center justify-between p-2 cursor-pointer"
+          <button
+            className="flex flex-1 items-center justify-between p-2 cursor-pointer text-left focus-visible:ring-1 focus-visible:ring-hud-green outline-none w-full"
             onClick={() => setSatExpanded(!satExpanded)}
+            aria-expanded={satExpanded}
+            aria-label="Toggle Orbital Filter Group"
           >
             <div className="flex items-center gap-2">
               <Satellite size={14} className={filters.showSatellites ? 'text-purple-400' : 'text-white/20'} />
@@ -359,19 +369,21 @@ export const LayerFilters: React.FC<LayerFiltersProps> = ({ filters, onFilterCha
             <div className="w-4 flex justify-center transition-transform duration-200 shrink-0" style={{ transform: satExpanded ? 'rotate(90deg)' : 'none' }}>
               <ChevronRight size={14} className="text-white/40" />
             </div>
-          </div>
-          <div className="border-l border-white/10 p-2" onClick={(e) => e.stopPropagation()}>
-            <input type="checkbox" className="sr-only" checked={filters.showSatellites} onChange={(e) => onFilterChange('showSatellites', e.target.checked)} />
-            <div
-              className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showSatellites ? 'bg-purple-400' : 'bg-white/10 hover:bg-white/20'}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onFilterChange('showSatellites', !filters.showSatellites);
-              }}
-            >
+          </button>
+          <button
+            className="border-l border-white/10 p-2 flex items-center focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFilterChange('showSatellites', !filters.showSatellites);
+            }}
+            aria-label="Toggle all Orbital filters"
+            aria-pressed={filters.showSatellites}
+          >
+            <input type="checkbox" className="sr-only" checked={filters.showSatellites} onChange={(e) => onFilterChange('showSatellites', e.target.checked)} tabIndex={-1} />
+            <div className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showSatellites ? 'bg-purple-400' : 'bg-white/10 hover:bg-white/20'}`}>
               <div className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${filters.showSatellites ? 'left-3.5' : 'left-0.5'}`} />
             </div>
-          </div>
+          </button>
         </div>
         {/* Sub-filters for Satellites */}
         {satExpanded && (

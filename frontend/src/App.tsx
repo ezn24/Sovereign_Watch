@@ -8,7 +8,7 @@ import { OrbitalMap } from './components/map/OrbitalMap'
 import { OrbitalSidebarLeft } from './components/layouts/OrbitalSidebarLeft'
 import RadioTerminal from './components/js8call/RadioTerminal'
 import { DashboardView } from './components/views/DashboardView'
-import { CoTEntity, IntelEvent, MissionProps } from './types'
+import { CoTEntity, HistorySegment, IntelEvent, MissionProps } from './types'
 import { TimeControls } from './components/widgets/TimeControls'
 import { useSystemHealth } from './hooks/useSystemHealth'
 import { useJS8Stations } from './hooks/useJS8Stations'
@@ -30,6 +30,7 @@ function App() {
   const [trackCounts, setTrackCounts] = useState({ air: 0, sea: 0, orbital: 0 });
   const [selectedEntity, setSelectedEntity] = useState<CoTEntity | null>(null);
   const [mapBounds, setMapBounds] = useState<{ minLat: number; maxLat: number; minLon: number; maxLon: number } | null>(null);
+  const [historySegments, setHistorySegments] = useState<HistorySegment[]>([]);
   const [followMode, setFollowMode] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isSystemSettingsOpen, setIsSystemSettingsOpen] = useState(false);
@@ -474,34 +475,6 @@ function App() {
   const lastReplayFrameRef = useRef<number>(0);
   const animationFrameRef = useRef<number>();
 
-  const loadReplayData = useCallback(async (hoursOverride?: number) => {
-    try {
-      const hours = hoursOverride || historyDuration;
-      const end = new Date();
-      const start = new Date(end.getTime() - 1000 * 60 * 60 * hours); // Use selected hours
-
-      console.log(`Loading replay data (${hours}h): ${start.toISOString()} - ${end.toISOString()}`);
-
-      const res = await fetch(`/api/tracks/replay?start=${start.toISOString()}&end=${end.toISOString()}&limit=10000`);
-      if (!res.ok) throw new Error('Failed to fetch history');
-
-      const data = await res.json();
-      console.log(`Loaded ${data.length} historical points`);
-
-      // Process and Index Data
-      replayCacheRef.current = processReplayData(data);
-      setReplayRange({ start: start.getTime(), end: end.getTime() });
-      setReplayTime(start.getTime());
-      updateReplayFrame(start.getTime());
-
-      setReplayMode(true);
-      setIsPlaying(true);
-
-    } catch (err) {
-      console.error("Replay load failed:", err);
-    }
-  }, [historyDuration]);
-
   const updateReplayFrame = useCallback((time: number) => {
     const frameMap = new Map<string, CoTEntity>();
 
@@ -533,6 +506,44 @@ function App() {
     }
     setReplayEntities(frameMap);
   }, []);
+
+  const loadReplayData = useCallback(async (hoursOverride?: number) => {
+    try {
+      const hours = hoursOverride || historyDuration;
+      const end = new Date();
+      const start = new Date(end.getTime() - 1000 * 60 * 60 * hours); // Use selected hours
+
+      console.log(`Loading replay data (${hours}h): ${start.toISOString()} - ${end.toISOString()}`);
+
+      const res = await fetch(`/api/tracks/replay?start=${start.toISOString()}&end=${end.toISOString()}&limit=10000`);
+      if (!res.ok) throw new Error('Failed to fetch history');
+
+      const data = await res.json();
+      console.log(`Loaded ${data.length} historical points`);
+
+      // Process and Index Data
+      replayCacheRef.current = processReplayData(data);
+      setReplayRange({ start: start.getTime(), end: end.getTime() });
+
+      // Sync the ref (animation loop source-of-truth) to the new start time.
+      // Without this, changing duration while playing leaves replayTimeRef.current
+      // at the old window position so the loop never restarts from the correct point.
+      replayTimeRef.current = start.getTime();
+      // Reset the rAF delta timer so the first frame of the restarted loop does
+      // not compute a massive dt from the previous animation session and
+      // instantly skip past replayRange.end, stopping playback immediately.
+      lastReplayFrameRef.current = 0;
+
+      setReplayTime(start.getTime());
+      updateReplayFrame(start.getTime());
+
+      setReplayMode(true);
+      setIsPlaying(true);
+
+    } catch (err) {
+      console.error("Replay load failed:", err);
+    }
+  }, [historyDuration, updateReplayFrame]);
 
   const replayTimeRef = useRef<number>(Date.now());
 
@@ -654,6 +665,7 @@ function App() {
 
   const handleEntitySelect = useCallback((e: CoTEntity | null) => {
     setSelectedEntity(e);
+    setHistorySegments([]); // clear track path when selection changes
     // Always stop following when selection changes (user must re-engage)
     setFollowMode(false);
 
@@ -755,6 +767,7 @@ function App() {
             entity={selectedEntity}
             onClose={() => {
               setSelectedEntity(null);
+              setHistorySegments([]);
               setFollowMode(false);
             }}
             onCenterMap={() => {
@@ -764,6 +777,7 @@ function App() {
               }
             }}
             onOpenAnalystPanel={handleOpenAnalystPanel}
+            onHistoryLoaded={setHistorySegments}
           />
         ) : null
       }
@@ -786,6 +800,7 @@ function App() {
             onMapActionsReady={setMapActions}
             showVelocityVectors={showVelocityVectors}
             showHistoryTails={showHistoryTails}
+            historySegments={historySegments}
             globeMode={globeMode}
             onToggleGlobe={handleGlobeModeToggle}
             replayMode={replayMode}
