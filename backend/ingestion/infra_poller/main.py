@@ -3,6 +3,7 @@ import os
 import json
 import time
 import logging
+import tempfile
 import requests
 import redis
 import traceback
@@ -20,10 +21,12 @@ logger = logging.getLogger("InfraPoller")
 # Config
 REDIS_URL = os.getenv("REDIS_URL", "redis://sovereign-redis:6379/0")
 DB_URL = os.getenv("DATABASE_URL", "postgresql://sovereign:watch@sovereign-db:5432/sovereign")
-POLL_INTERVAL_CABLES_HOURS = 24
+POLL_INTERVAL_CABLES_DAYS = 7
 POLL_INTERVAL_IODA_MINUTES = 30
 POLL_INTERVAL_FCC_DAYS = 7
-FCC_TOWERS_URL = "https://wireless2.fcc.gov/UlsApp/AsrSearch/res/downloads/l_tower.zip"
+# FCC migrated ASR bulk data from wireless2.fcc.gov -> data.fcc.gov.
+# r_tower.zip = active Registrations (~35 MB). a_tower.zip = full Application history (~195 MB).
+FCC_TOWERS_URL = "https://data.fcc.gov/download/pub/uls/complete/r_tower.zip"
 
 # IODA
 IODA_URL = "https://api.ioda.inetintel.cc.gatech.edu/v2/outages/summary"
@@ -157,43 +160,77 @@ def fetch_cables_and_stations():
     except Exception as e:
         logger.error(f"Failed to fetch cables/stations: {e}")
 
-def convert_coord(coord_str, dir_str):
-    if not coord_str or not dir_str:
-        return None
+def dms_to_decimal(deg_s, min_s, sec_s, dir_s):
+    """Convert separate DMS fields to decimal degrees.
+
+    data.fcc.gov r_tower.zip CO.dat format (confirmed):
+      [6]=lat_deg  [7]=lat_min  [8]=lat_sec  [9]=lat_dir (N/S)
+      [11]=lon_deg [12]=lon_min [13]=lon_sec [14]=lon_dir (E/W)
+    """
     try:
-        coord_str = coord_str.strip()
-        dir_str = dir_str.strip().upper()
-        if len(coord_str) < 7:
+        deg = float(deg_s)
+        mins = float(min_s) if min_s and min_s.strip() else 0.0
+        secs = float(sec_s) if sec_s and sec_s.strip() else 0.0
+        direction = dir_s.strip().upper() if dir_s else ''
+        if not direction:
             return None
-
-        degrees = int(coord_str[0:2])
-        if len(coord_str) == 9: # Longitude format
-            degrees = int(coord_str[0:3])
-            coord_str = coord_str[1:] # Shift so minutes/seconds align
-
-        minutes = int(coord_str[2:4])
-        seconds = float(coord_str[4:])
-
-        decimal = degrees + (minutes / 60.0) + (seconds / 3600.0)
-
-        if dir_str in ['S', 'W']:
+        decimal = deg + (mins / 60.0) + (secs / 3600.0)
+        if direction in ('S', 'W'):
             decimal = -decimal
-
         return decimal
-    except Exception:
+    except (TypeError, ValueError):
         return None
+
+FCC_DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024  # 8 MB chunks
+FCC_CONNECT_TIMEOUT_S    = 30               # fail fast if server won't accept
+FCC_READ_TIMEOUT_S       = 120              # allow 2 min per chunk read
+FCC_MAX_RETRIES          = 3
+
+
+def _download_fcc_zip(dest_path: str) -> None:
+    """Stream-download the FCC ASR zip to dest_path with retry/backoff."""
+    for attempt in range(1, FCC_MAX_RETRIES + 1):
+        try:
+            logger.info("FCC download attempt %d/%d -> %s", attempt, FCC_MAX_RETRIES, FCC_TOWERS_URL)
+            with requests.get(
+                FCC_TOWERS_URL,
+                stream=True,
+                timeout=(FCC_CONNECT_TIMEOUT_S, FCC_READ_TIMEOUT_S),
+            ) as resp:
+                resp.raise_for_status()
+                total = 0
+                with open(dest_path, "wb") as fh:
+                    for chunk in resp.iter_content(chunk_size=FCC_DOWNLOAD_CHUNK_BYTES):
+                        if chunk:
+                            fh.write(chunk)
+                            total += len(chunk)
+                            logger.debug("FCC download progress: %.1f MB", total / 1_000_000)
+            logger.info("FCC zip downloaded: %.1f MB", total / 1_000_000)
+            return  # success
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
+            logger.warning("FCC download attempt %d failed: %s", attempt, exc)
+            if attempt < FCC_MAX_RETRIES:
+                backoff = 30 * attempt
+                logger.info("Retrying FCC download in %ds...", backoff)
+                time.sleep(backoff)
+            else:
+                raise
+
 
 def fetch_and_ingest_fcc_towers():
     logger.info("Starting FCC Towers ingestion...")
+    tmp_path = None
     try:
-        # Download the zip file
-        response = requests.get(FCC_TOWERS_URL, stream=True)
-        response.raise_for_status()
+        # Stream the zip to a temp file so we survive slow/flaky FCC servers
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        _download_fcc_zip(tmp_path)
 
         records = []
 
-        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-            # We are interested in the CO.dat file which contains coordinates
+        with zipfile.ZipFile(tmp_path) as z:
+            # CO.dat contains the coordinate records
             if 'CO.dat' not in z.namelist():
                 logger.error("CO.dat not found in FCC towers zip")
                 return
@@ -202,74 +239,69 @@ def fetch_and_ingest_fcc_towers():
                 content = f.read().decode('latin1')
                 reader = csv.reader(io.StringIO(content), delimiter='|')
                 for row in reader:
-                    # CO.dat format has specific fields. We need to extract:
-                    # Registration Number, Lat/Lon, Elevation, Height
+                    # data.fcc.gov r_tower.zip CO.dat schema (18 columns):
+                    # [0]=record_type [1]=REG [2]=file_num (FCC ID)
+                    # [5]=coord_type (T=Tower)
+                    # [6]=lat_deg [7]=lat_min [8]=lat_sec [9]=lat_dir
+                    # [11]=lon_deg [12]=lon_min [13]=lon_sec [14]=lon_dir
                     if len(row) < 15:
                         continue
 
-                    record_type = row[0]
-                    if record_type != 'CO':
+                    if row[0] != 'CO':
                         continue
 
-                    reg_num = row[4].strip()
-                    if not reg_num:
+                    # Only ingest Tower coordinate type
+                    if row[5].strip() not in ('T', ''):
                         continue
 
-                    lat_deg, lat_dir = row[6], row[7]
-                    lon_deg, lon_dir = row[8], row[9]
+                    fcc_id = row[2].strip()
+                    if not fcc_id:
+                        continue
 
-                    lat = convert_coord(lat_deg, lat_dir)
-                    # Longitudes are 3 digits for degrees
-                    lon_full = None
-                    if lon_deg:
-                        # Pad to 9 chars if it's 8
-                        if len(lon_deg) == 8:
-                            lon_deg = "0" + lon_deg
-                        lon = convert_coord(lon_deg, lon_dir)
-                    else:
-                        lon = None
+                    lat = dms_to_decimal(row[6], row[7], row[8], row[9])
+                    lon = dms_to_decimal(row[11], row[12], row[13], row[14])
 
                     if lat is None or lon is None:
                         continue
-
-                    # Elevation and Height
-                    try:
-                        elevation = float(row[14]) if row[14].strip() else None
-                        height = float(row[15]) if row[15].strip() else None
-                    except ValueError:
-                        elevation, height = None, None
+                    # Sanity-check: must be on Earth
+                    if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+                        continue
 
                     records.append((
-                        reg_num,
+                        fcc_id,
                         lat,
                         lon,
-                        elevation,
-                        height
+                        None,   # elevation_m — not in CO.dat new schema
+                        None,   # height_m   — not in CO.dat new schema
                     ))
 
         if not records:
             logger.warning("No valid FCC tower records found.")
             return
 
-        # Insert into DB
-        logger.info(f"Connecting to DB to insert {len(records)} towers...")
+        # Deduplicate by fcc_id — CO.dat can contain repeated entries for the
+        # same registration number. ON CONFLICT DO UPDATE cannot affect the same
+        # row twice within one execute_values page, so deduplicate first.
+        records_by_id = {r[0]: r for r in records}
+        records = list(records_by_id.values())
+        logger.info("Connecting to DB to insert %d unique towers...", len(records))
         conn = psycopg2.connect(DB_URL)
         cursor = conn.cursor()
 
-        # Upsert logic
+        # Upsert logic — columns match init.sql infra_towers schema
         insert_query = """
-            INSERT INTO infra_towers (registration_number, lat, lon, elevation, height, location)
+            INSERT INTO infra_towers (fcc_id, lat, lon, elevation_m, height_m, geom)
             VALUES %s
-            ON CONFLICT (registration_number) DO UPDATE SET
+            ON CONFLICT (fcc_id) DO UPDATE SET
                 lat = EXCLUDED.lat,
                 lon = EXCLUDED.lon,
-                elevation = EXCLUDED.elevation,
-                height = EXCLUDED.height,
-                location = EXCLUDED.location,
-                last_updated = CURRENT_TIMESTAMP;
+                elevation_m = EXCLUDED.elevation_m,
+                height_m = EXCLUDED.height_m,
+                geom = EXCLUDED.geom,
+                updated_at = CURRENT_TIMESTAMP;
         """
 
-        # Prepare data with PostGIS points
+        # Prepare data with PostGIS geometry
         psycopg2_records = [
             (
                 r[0], r[1], r[2], r[3], r[4],
@@ -285,22 +317,60 @@ def fetch_and_ingest_fcc_towers():
         logger.info("Successfully ingested FCC Towers.")
 
     except Exception as e:
-        logger.error(f"Failed to ingest FCC towers: {e}")
+        logger.error("Failed to ingest FCC towers: %s", e)
         traceback.print_exc()
+    finally:
+        # Always clean up the temp file
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
 def main():
     logger.info("Starting InfraPoller...")
 
+    # IODA refreshes on every boot. 
+    # FCC and Cables are persistent weekly updates.
     last_ioda_fetch = 0
-    last_cables_fetch = 0
-    last_fcc_fetch = 0
+    
+    last_cables_fetch_str = redis_client.get("infra:last_cables_fetch")
+    last_cables_fetch = float(last_cables_fetch_str) if last_cables_fetch_str else 0
+
+    last_fcc_fetch_str = redis_client.get("infra:last_fcc_fetch")
+    last_fcc_fetch = float(last_fcc_fetch_str) if last_fcc_fetch_str else 0
+
+    now = time.time()
+    
+    # Cables Sync Check
+    if last_cables_fetch > 0:
+        elapsed = now - last_cables_fetch
+        remaining = max(0, (POLL_INTERVAL_CABLES_DAYS * 86400) - elapsed)
+        if remaining > 0:
+            days = int(remaining // 86400)
+            hours = int((remaining % 86400) // 3600)
+            logger.info(f"Submarine Cables data is cached. Next sync in {days}d {hours}h.")
+    else:
+        logger.info("No cached Submarine Cables timestamp. Syncing shortly.")
+
+    # FCC Sync Check
+    if last_fcc_fetch > 0:
+        elapsed = now - last_fcc_fetch
+        remaining = max(0, (POLL_INTERVAL_FCC_DAYS * 86400) - elapsed)
+        if remaining > 0:
+            days = int(remaining // 86400)
+            hours = int((remaining % 86400) // 3600)
+            logger.info(f"FCC Towers data is cached. Next sync in {days}d {hours}h.")
+    else:
+        logger.info("No cached FCC timestamp. Syncing shortly.")
 
     while True:
         now = time.time()
 
-        if now - last_cables_fetch > POLL_INTERVAL_CABLES_HOURS * 3600:
+        if now - last_cables_fetch > POLL_INTERVAL_CABLES_DAYS * 86400:
             fetch_cables_and_stations()
             last_cables_fetch = now
+            redis_client.set("infra:last_cables_fetch", str(now))
 
         if now - last_ioda_fetch > POLL_INTERVAL_IODA_MINUTES * 60:
             fetch_internet_outages()
@@ -309,6 +379,9 @@ def main():
         if now - last_fcc_fetch > POLL_INTERVAL_FCC_DAYS * 86400:
             fetch_and_ingest_fcc_towers()
             last_fcc_fetch = now
+            redis_client.set("infra:last_fcc_fetch", str(now))
+
+        time.sleep(60)
 
         time.sleep(60)
 

@@ -214,7 +214,13 @@ export function composeAllLayers(options: LayerCompositionOptions) {
     ),
     ...repeaterLayers,
     ...kiwiLayers,
-    buildTowerLayer(towersData || [], filters?.showTowers ?? false),
+    ...buildTowerLayer(
+      towersData || [], 
+      filters?.showTowers ?? false, 
+      globeMode, 
+      setHoveredInfra, 
+      setSelectedInfra
+    ),
     // Historical flight path (solid coverage segments + ghost gap segments)
     ...(historySegments && historySegments.length > 0 ? [
       new PathLayer({

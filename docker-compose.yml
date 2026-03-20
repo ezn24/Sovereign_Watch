@@ -113,7 +113,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # --- Ingestion: Infrastructure (Cables, Outages, Datacenters) ---
+  # --- Ingestion: Infrastructure (Cables, Outages, Datacenters, FCC Towers) ---
   infra-poller:
     build:
       context: ./backend/ingestion/infra_poller
@@ -121,11 +121,14 @@ services:
     container_name: sovereign-infra-poller
     environment:
       - REDIS_URL=redis://sovereign-redis:6379/0
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@sovereign-timescaledb:5432/${POSTGRES_DB:-sovereign_watch}
     networks:
       - backend-net
     depends_on:
       redis:
         condition: service_started
+      timescaledb:
+        condition: service_healthy
     restart: unless-stopped
 
   # --- Ingestion: RF Infrastructure (Repeaters, NOAA NWR, Public Safety) ---

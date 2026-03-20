@@ -1,22 +1,28 @@
-# Release - v0.39.2 - Spectral Precision
+# Release - v0.40.0 - Infrastructure Resilience
 
 ## Summary
-This update significantly enhances the **RadioReference** ingestion engine, moving from system-level centroids to individual tower sites and conventional regional frequencies. This shift provide operators with much higher spatial accuracy and detailed technical intelligence for public safety and regional radio infrastructure.
+
+This release introduces the **FCC Antenna Structure Registration (ASR)** dataset, providing operators with situational awareness of over 195,000 unique tower and antenna structures. To support this significant data expansion, the `infra-poller` architecture has been overhauled with a high-performance, persistent synchronization strategy that drastically reduces upstream API consumption and improves system stability.
 
 ## Key Features
-- **Tower-Level Accuracy**: Instead of showing one dot per radio system, we now map every physical site (tower) individually.
-- **Frequency Intelligence**: Direct display of input/output frequencies, CTCSS tones, and advanced digital modes (P25, DMR, NXDN) in the UI.
-- **Regional Coverage**: Added deep traversal of State -> County subcategories to fetch regional conventional frequencies.
-- **API Protection**: Persistent Redis-backed cooldown mechanism to prevent unnecessary API consumption during development or container restarts.
+
+- **FCC Tower Ingestion**: Comprehensive mapping of terrestrial antenna infrastructure across North America.
+- **Weekly Cooldown Cycles**: Both FCC and Submarine Cable datasets now sync strictly every 7 days, avoiding redundant multi-megabyte downloads.
+- **Boot-Safe Persistence**: Polling status is now persisted in Redis. If a service restarts, it will skip scheduled syncs if the data is already current.
+- **Interactive Infrastructure Tooltips**: Improved interactivity for the new infrastructure layers, including registration details and status metadata.
+- **Transparent Polling Diagnostics**: Real-time logs now show exactly when the next weekly sync is scheduled (e.g., "Next sync in 6d 23h").
 
 ## Technical Details
-- **Sync Strategy**: Fetch interval now defaults to **168 hours (7 days)**, configurable via `RF_RADIOREF_INTERVAL_H`.
-- **Cache Management**: LocalStorage cache version bumped to `v4`.
+
+- **Ingestion**: Migrated from legacy `wireless2.fcc.gov` endpoints to modern `data.fcc.gov` APIs.
+- **Parser Tuning**: Specialized DMS (Degrees-Minutes-Seconds) coordinate translation to ensure sub-meter mapping precision for structured tower data.
+- **Rendering**: FCC towers utilize a Development Preview rendering mode with optimized Z-ordering and depth bias for Globe/3D views.
 
 ## Upgrade Instructions
-Run the following commands to pull the latest changes and apply the poller updates:
+
+Rebuild and restart the infrastructure poller to apply the new scheduling and ingestion logic:
 
 ```bash
 git pull origin dev
-docker compose up -d --build rf-pulse
+docker compose up -d --build infra-poller
 ```

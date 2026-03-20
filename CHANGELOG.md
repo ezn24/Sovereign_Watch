@@ -1,3 +1,26 @@
+## [0.40.0] - 2026-03-20
+
+### Added
+
+- **FCC Infrastructure Ingestion (Development Preview)**: Integrated the FCC Antenna Structure Registration (ASR) dataset into the global infrastructure map.
+  - **New Data Source**: High-fidelity ingestion of over 195,000 unique tower and antenna structures from the official FCC archive.
+  - **Interactive Mapping**: Towers are rendered as interactive orange icons with detailed registration metadata and interactive tooltips.
+  - **Filtering Support**: Added a dedicated "FCC TOWERS" toggle to the Map Layers panel under the "GLOBAL NETWORK" section.
+
+### Changed
+
+- **Infrastructure Polling Architecture**: Overhauled the `infra-poller` service with persistent, Redis-backed scheduling to improve performance and reduce upstream API load.
+  - **Weekly Cooldowns**: Transitioned FCC Towers and Submarine Cable data to a strict 7-day synchronization interval, matching the update frequency of the source providers.
+  - **Boot-Safe Persistence**: Polling timestamps are now stored in Redis, ensuring that service restarts do not trigger redundant multi-megabyte downloads if the data is already current.
+  - **Transparent Logging**: Added startup diagnostics that calculate and log the exact time remaining until the next scheduled synchronization for each infrastructure set.
+  - **Chunked Ingestion**: Implemented high-performance streaming for the FCC dataset (~37MB compressed) using temporary file buffers to prevent memory exhaustion in restricted container environments.
+
+### Fixed
+
+- **FCC Data Migration**: Resolved 404 errors by migrating the ingestion target from the deprecated `wireless2.fcc.gov` domain to the modern `data.fcc.gov` endpoint.
+- **Coordinate Precision**: Implemented a new Degrees-Minutes-Seconds (DMS) parser to handle the FCC's separate-field coordinate schema, ensuring sub-meter mapping accuracy.
+- **Rendering Z-Ordering**: Standardized tower depth testing and bias parameters to ensure markers render correctly in both 3D Mercator and Globe projections without flickering.
+
 ## [0.39.2] - 2026-03-20
 
 ### Fixed
