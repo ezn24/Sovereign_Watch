@@ -12,7 +12,7 @@
 | Requirement | Version | Notes |
 | :--- | :--- | :--- |
 | **Node.js** | 20+ | Required for frontend tooling and LSP servers |
-| **npm** or **pnpm** | npm 10+ / pnpm 9+ | Project uses both; npm recommended for global installs |
+| **pnpm** | 9+ | All frontend dependencies use pnpm. npm is used only for global LSP servers |
 | **Python** | 3.11+ | Required for backend lint, tests, and LSP on the host |
 | **Docker** | 24+ | Required for infrastructure services (DB, bus, cache) |
 | **Docker Compose** | v2 | Included with Docker Desktop |
@@ -50,10 +50,10 @@ Installing frontend and backend dependencies locally gives your editor full type
 **Frontend — install `node_modules` locally:**
 
 ```bash
-cd frontend && npm install
+cd frontend && pnpm install
 ```
 
-Your editor can now resolve all Deck.gl, MapLibre, React, and Tailwind types from `frontend/node_modules/`. Vite HMR and `npm run lint` / `npm run test` also work directly from here.
+Your editor can now resolve all Deck.gl, MapLibre, React, and Tailwind types from `frontend/node_modules/`. Vite HMR and `pnpm run lint` / `pnpm run test` also work directly from here.
 
 **Backend API — create a local virtual environment:**
 

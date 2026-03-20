@@ -24,7 +24,7 @@ lint and unit tests — do NOT spin up docker compose just to verify:
 
 ```bash
 # Frontend
-cd frontend && npm run lint && npm run test
+cd frontend && pnpm run lint && pnpm run test
 
 # Backend API
 cd backend/api && ruff check . && python -m pytest
@@ -36,7 +36,7 @@ cd backend/ingestion/<poller> && ruff check . && python -m pytest
 If containers ARE already running, prefer:
 
 ```bash
-docker compose exec frontend npm run lint
+docker compose exec frontend pnpm run lint
 docker compose exec backend-api ruff check .
 ```
 

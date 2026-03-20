@@ -78,8 +78,8 @@ Use this gate to avoid unnecessary container overhead while preserving container
 ```bash
 # Frontend
 cd frontend
-npm run lint
-npm run test
+pnpm run lint
+pnpm run test
 
 # Backend API
 cd backend/api
