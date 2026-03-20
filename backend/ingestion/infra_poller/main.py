@@ -6,6 +6,11 @@ import logging
 import requests
 import redis
 import traceback
+import zipfile
+import csv
+import io
+import psycopg2
+from psycopg2.extras import execute_values
 from datetime import datetime, timezone
 
 # Setup Logging
@@ -14,8 +19,11 @@ logger = logging.getLogger("InfraPoller")
 
 # Config
 REDIS_URL = os.getenv("REDIS_URL", "redis://sovereign-redis:6379/0")
+DB_URL = os.getenv("DATABASE_URL", "postgresql://sovereign:watch@sovereign-db:5432/sovereign")
 POLL_INTERVAL_CABLES_HOURS = 24
 POLL_INTERVAL_IODA_MINUTES = 30
+POLL_INTERVAL_FCC_DAYS = 7
+FCC_TOWERS_URL = "https://wireless2.fcc.gov/UlsApp/AsrSearch/res/downloads/l_tower.zip"
 
 # IODA
 IODA_URL = "https://api.ioda.inetintel.cc.gatech.edu/v2/outages/summary"
@@ -149,11 +157,143 @@ def fetch_cables_and_stations():
     except Exception as e:
         logger.error(f"Failed to fetch cables/stations: {e}")
 
+def convert_coord(coord_str, dir_str):
+    if not coord_str or not dir_str:
+        return None
+    try:
+        coord_str = coord_str.strip()
+        dir_str = dir_str.strip().upper()
+        if len(coord_str) < 7:
+            return None
+
+        degrees = int(coord_str[0:2])
+        if len(coord_str) == 9: # Longitude format
+            degrees = int(coord_str[0:3])
+            coord_str = coord_str[1:] # Shift so minutes/seconds align
+
+        minutes = int(coord_str[2:4])
+        seconds = float(coord_str[4:])
+
+        decimal = degrees + (minutes / 60.0) + (seconds / 3600.0)
+
+        if dir_str in ['S', 'W']:
+            decimal = -decimal
+
+        return decimal
+    except Exception:
+        return None
+
+def fetch_and_ingest_fcc_towers():
+    logger.info("Starting FCC Towers ingestion...")
+    try:
+        # Download the zip file
+        response = requests.get(FCC_TOWERS_URL, stream=True)
+        response.raise_for_status()
+
+        records = []
+
+        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+            # We are interested in the CO.dat file which contains coordinates
+            if 'CO.dat' not in z.namelist():
+                logger.error("CO.dat not found in FCC towers zip")
+                return
+
+            with z.open('CO.dat') as f:
+                content = f.read().decode('latin1')
+                reader = csv.reader(io.StringIO(content), delimiter='|')
+                for row in reader:
+                    # CO.dat format has specific fields. We need to extract:
+                    # Registration Number, Lat/Lon, Elevation, Height
+                    if len(row) < 15:
+                        continue
+
+                    record_type = row[0]
+                    if record_type != 'CO':
+                        continue
+
+                    reg_num = row[4].strip()
+                    if not reg_num:
+                        continue
+
+                    lat_deg, lat_dir = row[6], row[7]
+                    lon_deg, lon_dir = row[8], row[9]
+
+                    lat = convert_coord(lat_deg, lat_dir)
+                    # Longitudes are 3 digits for degrees
+                    lon_full = None
+                    if lon_deg:
+                        # Pad to 9 chars if it's 8
+                        if len(lon_deg) == 8:
+                            lon_deg = "0" + lon_deg
+                        lon = convert_coord(lon_deg, lon_dir)
+                    else:
+                        lon = None
+
+                    if lat is None or lon is None:
+                        continue
+
+                    # Elevation and Height
+                    try:
+                        elevation = float(row[14]) if row[14].strip() else None
+                        height = float(row[15]) if row[15].strip() else None
+                    except ValueError:
+                        elevation, height = None, None
+
+                    records.append((
+                        reg_num,
+                        lat,
+                        lon,
+                        elevation,
+                        height
+                    ))
+
+        if not records:
+            logger.warning("No valid FCC tower records found.")
+            return
+
+        # Insert into DB
+        logger.info(f"Connecting to DB to insert {len(records)} towers...")
+        conn = psycopg2.connect(DB_URL)
+        cursor = conn.cursor()
+
+        # Upsert logic
+        insert_query = """
+            INSERT INTO infra_towers (registration_number, lat, lon, elevation, height, location)
+            VALUES %s
+            ON CONFLICT (registration_number) DO UPDATE SET
+                lat = EXCLUDED.lat,
+                lon = EXCLUDED.lon,
+                elevation = EXCLUDED.elevation,
+                height = EXCLUDED.height,
+                location = EXCLUDED.location,
+                last_updated = CURRENT_TIMESTAMP;
+        """
+
+        # Prepare data with PostGIS points
+        psycopg2_records = [
+            (
+                r[0], r[1], r[2], r[3], r[4],
+                f"SRID=4326;POINT({r[2]} {r[1]})"
+            )
+            for r in records
+        ]
+
+        execute_values(cursor, insert_query, psycopg2_records, page_size=1000)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        logger.info("Successfully ingested FCC Towers.")
+
+    except Exception as e:
+        logger.error(f"Failed to ingest FCC towers: {e}")
+        traceback.print_exc()
+
 def main():
     logger.info("Starting InfraPoller...")
 
     last_ioda_fetch = 0
     last_cables_fetch = 0
+    last_fcc_fetch = 0
 
     while True:
         now = time.time()
@@ -166,6 +306,9 @@ def main():
             fetch_internet_outages()
             last_ioda_fetch = now
 
+        if now - last_fcc_fetch > POLL_INTERVAL_FCC_DAYS * 86400:
+            fetch_and_ingest_fcc_towers()
+            last_fcc_fetch = now
 
         time.sleep(60)
 
