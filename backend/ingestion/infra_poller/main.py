@@ -185,10 +185,10 @@ def dms_to_decimal(deg_s, min_s, sec_s, dir_s):
     except (TypeError, ValueError):
         return None
 
-FCC_DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024  # 8 MB chunks
+FCC_DOWNLOAD_CHUNK_BYTES = 1 * 1024 * 1024  # 1 MB chunks
 FCC_CONNECT_TIMEOUT_S    = 30               # fail fast if server won't accept
-FCC_READ_TIMEOUT_S       = 120              # allow 2 min per chunk read
-FCC_MAX_RETRIES          = 3
+FCC_READ_TIMEOUT_S       = 60               # allow 1 min per chunk read
+FCC_MAX_RETRIES          = 5
 
 
 def _download_fcc_zip(dest_path: str) -> None:
@@ -208,7 +208,7 @@ def _download_fcc_zip(dest_path: str) -> None:
                         if chunk:
                             fh.write(chunk)
                             total += len(chunk)
-                            logger.debug("FCC download progress: %.1f MB", total / 1_000_000)
+                            logger.info("FCC download progress: %.1f MB", total / 1_000_000)
             logger.info("FCC zip downloaded: %.1f MB", total / 1_000_000)
             return  # success
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:

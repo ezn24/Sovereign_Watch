@@ -127,7 +127,7 @@ class RadioReferenceSource:
                         continue
 
                 current_hour = datetime.now(UTC).hour
-                if current_hour != self.fetch_hour:
+                if self.fetch_hour >= 0 and current_hour != self.fetch_hour:
                     logger.info(
                         "RadioReference: sync due but deferring to %02d:00 UTC "
                         "(currently %02d:00 UTC) to avoid peak-hour contention.",

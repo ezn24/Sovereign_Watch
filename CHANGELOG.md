@@ -1,3 +1,10 @@
+## [0.41.1] - 2026-03-21
+
+### Fixed
+
+- **RadioReference Sync Deferral**: Resolved an issue where `RadioReference` sync was incorrectly deferred when `RF_RR_FETCH_HOUR` was set to `-1`. The poller now correctly bypasses hour gating when disabled.
+- **FCC Download Resilience**: Improved `infra_poller` download logic for the FCC Antenna Structure Registration (ASR) dataset. Reduced chunk sizes from 8MB to 1MB and enabled progress logging at `INFO` level to provide better visibility during long-running downloads.
+
 ## [0.41.0] - 2026-03-20
 
 ### Added

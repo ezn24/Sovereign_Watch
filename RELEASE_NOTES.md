@@ -1,24 +1,21 @@
-# Release - v0.41.0 - Infrastructure & Analyst Fusion
+# Release - v0.41.1 - Polling Resilience Patch
 
-## Summary
-This release marks a significant milestone in situational awareness by enabling the **AI Analyst** to process non-moving infrastructure and orbital assets, while simultaneously completing the high-resolution enrichment of the **FCC** datasets. It also includes a major architectural cleanup (Docker Compose harmonization) and a move to **pnpm** for optimized frontend builds.
+This patch update focuses on stabilizing and improving the transparency of our data ingestion pipelines, specifically for RadioReference and FCC infrastructure datasets.
 
-## Key Features
-*   **AOR Analyst Fusion for Static Assets**: The AI Analyst now supports full contextual fusion for satellites, towers, and cable infrastructure by synthesizing trajectory waypoints from static locations.
-*   **FCC High-Fidelity Data Enrichment**: Integrated registration owners, structure heights, and ground elevations for 190,000+ antenna sites.
-*   **Docker Stack Harmonization**: Unified naming convention across all 12 services, networks, and volumes for intuitive CLI operations.
-*   **pnpm Transition**: Completed migration to pnpm, resulting in significantly faster container build times and reduced disk usage.
+### High-Level Summary
+This release resolves a configuration bug that prevented immediate RadioReference syncs and addresses visibility issues during large FCC historical downloads. Operators can now more reliably trigger immediate refreshes and monitor progress during initial deployment.
 
-## Technical Details
-*   **Analyst Fallbacks**: Implemented in `backend/api/routers/analysis.py`.
-*   **FCC USI Mapping**: Poller logic updated to use `USI` for multi-table joins.
-*   **Named Volumes**: The frontend `node_modules` is now a named volume (`sovereign-vol-frontend-node-modules`).
+### Key Fixed
+- **RadioReference Syncing**: Fixed a logic error in the `rf_pulse` poller where an "immediate sync" setting (`-1`) was interpreted as a deferred hour. Syncs now trigger correctly based on interval when the hour gate is disabled.
+- **FCC Progress Visibility**: Improved the `infra_poller` download loop. By reducing chunk sizes and boosting progress logging to the `INFO` level, we've eliminated "silent hangs" during the 35 MB FCC Structures download from data.fcc.gov.
 
-## Upgrade Instructions
-To apply these structural Docker changes, a clean restart is required:
+### Technical Details
+- **Poller Logic**: `fetch_hour` check in `radioref.py` now explicitly guards with `self.fetch_hour >= 0`.
+- **Download Parameters**: `infra_poller` chunking reduced to 1 MB; read timeout tightened to 60s for faster failover.
+
+### Upgrade Instructions
+To apply these fixes, pull the latest code and rebuild the ingestion services:
 ```bash
-docker compose down
-docker compose up -d --build
+docker compose up -d --build sovereign-rf-pulse sovereign-infra-poller
 ```
-> [!NOTE] 
-> Renaming volumes causes a data reset. Previous database records are preserved on disk but will not be visible in the new `sovereign-vol-postgres` without manual migration.
+No database migrations are required for this patch.
