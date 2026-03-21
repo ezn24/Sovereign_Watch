@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, MutableRefObject } from "react";
+import type { FeatureCollection } from "geojson";
+import type { PickingInfo } from "@deck.gl/core";
 import { CoTEntity, HistorySegment, JS8Station, RFSite, DRState, VisualState, GroundTrackPoint } from "../types";
 import { H3CellData } from "../layers/buildH3CoverageLayer";
 import { getCompensatedCenter } from "../utils/map/geoUtils";
@@ -36,13 +38,13 @@ interface UseAnimationLoopOptions {
   aotShapes: { maritime: number[][]; aviation: number[][] } | null;
   selectedEntity: CoTEntity | null;
   filters: import("../types").MapFilters | undefined;
-  cablesData?: any;
-  stationsData?: any;
-  outagesData?: any;
-  towersData?: any[];
-  setHoveredInfra?: (info: any) => void;
-  setSelectedInfra?: (info: any) => void;
-  worldCountriesData?: any;
+  cablesData?: FeatureCollection | null;
+  stationsData?: FeatureCollection | null;
+  outagesData?: FeatureCollection | null;
+  towersData?: unknown[];
+  setHoveredInfra?: (info: unknown) => void;
+  setSelectedInfra?: (info: unknown) => void;
+  worldCountriesData?: FeatureCollection | null;
   globeMode: boolean | undefined;
   enable3d: boolean;
   mapLoaded: boolean;
@@ -130,13 +132,14 @@ export function useAnimationLoop({
 
   const countryOutageMap = React.useMemo(() => {
     if (!outagesData || !outagesData.features) return {};
-    const map: Record<string, any> = {};
-    outagesData.features.forEach((f: any) => {
-      const countryCode = f.properties?.country_code;
+    const map: Record<string, Record<string, unknown>> = {};
+    outagesData.features.forEach((f) => {
+      const props = f.properties as Record<string, unknown> | null;
+      const countryCode = props?.country_code as string | undefined;
       if (countryCode) {
         const current = map[countryCode];
-        if (!current || (f.properties?.severity || 0) > (current.severity || 0)) {
-          map[countryCode] = f.properties;
+        if (!current || (props?.severity as number || 0) > (current.severity as number || 0)) {
+          map[countryCode] = props ?? {};
         }
       }
     });
@@ -453,9 +456,9 @@ export function useAnimationLoop({
       });
 
       if (mapLoaded && overlayRef.current?.setProps) {
-        overlayRef.current.setProps({ 
+        overlayRef.current.setProps({
           layers,
-          onHover: (info: any) => {
+          onHover: (info: PickingInfo) => {
             if (!info.object) {
               setHoveredEntity(null);
               setHoverPosition(null);

@@ -1,4 +1,5 @@
 import { ScatterplotLayer } from '@deck.gl/layers';
+import type { Layer } from "@deck.gl/core";
 
 type TowerRecord = {
     id: string;
@@ -56,7 +57,7 @@ export const buildTowerLayer = (
     globeMode: boolean,
     onHover: (info: TowerPickInfo) => void,
     onSelect: (info: TowerPickInfo) => void
-) => {
+): Layer[] => {
     if (!visible || !towers || towers.length === 0) return [];
 
     return [
