@@ -1,3 +1,17 @@
+## [0.43.0] - 2026-03-21
+
+### Added
+
+- **Space Weather & Geomagnetic Intelligence**: Integrated the NOAA SWPC data streams for global situational awareness.
+  - **Auroral Oval Visualization**: Added a real-time, 3D animated Auroral Oval layer to the Situation Globe and Orbital views, enabling live tracking of the Northern and Southern Lights.
+  - **Kp-Index & Risk Metric**: Added a persistent, tactical `KpIndexWidget` to the main Top Bar, providing instant readings of the planetary K-index (Kp) and GPS degradation risks across all screens.
+  - **Jamming Forecaster**: Introduced active RF jamming and GNSS degradation zones layered with the global atmospheric intelligence.
+
+### Changed
+
+- **Environmental Filter Suite**: Created a new centralized header toggle group for "ENV" (Environmental) filters, consolidating Space Weather layers alongside Global Network and RF infrastructure switches.
+- **Orbital Map Interface**: Embedded Environmental filters directly into the Orbital view's object panel, sitting flush left of the total tracked object counts.
+
 ## [0.42.2] - 2026-03-21
 
 ### Changed
