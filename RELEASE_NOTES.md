@@ -1,31 +1,27 @@
-# Release - v0.42.0 - GhostNet Operational Integration
+# Release - v0.42.1 - Strategic Update
 
-This release integrates full operational support for the GhostNet JS8Call network (S2 Underground GhostNet v1.5), significantly enhancing the JS8Call radio terminal.
+## Summary
 
-### High-Level Summary
-The main focus of this release is the integration of GhostNet v1.5 operational support into the JS8Call terminal. Operators can now leverage frequency presets, group targeting, and a weekly net schedule with real-time active window highlighting. This release also resolves critical UI cutoff issues and background bridge stability, ensuring a seamless operational experience.
+This update marks a critical transition from core track ingestion toward high-level analytical utility. Following a deep-dive research phase across GDELT and External SIGINT datasets, we are formally prioritizing features that provide global situational context.
 
-### Key Features
-- **GhostNet v1.5 Operational Support**: 
-    - Full suite of frequency presets for weekly nets, data bridges, RTTY, and emergency voice.
-    - Specialized JS8Call group tags (@GHOSTNET, @GSTFLASH, @ALLCALL) for rapid TX targeting.
-    - Integrated weekly net schedule with "ACTIVE" window highlighting and inline tuning.
-- **RadioTerminal UI Enhancements**:
-    - Converted the right sidebar to a tabbed interface ("Heard" vs "GhostNet").
-    - Added a color-coded frequency/group quick-select toolbar.
-    - Implemented pulsing status badges for active GhostNet windows.
-- **JS8Call Frequency Sync**: Added `RIG.SET_FREQ` support to automatically synchronize the JS8Call dial frequency with the linked KiwiSDR receiver.
-- **KiwiSDR Filter Widening**: Expanded USB passband from 300–2700 Hz to 50–2800 Hz to capture the full JS8Call audio spectrum.
+This release also performs a "Repo Hygiene" pass, pruning over 17,000 lines of obsolete documentation in `agent_docs` to ensure token-efficient AI operations and faster workspace loading on tactical edge hardware.
 
-### Technical Details
-- **UI Protection**: Implemented defensive padding (`pb-10`) across terminal panels to prevent bottom controls from being lost under system taskbars.
-- **Bridge Stability**: Fixed a missing `socket` import in the `js8call` service that caused UDP command failures.
-- **Spectrum Capture**: Symmetrically widened LSB/USB filters to ensure binary-transparent audio capture across the entire 2500 Hz JS8Call offset range.
+## Key Features (Backlog)
 
-### Upgrade Instructions
-Pull the latest source and rebuild the `sovereign-js8call` service:
+*   **GDELT Intelligence Pulse**: Integrated planned support for the Global Database of Events, Language, and Tone (15-min interval mapping).
+*   **SIGINT Jamming Index (ADS-B)**: Strategic roadmap now includes inference models for GPS jamming detection via ADS-B integrity categories (NIC/NACp).
+*   **Environmental Layer**: Added NOAA Space Weather (Kp-index & Auroral Oval) to the operational backlog.
+*   **Multi-INT HUD Suite**: Roadmap now includes integrated widgets for Polymarket (predictive OSINT), Live News Grids, and Global Threat Levels (DEFCON).
+
+## Technical Details
+
+*   **Pruning**: Cleaned up historical `agent_docs/tasks/archive/` directory to remove hundreds of obsolete markdown task logs.
+*   **Roadmap**: Updated `ROADMAP.md` and `COMPLETED_ARCHIVE.md` to ensure ID-level consistency and status accuracy.
+
+## Upgrade Instructions
+
+No code changes in this version; document-only update to roadmap and repository metadata.
 
 ```bash
-docker compose up -d --build sovereign-js8call
+git pull origin main
 ```
-The frontend UI will update automatically via Vite's HMR system. For production bundles, run `pnpm run build` inside the `frontend` directory.

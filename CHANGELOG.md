@@ -1,3 +1,20 @@
+## [0.42.1] - 2026-03-21
+
+### Changed
+
+- **Roadmap & Backlog Modernization**: Integrated strategic research findings for GDELT (Global Database of Events, Language, and Tone), SIGINT Jamming (ADS-B integrity analysis), and Space Weather (NOAA SWPC) into the technical roadmap.
+- **Documentation Pruning**: Performed a massive cleanup of obsolete `agent_docs/tasks/archive/` files (over 17k lines removed) to reduce repository clutter and improve agent token efficiency.
+- **Strategic Features Added to Backlog**:
+  - GDELT Events Pulse (GeoJSON news mapping).
+  - SIGINT Jamming Pipeline (NIC/NACp inference).
+  - Space Weather Pulse (Kp-index/Auroral Oval).
+  - Multi-INT HUD (Polymarket/News Grid/DEFCON).
+  - RF Band Plan context (Offline SQLite lookup).
+
+### Fixed
+
+- **Roadmap Consistency**: Updated `COMPLETED_ARCHIVE.md` status for FCC Tower datasets and standardized task IDs across documentation.
+
 ## [0.42.0] - 2026-03-21
 
 ### Added
