@@ -19,7 +19,7 @@
 - **Container-First**: Do NOT run `npm`, `node`, `python`, `pip`, or `go` directly on the host shell for build/runtime tasks. Use Docker Compose (`docker compose build <service>`, `docker compose up -d --build <service>`).
 - **Communication**: All inter-service communication must use **TAK Protocol V1 (Protobuf)** via `tak.proto`. No ad-hoc JSON.
 - **Rendering**: Hybrid Architecture (WebGL2 for visuals, WebGPU/Workers for compute). Do not downgrade to Leaflet.
-  - **Map Layer Reference**: Before adding or modifying any Deck.gl layer, you **MUST** read `agent_docs/z-ordering.md`. It documents the full draw-order stack, `depthTest`/`depthBias` rules, and — critically — the **animation loop data threading checklist** that every new layer's data ref must complete to be visible on the map.
+  - **Map Layer Reference**: `agent_docs/z-ordering.md` documents the full draw-order stack, `depthTest`/`depthBias` rules, and animation loop data threading. It is injected automatically when you edit files in `frontend/src/layers/` or `frontend/src/components/map/`.
 - **State**: Backend uses `Redpanda` (Kafka-compatible) for event streaming.
 - **Ingestion**: Use Python pollers (`backend/ingestion/`). Do NOT use Redpanda Connect (Benthos).
 
@@ -43,7 +43,7 @@ Both frontend and backend have Hot Module Replacement (HMR) enabled:
   - **Changes**: Specific files modified and logic implemented.
   - **Verification**: Tests run and results observed.
   - **Benefits**: Impact on the project (e.g., performance, security, maintainability).
-- **MCP Workflow Reference**: For token-efficient MCP and LSP tool selection, read `agent_docs/mcp-agent-playbook.md` before falling back to broad repo search.
+- **MCP Workflow Reference**: MCP tool guidance is injected at session start when available. See `agent_docs/mcp-agent-playbook.md` for the full playbook.
 
 ## 5. Verification & Quality Gates
 
