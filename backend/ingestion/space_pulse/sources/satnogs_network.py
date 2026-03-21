@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, UTC
 
 import httpx
 
-logger = logging.getLogger("satnogs_pulse.network")
+logger = logging.getLogger("space_pulse.network")
 
 SATNOGS_NETWORK_BASE = "https://network.satnogs.org/api"
 OBSERVATIONS_URL     = f"{SATNOGS_NETWORK_BASE}/observations/"

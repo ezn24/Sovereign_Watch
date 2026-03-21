@@ -16,7 +16,7 @@ from datetime import datetime, UTC
 
 import httpx
 
-logger = logging.getLogger("satnogs_pulse.db")
+logger = logging.getLogger("space_pulse.db")
 
 SATNOGS_DB_BASE  = "https://db.satnogs.org/api"
 TRANSMITTERS_URL = f"{SATNOGS_DB_BASE}/transmitters/"

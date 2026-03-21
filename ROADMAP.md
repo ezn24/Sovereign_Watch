@@ -34,8 +34,7 @@ The platform's "System of Systems" architecture is documented in detail within t
 | **FE-22**     | Drone Tactical Layer | Frontend  | Implement `DroneLayer.tsx` with rotor icons and `drone_class` color coding. |
 | **FE-25c**    | PSAP / 911 Centers   | Frontend  | Static GeoJSON markers for emergency dispatch centers.                      |
 | **Ingest-04** | SIGINT Jamming       | Data Eng  | ADS-B Integrity Analysis                                                    |
-| **Ingest-05** | Spectrum Verif       | Data Eng  | SatNOGS Integration                                                         |
-| **Ingest-14** | GDELT Events Pulse   | Data Eng  | Ingest GDELT GKG GeoJSON (15-min interval) news events.                     |
+|**Ingest-14** | GDELT Events Pulse   | Data Eng  | Ingest GDELT GKG GeoJSON (15-min interval) news events.                     |
 | **FE-35**     | GDELT News Layer     | Frontend  | Real-time news markers with Tone (Goldstein) and CAMEO filtering.           |
 | **Ingest-15** | Space Weather Pulse  | Data Eng  | NOAA SWPC (Kp-index, Solar Flux, Auroral Oval) ingestion.                   |
 | **FE-36**     | Env Layers           | Frontend  | Auroral Oval polygon layer and solar activity status widget.                |

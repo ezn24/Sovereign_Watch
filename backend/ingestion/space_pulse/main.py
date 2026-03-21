@@ -1,9 +1,16 @@
-"""satnogs-pulse: SatNOGS spectrum verification ingestion service."""
+"""space-pulse: Unified space domain ingestion service.
+
+Combines:
+  - Orbital TLE propagation (Celestrak → sgp4 → Kafka orbital_raw)
+  - SatNOGS transmitter catalog (db.satnogs.org → Kafka satnogs_transmitters)
+  - SatNOGS observations (network.satnogs.org → Kafka satnogs_observations)
+  - Space weather (NOAA SWPC Kp-index + Aurora → Redis + TimescaleDB)
+"""
 import asyncio
 import logging
 import signal
 
-from service import SatNOGSPulseService
+from service import SpacePulseService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -12,7 +19,7 @@ logging.basicConfig(
 
 
 async def main():
-    svc = SatNOGSPulseService()
+    svc = SpacePulseService()
     loop = asyncio.get_running_loop()
 
     for sig in (signal.SIGINT, signal.SIGTERM):

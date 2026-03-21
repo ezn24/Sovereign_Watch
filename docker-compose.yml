@@ -96,35 +96,24 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  # --- Ingestion: Space TLE (via Python Poller) ---
-  sovereign-orbital-pulse:
+  # --- Ingestion: Space Domain (Orbital TLE + SatNOGS Spectrum + Space Weather) ---
+  sovereign-space-pulse:
     build:
-      context: ./backend/ingestion/orbital_pulse
+      context: ./backend/ingestion/space_pulse
       dockerfile: Dockerfile
-    container_name: sovereign-orbital-pulse
+    container_name: sovereign-space-pulse
     environment:
       - KAFKA_BROKERS=sovereign-redpanda:9092
       - REDIS_HOST=sovereign-redis
       - REDIS_PORT=6379
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@sovereign-timescaledb:5432/${POSTGRES_DB:-sovereign_watch}
       # UTC hour (0-23) at which Celestrak TLE refreshes are allowed to run.
       # Set to -1 to disable hour gating and fetch immediately when interval elapses.
       - ORBITAL_TLE_FETCH_HOUR=${ORBITAL_TLE_FETCH_HOUR:-2}
-    networks:
-      - sovereign-net-backend
-    depends_on:
-      sovereign-redpanda:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # --- Ingestion: Space Weather (NOAA SWPC Kp-index + Auroral Oval) ---
-  sovereign-space-weather-pulse:
-    build:
-      context: ./backend/ingestion/space_weather_pulse
-      dockerfile: Dockerfile
-    container_name: sovereign-space-weather-pulse
-    environment:
-      - REDIS_URL=redis://sovereign-redis:6379/0
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-password}@sovereign-timescaledb:5432/${POSTGRES_DB:-sovereign_watch}
+      # SatNOGS transmitter catalog refresh interval (hours)
+      - SATNOGS_DB_INTERVAL_H=${SATNOGS_DB_INTERVAL_H:-24}
+      # SatNOGS observation poll interval (hours)
+      - SATNOGS_NETWORK_INTERVAL_H=${SATNOGS_NETWORK_INTERVAL_H:-1}
       # Aurora GeoJSON poll interval in seconds (default 300 = 5 min)
       - AURORA_INTERVAL_S=${AURORA_INTERVAL_S:-300}
       # Kp-index poll interval in seconds (default 900 = 15 min)
@@ -132,6 +121,8 @@ services:
     networks:
       - sovereign-net-backend
     depends_on:
+      sovereign-redpanda:
+        condition: service_healthy
       sovereign-redis:
         condition: service_started
       sovereign-timescaledb:
@@ -156,29 +147,6 @@ services:
         condition: service_started
       sovereign-timescaledb:
         condition: service_healthy
-    restart: unless-stopped
-
-  # --- Ingestion: SatNOGS Spectrum Verification (Transmitter Catalog + Observations) ---
-  sovereign-satnogs-pulse:
-    build:
-      context: ./backend/ingestion/satnogs_pulse
-      dockerfile: Dockerfile
-    container_name: sovereign-satnogs-pulse
-    environment:
-      - KAFKA_BROKERS=sovereign-redpanda:9092
-      - REDIS_HOST=sovereign-redis
-      - REDIS_PORT=6379
-      # How often to refresh the transmitter catalog from db.satnogs.org (hours)
-      - SATNOGS_DB_INTERVAL_H=${SATNOGS_DB_INTERVAL_H:-24}
-      # How often to fetch new observations from network.satnogs.org (hours)
-      - SATNOGS_NETWORK_INTERVAL_H=${SATNOGS_NETWORK_INTERVAL_H:-1}
-    networks:
-      - sovereign-net-backend
-    depends_on:
-      sovereign-redpanda:
-        condition: service_healthy
-      sovereign-redis:
-        condition: service_started
     restart: unless-stopped
 
   # --- Ingestion: RF Infrastructure (Repeaters, NOAA NWR, Public Safety) ---
