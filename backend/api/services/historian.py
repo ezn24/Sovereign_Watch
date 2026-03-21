@@ -46,6 +46,7 @@ async def historian_task():
     logger.info("Historian task started")
     consumer = AIOKafkaConsumer(
         "adsb_raw", "ais_raw", "orbital_raw", "rf_raw",
+        "satnogs_transmitters", "satnogs_observations",
         bootstrap_servers=settings.KAFKA_BROKERS,
         group_id="historian-writer-v2",
         auto_offset_reset="earliest"
@@ -125,6 +126,42 @@ async def historian_task():
                 updated_at      = NOW()
         """
 
+        satnogs_tx_upsert_sql = """
+            INSERT INTO satnogs_transmitters (
+                uuid, norad_id, sat_name, description, alive, type,
+                uplink_low, uplink_high, downlink_low, downlink_high,
+                mode, invert, baud, status, updated_at
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+            ON CONFLICT (uuid) DO UPDATE SET
+                norad_id      = EXCLUDED.norad_id,
+                sat_name      = EXCLUDED.sat_name,
+                description   = EXCLUDED.description,
+                alive         = EXCLUDED.alive,
+                type          = EXCLUDED.type,
+                uplink_low    = EXCLUDED.uplink_low,
+                uplink_high   = EXCLUDED.uplink_high,
+                downlink_low  = EXCLUDED.downlink_low,
+                downlink_high = EXCLUDED.downlink_high,
+                mode          = EXCLUDED.mode,
+                invert        = EXCLUDED.invert,
+                baud          = EXCLUDED.baud,
+                status        = EXCLUDED.status,
+                updated_at    = NOW()
+        """
+
+        satnogs_obs_insert_sql = """
+            INSERT INTO satnogs_observations (
+                time, observation_id, norad_id, ground_station_id, transmitter_uuid,
+                frequency, mode, status, rise_azimuth, set_azimuth, max_altitude,
+                has_audio, has_waterfall, vetted_status, tle0, tle1, tle2, fetched_at
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,NOW())
+            ON CONFLICT (observation_id, time) DO NOTHING
+        """
+
+        # Batch buffers for satnogs transmitters (keyed by uuid for dedup)
+        satnogs_tx_batch: dict[str, dict] = {}
+        satnogs_tx_last_flush = time.time()
+
         async for msg in consumer:
             try:
                 data = json.loads(msg.value.decode('utf-8'))
@@ -159,6 +196,68 @@ async def historian_task():
                                 rf_last_flush = now
                             except Exception as rf_err:
                                 logger.error("Historian RF batch flush error: %s", rf_err)
+                    continue
+
+                if msg.topic == "satnogs_transmitters":
+                    uuid = data.get("uuid")
+                    if uuid:
+                        satnogs_tx_batch[uuid] = data
+                    now = time.time()
+                    if len(satnogs_tx_batch) >= BATCH_SIZE or (now - satnogs_tx_last_flush > FLUSH_INTERVAL and satnogs_tx_batch):
+                        if db.pool:
+                            try:
+                                rows = [
+                                    (
+                                        r["uuid"], r["norad_id"],
+                                        r.get("sat_name"), r.get("description"),
+                                        bool(r.get("alive", True)),
+                                        r.get("type", "Transmitter"),
+                                        r.get("uplink_low"), r.get("uplink_high"),
+                                        r.get("downlink_low"), r.get("downlink_high"),
+                                        r.get("mode"), bool(r.get("invert", False)),
+                                        r.get("baud"), r.get("status", "active"),
+                                    )
+                                    for r in satnogs_tx_batch.values()
+                                ]
+                                async with db.pool.acquire() as conn:
+                                    await conn.executemany(satnogs_tx_upsert_sql, rows)
+                                satnogs_tx_batch.clear()
+                                satnogs_tx_last_flush = now
+                            except Exception as stx_err:
+                                logger.error("Historian SatNOGS transmitter flush error: %s", stx_err)
+                    continue
+
+                if msg.topic == "satnogs_observations":
+                    if db.pool:
+                        try:
+                            start_str = data.get("start")
+                            if start_str:
+                                obs_time = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
+                            else:
+                                obs_time = datetime.now(timezone.utc)
+                            obs_row = (
+                                obs_time,
+                                data.get("observation_id"),
+                                data.get("norad_id"),
+                                data.get("ground_station_id"),
+                                data.get("transmitter_uuid"),
+                                data.get("frequency"),
+                                data.get("mode"),
+                                data.get("status", "good"),
+                                data.get("rise_azimuth"),
+                                data.get("set_azimuth"),
+                                data.get("max_altitude"),
+                                bool(data.get("has_audio", False)),
+                                bool(data.get("has_waterfall", False)),
+                                data.get("vetted_status"),
+                                data.get("tle0"),
+                                data.get("tle1"),
+                                data.get("tle2"),
+                            )
+                            async with db.pool.acquire() as conn:
+                                await conn.execute(satnogs_obs_insert_sql, *obs_row)
+                        except Exception as sobs_err:
+                            logger.error("Historian SatNOGS observation insert error: %s", sobs_err)
                     continue
 
                 # --- Parsing Logic ---
@@ -306,6 +405,26 @@ async def historian_task():
                 logger.info("Historian: flushed %d RF site records on shutdown", len(rows))
             except Exception as e:
                 logger.error("Historian RF shutdown flush error: %s", e)
+        if satnogs_tx_batch and db.pool:
+            try:
+                rows = [
+                    (
+                        r["uuid"], r["norad_id"],
+                        r.get("sat_name"), r.get("description"),
+                        bool(r.get("alive", True)),
+                        r.get("type", "Transmitter"),
+                        r.get("uplink_low"), r.get("uplink_high"),
+                        r.get("downlink_low"), r.get("downlink_high"),
+                        r.get("mode"), bool(r.get("invert", False)),
+                        r.get("baud"), r.get("status", "active"),
+                    )
+                    for r in satnogs_tx_batch.values()
+                ]
+                async with db.pool.acquire() as conn:
+                    await conn.executemany(satnogs_tx_upsert_sql, rows)
+                logger.info("Historian: flushed %d SatNOGS transmitter records on shutdown", len(rows))
+            except Exception as e:
+                logger.error("Historian SatNOGS transmitter shutdown flush error: %s", e)
         await consumer.stop()
         logger.info("Historian consumer stopped")
 
