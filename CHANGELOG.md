@@ -1,3 +1,9 @@
+## [0.43.1] - 2026-03-21
+
+### Fixed
+
+- **Aurora Visualization Distortion**: Fixed a critical rendering issue where NOAA aurora data points near the poles (beyond ±85° latitude) would render as giant screen-filling blobs in 2D Web Mercator mode. Points are now filtered out when not in Globe mode to maintain visual scale.
+
 ## [0.43.0] - 2026-03-21
 
 ### Added
