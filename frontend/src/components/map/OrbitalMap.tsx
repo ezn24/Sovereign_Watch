@@ -8,6 +8,7 @@ import React, {
   MutableRefObject,
 } from "react";
 import { Globe, RotateCcw, ChevronUp, ChevronDown, Plus, Minus } from "lucide-react";
+import { SpaceWeatherPanel } from "../SpaceWeatherPanel";
 import type { FeatureCollection } from "geojson";
 import type { MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -880,6 +881,19 @@ export function OrbitalMap({
       {hoveredEntity && hoverPosition && (
         <MapTooltip entity={hoveredEntity} position={hoverPosition} />
       )}
+
+      {/* Space Weather Panel — top-right corner of orbital dashboard */}
+      <div
+        style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          zIndex: 200,
+          pointerEvents: "none",
+        }}
+      >
+        <SpaceWeatherPanel visible={true} />
+      </div>
     </>
   );
 }

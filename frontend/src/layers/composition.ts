@@ -13,6 +13,8 @@ import { buildH3CoverageLayer } from "./buildH3CoverageLayer";
 import { getTerminatorLayer } from "../components/map/TerminatorLayer";
 import { buildTowerLayer } from "./buildTowerLayer";
 import { maidenheadToLatLon } from "../utils/map/geoUtils";
+import { buildAuroraLayer } from "./buildAuroraLayer";
+import { buildJammingLayer } from "./buildJammingLayer";
 
 import type { H3CellData } from "./buildH3CoverageLayer";
 import type { GroundTrackPoint } from "../types";
@@ -44,6 +46,10 @@ interface LayerCompositionOptions {
   observer?: { lat: number; lon: number; radiusKm: number } | null;
   currentMission?: { lat: number; lon: number } | null;
   aotShapes: { maritime: number[][]; aviation: number[][] } | null;
+  /** NOAA aurora 1-hour forecast GeoJSON */
+  auroraData?: any;
+  /** Active GPS jamming zones GeoJSON from JammingAnalyzer */
+  jammingData?: any;
   onEntitySelect: (entity: CoTEntity | null) => void;
   setHoveredEntity: (entity: CoTEntity | null) => void;
   setHoverPosition: (pos: { x: number; y: number } | null) => void;
@@ -81,6 +87,8 @@ export function composeAllLayers(options: LayerCompositionOptions) {
     observer,
     currentMission,
     aotShapes,
+    auroraData,
+    jammingData,
     onEntitySelect,
     setHoveredEntity,
     setHoverPosition,
@@ -181,7 +189,11 @@ export function composeAllLayers(options: LayerCompositionOptions) {
   return [
     ...buildH3CoverageLayer(h3Cells, !!filters?.showH3Coverage),
     getTerminatorLayer(!!filters?.showTerminator),
+    // Aurora oval sits below infra/entity layers — large translucent area fill
+    ...buildAuroraLayer(auroraData, !!filters?.showAurora, globeMode, now),
     ...infraLayers,
+    // Jamming zones sit above infra but below entity chevrons
+    ...buildJammingLayer(jammingData, !!filters?.showJamming, globeMode, now),
     ...getOrbitalLayers({
       satellites: filteredSatellites,
       selectedEntity: currentSelected,
