@@ -1,3 +1,9 @@
+## [0.41.2] - 2026-03-22
+
+### Fixed
+
+- **FCC Tower Distribution**: Resolved an issue where tower scatter plots appeared in "patches" or "clusters" due to database physical storage order. By introducing a sort by random UUID and increasing the default budget to 10,000 points, the map now provides a representative geographic sample across the entire viewport.
+
 ## [0.41.1] - 2026-03-21
 
 ### Fixed
