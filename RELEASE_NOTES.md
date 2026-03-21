@@ -1,28 +1,19 @@
-# Release - v0.40.0 - Infrastructure Resilience
+# Release - v0.41.4 - Dynamic RadioReference & RF Range Enhancements
 
-## Summary
+This release significantly enhances the geographical intelligence handling for RadioReference ingestion and expands backend querying capabilities for the tactical map.
 
-This release introduces the **FCC Antenna Structure Registration (ASR)** dataset, providing operators with situational awareness of over 195,000 unique tower and antenna structures. To support this significant data expansion, the `infra-poller` architecture has been overhauled with a high-performance, persistent synchronization strategy that drastically reduces upstream API consumption and improves system stability.
+### High-Level Summary
+Previously, the overarching map limits constrained the RadioReference ingestion engine exclusively to the Pacific Northwest (Oregon/Washington) and capped visual tower mapping to a rigid 5000 pins inside the view. This resulted in sharp geographical constraints extending outward into the contiguous United States. By introducing dynamic US state discovery metrics based on your custom `CENTER_LAT`/`CENTER_LON`, the system now dynamically auto-extracts infrastructure boundaries to envelop your localized area flawlessly.
 
-## Key Features
+### Key Changes
+- **Dynamic State Generation (RadioReference)**: The ingestion container natively leverages FIPS lookup tables instead of hardcoded environment inputs. Providing `RADIOREF_STATE_IDS="AUTO"` measures states encompassing your predefined `RR_RADIUS_MI`, mapping dynamically selected states perfectly for targeted ingestion.
+- **RF Map Capacity Expansion**: Lifted backend database retrieval restrictions from generating a strict `LIMIT 5000` to `LIMIT 15000` nodes natively. This prevents harsh geographic drop-offs during macro-tactical views of radio and infrastructure elements.
+- **Optimized UI Range Toggles**: Altered the legacy system parameters out of large bounds (e.g. 1000, 2000 NM filters) focusing exclusively on the most accurate radar presentation intervals: `150`, `300` (Default), and `600` NM radius views.
 
-- **FCC Tower Ingestion**: Comprehensive mapping of terrestrial antenna infrastructure across North America.
-- **Weekly Cooldown Cycles**: Both FCC and Submarine Cable datasets now sync strictly every 7 days, avoiding redundant multi-megabyte downloads.
-- **Boot-Safe Persistence**: Polling status is now persisted in Redis. If a service restarts, it will skip scheduled syncs if the data is already current.
-- **Interactive Infrastructure Tooltips**: Improved interactivity for the new infrastructure layers, including registration details and status metadata.
-- **Transparent Polling Diagnostics**: Real-time logs now show exactly when the next weekly sync is scheduled (e.g., "Next sync in 6d 23h").
-
-## Technical Details
-
-- **Ingestion**: Migrated from legacy `wireless2.fcc.gov` endpoints to modern `data.fcc.gov` APIs.
-- **Parser Tuning**: Specialized DMS (Degrees-Minutes-Seconds) coordinate translation to ensure sub-meter mapping precision for structured tower data.
-- **Rendering**: FCC towers utilize a Development Preview rendering mode with optimized Z-ordering and depth bias for Globe/3D views.
-
-## Upgrade Instructions
-
-Rebuild and restart the infrastructure poller to apply the new scheduling and ingestion logic:
+### Upgrade Instructions
+Pull the newest source configurations and launch a forced service rebuild for the `sovereign-rf-pulse` polling engine:
 
 ```bash
-git pull origin dev
-docker compose up -d --build infra-poller
+docker compose up -d --build sovereign-rf-pulse
 ```
+No frontend static bundles are strictly required since Vite's HMR manages mapping files automatically, but users navigating back out of the environment can run `pnpm run build` as needed.

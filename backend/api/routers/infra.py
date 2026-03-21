@@ -54,7 +54,7 @@ async def get_infra_outages():
 
 @router.get("/api/infra/towers")
 async def get_infra_towers(
-    min_lat: float, min_lon: float, max_lat: float, max_lon: float, limit: int = 2000
+    min_lat: float, min_lon: float, max_lat: float, max_lon: float, limit: int = 10000
 ):
     """Returns FCC Towers within a bounding box as GeoJSON."""
     if not db.pool:
@@ -89,6 +89,7 @@ async def get_infra_towers(
         SELECT id, fcc_id, type, owner, status, height_m, elevation_m, geom
         FROM infra_towers
         WHERE geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+        ORDER BY id
         LIMIT $5
     ) as sub;
     """

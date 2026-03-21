@@ -1,10 +1,10 @@
 ---
-description: Release management workflow for version bumping, changelogs, and release notes.
+description: Release management workflow for changelogs, release notes, and optional version metadata updates.
 ---
 
 # /release - Release Management
 
-Standardized release process: version bump, changelog, release notes, and documentation updates.
+Standardized release process: changelog, release notes, and documentation updates.
 
 ---
 
@@ -21,10 +21,7 @@ Standardized release process: version bump, changelog, release notes, and docume
 
 ## 2. Version Updates
 
-- [ ] **Frontend**: Update `"version"` in `frontend/package.json`.
-  ```json
-  "version": "X.Y.Z"
-  ```
+- [ ] **Frontend (Optional)**: Update `"version"` in `frontend/package.json` only when you explicitly want frontend package metadata to track the release.
 - [ ] **Backend (Optional)**: If applicable, check `backend/api/main.py` or equivalent for version strings.
 
 ## 3. Changelog Management
@@ -63,7 +60,7 @@ Standardized release process: version bump, changelog, release notes, and docume
 ## 5. Verification
 
 - [ ] **Tests**: Run `/test` to execute unit/integration tests.
-- [ ] **Build Check**: Run `docker compose build frontend` to ensure `package.json` is valid.
+- [ ] **Build Check**: Run `docker compose build frontend` to ensure frontend dependency metadata is valid.
 - [ ] **Sanity Check**: Verify links in `RELEASE_NOTES.md` and `README.md`.
 
 ## 6. Deployment (Optional)
@@ -75,11 +72,11 @@ Standardized release process: version bump, changelog, release notes, and docume
 To be executed by the user or agent with explicit permission:
 
 ```bash
-# 1. Stage documentation and version files
-git add frontend/package.json README.md CHANGELOG.md RELEASE_NOTES.md
+# 1. Stage documentation files (add frontend/package.json only if you intentionally changed it)
+git add README.md CHANGELOG.md RELEASE_NOTES.md
 
 # 2. Commit
-git commit -m "chore(release): vX.Y.Z - Release Name
+git commit -m "chore(release): vX.Y.Z - Release Name"
 
 # 3. Tag (Annotated required for --follow-tags)
 git tag -a vX.Y.Z -m "Release vX.Y.Z"

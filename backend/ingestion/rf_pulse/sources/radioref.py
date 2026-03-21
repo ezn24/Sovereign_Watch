@@ -33,11 +33,15 @@ import asyncio
 import logging
 import math
 import os
+import time
+from datetime import datetime, UTC
 
 import httpx
 import zeep
 import zeep.exceptions
 from zeep.transports import AsyncTransport
+
+from sources.fips_states import STATE_FIPS
 
 logger = logging.getLogger("rf_pulse.radioref")
 
@@ -47,12 +51,9 @@ CENTER_LAT   = float(os.getenv("CENTER_LAT", "45.5152"))
 CENTER_LON   = float(os.getenv("CENTER_LON", "-122.6784"))
 RR_RADIUS_MI = int(os.getenv("RF_RR_RADIUS_MI", "200"))
 
-# Comma-separated RR state IDs to scan; defaults to Oregon (43) and Washington (56).
-_STATE_IDS: list[int] = [
-    int(s.strip())
-    for s in os.getenv("RADIOREF_STATE_IDS", "41,53").split(",")
-    if s.strip().isdigit()
-]
+# Comma-separated RR state IDs to scan. If "AUTO" or empty, this will dynamically select states
+# whose centers fall within RR_RADIUS_MI + buffer of CENTER_LAT / CENTER_LON.
+_ENV_STATES = os.getenv("RADIOREF_STATE_IDS", "AUTO").strip().upper()
 
 
 def _haversine_mi(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -72,6 +73,9 @@ class RadioReferenceSource:
         self.redis_client  = redis_client
         self.topic         = topic
         self.interval_sec  = fetch_interval_h * 3600
+        # UTC hour (0-23) at which the weekly RadioReference sync is allowed to run.
+        # Defaults to 4 AM UTC — offset from FCC (3 AM) to spread heavy fetches.
+        self.fetch_hour    = int(os.getenv("RF_RR_FETCH_HOUR", "4"))
 
         self.app_key  = os.getenv("RADIOREF_APP_KEY", "")
         self.username = os.getenv("RADIOREF_USERNAME", "")
@@ -107,9 +111,6 @@ class RadioReferenceSource:
             try:
                 # Check for last-fetch timestamp in Redis to avoid over-fetching on restarts
                 last_fetch = await self.redis_client.get("rf_pulse:radioref:last_fetch")
-                now = asyncio.get_event_loop().time() # Using event loop time for consistency
-                # Wait, Redis uses real time, let's use time.time()
-                import time
                 now = time.time()
 
                 if last_fetch:
@@ -124,9 +125,21 @@ class RadioReferenceSource:
                         await asyncio.sleep(wait_sec)
                         continue
 
+                current_hour = datetime.now(UTC).hour
+                if self.fetch_hour >= 0 and current_hour != self.fetch_hour:
+                    logger.info(
+                        "RadioReference: sync due but deferring to %02d:00 UTC "
+                        "(currently %02d:00 UTC) to avoid peak-hour contention.",
+                        self.fetch_hour, current_hour,
+                    )
+                    await asyncio.sleep(3600)  # re-check in 1 hour
+                    continue
+
                 await self._fetch_and_publish()
-                # Update last-fetch timestamp in Redis
-                await self.redis_client.set("rf_pulse:radioref:last_fetch", str(time.time()))
+                await self.redis_client.set(
+                    "rf_pulse:radioref:last_fetch", str(time.time()),
+                    ex=int(self.interval_sec * 2),
+                )
                 
             except Exception:
                 logger.exception("RadioReference: unhandled fetch error")
@@ -158,12 +171,23 @@ class RadioReferenceSource:
             "1": "FM", "2": "NFM", "3": "DMR", "4": "P25", "10": "P25 Phase 2", "11": "D-Star", "14": "YSF Fusion", "15": "NXDN",
         }
 
+        state_ids_to_scan = []
+        if _ENV_STATES == "AUTO" or not _ENV_STATES:
+            # Dynamically calc which states are geographically relevant
+            # We add a 300 mile buffer to state centers so boundary counties aren't missed
+            for s_info in STATE_FIPS.values():
+                dist = _haversine_mi(CENTER_LAT, CENTER_LON, s_info["lat"], s_info["lon"])
+                if dist <= (RR_RADIUS_MI + 300):
+                    state_ids_to_scan.append(s_info["fips"])
+        else:
+            state_ids_to_scan = [int(s.strip()) for s in _ENV_STATES.split(",") if s.strip().isdigit()]
+
         logger.info(
-            "RadioReference: scanning %d state(s) for sites within %d mi of %.4f,%.4f",
-            len(_STATE_IDS), RR_RADIUS_MI, CENTER_LAT, CENTER_LON,
+            "RadioReference: scanning %d state(s) (IDs: %s) for sites within %d mi of %.4f,%.4f",
+            len(state_ids_to_scan), state_ids_to_scan, RR_RADIUS_MI, CENTER_LAT, CENTER_LON,
         )
 
-        for stid in _STATE_IDS:
+        for stid in state_ids_to_scan:
             try:
                 state_info = await client.service.getStateInfo(stid=stid, authInfo=auth)
             except zeep.exceptions.Fault:

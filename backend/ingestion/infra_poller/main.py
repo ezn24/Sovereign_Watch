@@ -12,7 +12,7 @@ import csv
 import io
 import psycopg2
 from psycopg2.extras import execute_values
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -24,8 +24,12 @@ DB_URL = os.getenv("DATABASE_URL", "postgresql://sovereign:watch@sovereign-db:54
 POLL_INTERVAL_CABLES_DAYS = 7
 POLL_INTERVAL_IODA_MINUTES = 30
 POLL_INTERVAL_FCC_DAYS = 7
+# UTC hour (0-23) at which the weekly FCC sync is allowed to start.
+# Defaults to 3 AM UTC to avoid contention with peak daytime track writes.
+POLL_FCC_START_HOUR = int(os.getenv("POLL_FCC_START_HOUR", "3"))
 # FCC migrated ASR bulk data from wireless2.fcc.gov -> data.fcc.gov.
 # r_tower.zip = active Registrations (~35 MB). a_tower.zip = full Application history (~195 MB).
+# Standard r_tower layout docs: https://data.fcc.gov/download/pub/uls/complete/r_tower.zip_README.txt
 FCC_TOWERS_URL = "https://data.fcc.gov/download/pub/uls/complete/r_tower.zip"
 
 # IODA
@@ -181,10 +185,10 @@ def dms_to_decimal(deg_s, min_s, sec_s, dir_s):
     except (TypeError, ValueError):
         return None
 
-FCC_DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024  # 8 MB chunks
+FCC_DOWNLOAD_CHUNK_BYTES = 1 * 1024 * 1024  # 1 MB chunks
 FCC_CONNECT_TIMEOUT_S    = 30               # fail fast if server won't accept
-FCC_READ_TIMEOUT_S       = 120              # allow 2 min per chunk read
-FCC_MAX_RETRIES          = 3
+FCC_READ_TIMEOUT_S       = 60               # allow 1 min per chunk read
+FCC_MAX_RETRIES          = 5
 
 
 def _download_fcc_zip(dest_path: str) -> None:
@@ -204,7 +208,7 @@ def _download_fcc_zip(dest_path: str) -> None:
                         if chunk:
                             fh.write(chunk)
                             total += len(chunk)
-                            logger.debug("FCC download progress: %.1f MB", total / 1_000_000)
+                            logger.info("FCC download progress: %.1f MB", total / 1_000_000)
             logger.info("FCC zip downloaded: %.1f MB", total / 1_000_000)
             return  # success
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as exc:
@@ -217,6 +221,16 @@ def _download_fcc_zip(dest_path: str) -> None:
                 raise
 
 
+def _parse_float(s: str):
+    """Return a float from a pipe-delimited FCC field, or None if empty/invalid."""
+    if not s or not s.strip():
+        return None
+    try:
+        return float(s.strip())
+    except ValueError:
+        return None
+
+
 def fetch_and_ingest_fcc_towers():
     logger.info("Starting FCC Towers ingestion...")
     tmp_path = None
@@ -227,14 +241,47 @@ def fetch_and_ingest_fcc_towers():
 
         _download_fcc_zip(tmp_path)
 
-        records = []
-
         with zipfile.ZipFile(tmp_path) as z:
-            # CO.dat contains the coordinate records
-            if 'CO.dat' not in z.namelist():
+            names = z.namelist()
+
+            # --- EN.dat: entity / owner name ---
+            # col[1]=usi  col[2]=fcc_id  col[9]=entity_name (registered owner)
+            owner_by_usi = {}
+            if 'EN.dat' in names:
+                logger.info("Parsing EN.dat for owner names...")
+                with z.open('EN.dat') as f:
+                    content = f.read().decode('latin1')
+                for row in csv.reader(io.StringIO(content), delimiter='|'):
+                    if len(row) > 9 and row[0] == 'EN':
+                        usi = row[3].strip()
+                        name = row[9].strip()
+                        if usi and name:
+                            owner_by_usi[usi] = name
+                logger.info("Loaded %d owner records from EN.dat", len(owner_by_usi))
+
+            # --- RA.dat: registration / structure dimensions ---
+            # col[1]=usi  col[2]=fcc_id  col[28]=ground_elevation_m (AMSL)  col[30]=height_above_ground_m
+            ra_by_usi = {}
+            if 'RA.dat' in names:
+                logger.info("Parsing RA.dat for height/elevation...")
+                with z.open('RA.dat') as f:
+                    content = f.read().decode('latin1')
+                for row in csv.reader(io.StringIO(content), delimiter='|'):
+                    if len(row) > 30 and row[0] == 'RA':
+                        usi = row[3].strip()
+                        if usi and usi not in ra_by_usi:  # keep first (most recent) record
+                            ra_by_usi[usi] = (
+                                _parse_float(row[28]),  # ground elevation AMSL (m)
+                                _parse_float(row[30]),  # structure height above ground (m)
+                            )
+                logger.info("Loaded %d structure records from RA.dat", len(ra_by_usi))
+
+            # --- CO.dat: coordinates ---
+            if 'CO.dat' not in names:
                 logger.error("CO.dat not found in FCC towers zip")
                 return
 
+            records = []
             with z.open('CO.dat') as f:
                 content = f.read().decode('latin1')
                 reader = csv.reader(io.StringIO(content), delimiter='|')
@@ -254,8 +301,9 @@ def fetch_and_ingest_fcc_towers():
                     if row[5].strip() not in ('T', ''):
                         continue
 
+                    usi = row[3].strip()
                     fcc_id = row[2].strip()
-                    if not fcc_id:
+                    if not usi or not fcc_id:
                         continue
 
                     lat = dms_to_decimal(row[6], row[7], row[8], row[9])
@@ -267,12 +315,14 @@ def fetch_and_ingest_fcc_towers():
                     if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
                         continue
 
+                    elev_m, height_m = ra_by_usi.get(usi, (None, None))
                     records.append((
                         fcc_id,
                         lat,
                         lon,
-                        None,   # elevation_m — not in CO.dat new schema
-                        None,   # height_m   — not in CO.dat new schema
+                        elev_m,
+                        height_m,
+                        owner_by_usi.get(usi),
                     ))
 
         if not records:
@@ -290,13 +340,14 @@ def fetch_and_ingest_fcc_towers():
 
         # Upsert logic — columns match init.sql infra_towers schema
         insert_query = """
-            INSERT INTO infra_towers (fcc_id, lat, lon, elevation_m, height_m, geom)
+            INSERT INTO infra_towers (fcc_id, lat, lon, elevation_m, height_m, owner, geom)
             VALUES %s
             ON CONFLICT (fcc_id) DO UPDATE SET
                 lat = EXCLUDED.lat,
                 lon = EXCLUDED.lon,
                 elevation_m = EXCLUDED.elevation_m,
                 height_m = EXCLUDED.height_m,
+                owner = EXCLUDED.owner,
                 geom = EXCLUDED.geom,
                 updated_at = CURRENT_TIMESTAMP;
         """
@@ -304,8 +355,8 @@ def fetch_and_ingest_fcc_towers():
         # Prepare data with PostGIS geometry
         psycopg2_records = [
             (
-                r[0], r[1], r[2], r[3], r[4],
-                f"SRID=4326;POINT({r[2]} {r[1]})"
+                r[0], r[1], r[2], r[3], r[4], r[5],
+                "SRID=4326;POINT({} {})".format(r[2], r[1])
             )
             for r in records
         ]
@@ -377,11 +428,18 @@ def main():
             last_ioda_fetch = now
 
         if now - last_fcc_fetch > POLL_INTERVAL_FCC_DAYS * 86400:
-            fetch_and_ingest_fcc_towers()
-            last_fcc_fetch = now
-            redis_client.set("infra:last_fcc_fetch", str(now))
-
-        time.sleep(60)
+            current_hour = datetime.now(UTC).hour
+            # Start sync if it's the right hour, OR if hour gating is disabled (-1)
+            if POLL_FCC_START_HOUR == -1 or current_hour == POLL_FCC_START_HOUR:
+                fetch_and_ingest_fcc_towers()
+                last_fcc_fetch = now
+                redis_client.set("infra:last_fcc_fetch", str(now))
+            else:
+                logger.info(
+                    "FCC sync due but deferring to %02d:00 UTC (currently %02d:00 UTC) "
+                    "to avoid peak-hour disk contention.",
+                    POLL_FCC_START_HOUR, current_hour,
+                )
 
         time.sleep(60)
 

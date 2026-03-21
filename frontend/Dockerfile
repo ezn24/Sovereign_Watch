@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 3000
 
 # Start development server with host exposure
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["pnpm", "run", "dev", "--", "--host"]

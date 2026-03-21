@@ -1,3 +1,76 @@
+## [0.41.4] - 2026-03-20
+
+### Changed
+
+- **RadioReference Dynamic Coverage**: Replaced hardcoded `_STATE_IDS` targeting the Pacific Northwest entirely. Utilizing a dynamic FIPS state coordinate mapping inside the ingest container, `RADIOREF_STATE_IDS="AUTO"` now naturally discovers boundaries that correlate to your active Area of Tactical Operations parameters (`CENTER_LAT`/`CENTER_LON`), pulling all required regional nodes gracefully.
+- **RF Map Capacity**: Increased default spatial query limits on `/api/rf/sites` from 5,000 to 15,000 active nodes, preventing artificial circular rendering cutoffs within large AOR spheres.
+- **Map Range Presets**: Adjusted bounding radius widget settings in `SystemStatus.tsx` to center closer to optimal visual rendering thresholds (150, 300, 600 NM) and removed the oversized 2000 NM filter constraint.
+
+## [0.41.3] - 2026-03-20
+
+### Changed
+
+- **AI Analyst Theming**: Synchronized the property card `AnalysisWidget` button styling and the `AIAnalystPanel` modal to accurately inherit domain-specific accent colors (e.g., Orange for FCC Towers, Teal for Repeaters, Cyan for Infrastructure, and Indigo for JS8Call).
+
+### Fixed
+
+- **FCC Tower Ingestion Identifiers**: Resolved a bug in `infra_poller/main.py` where FCC tower parsing defaulted to the static row indicator `"REG"` instead of the Unique System Identifier (USI). This fix ensures metadata fields such as Owner and Elevation accurately map to their exact registered structure during database ingestion.
+
+## [0.41.2] - 2026-03-22
+
+### Fixed
+
+- **FCC Tower Distribution**: Resolved an issue where tower scatter plots appeared in "patches" or "clusters" due to database physical storage order. By introducing a sort by random UUID and increasing the default budget to 10,000 points, the map now provides a representative geographic sample across the entire viewport.
+
+## [0.41.1] - 2026-03-21
+
+### Fixed
+
+- **RadioReference Sync Deferral**: Resolved an issue where `RadioReference` sync was incorrectly deferred when `RF_RR_FETCH_HOUR` was set to `-1`. The poller now correctly bypasses hour gating when disabled.
+- **FCC Download Resilience**: Improved `infra_poller` download logic for the FCC Antenna Structure Registration (ASR) dataset. Reduced chunk sizes from 8MB to 1MB and enabled progress logging at `INFO` level to provide better visibility during long-running downloads.
+
+## [0.41.0] - 2026-03-20
+
+### Added
+
+- **AI Analyst Infrastructure Fallbacks**: Enabled analysis for satellites, towers, RF sites, and cables without track data by synthesizing a single-waypoint history from their static locations.
+- **FCC High-Fidelity Data Enrichment**: Integrated three separate FCC datasets to populate previously missing `owner`, `height`, and `ground elevation` fields for over 195,000 antenna structures.
+- **Immediate Sync support**: Added support for `POLL_FCC_START_HOUR=-1` to trigger immediate data refreshes during deployment or configuration.
+
+### Changed
+
+- **Docker Stack Harmonization**: Standardized all Docker service, container, network, and volume names with a persistent `sovereign-` prefix for simplified CLI management and resource tracking.
+- **Frontend pnpm Standardization**: Formally adopted `pnpm` as the sole package manager for the React HUD, removing redundant `package-lock.json` files and improving build parity.
+- **Environment Template Synchronization**: Updated `.env.example` to include missing variables for PostgreSQL database names and poll-timing for all ingestion services.
+
+### Fixed
+
+- **FCC Identity Persistence**: Switched the `infra_poller` join logic to use the Unique System Identifier (USI), resolving registration mapping inconsistencies across the FCC ASR schema.
+
+## [0.40.1] - 2026-03-20
+
+### Added
+
+- **MCP Readiness Health Check**: Added `tools/mcp-language-server/check.sh` to verify host prerequisites (`bash`, Node/npm, `typescript-language-server`, `pyright-langserver`), pinned bridge binary presence, and Graph-it-Live entrypoint discovery with explicit remediation steps.
+- **MCP Agent Efficiency Playbook**: Added `agent_docs/mcp-agent-playbook.md` with a token-efficient tool selection order (symbol tools first, file/dependency second, impact graph third, broad search last).
+
+### Changed
+
+- **MCP Runtime Wiring (Portability Pass)**:
+  - Standardized `.mcp.json` to wrapper-based startup for `graph-it-live`, `pyright`, and `tsserver`.
+  - Added `tools/mcp-language-server/run-graph-it-live.sh` for cross-host Graph-it-Live entrypoint resolution.
+  - Simplified `run-pyright.sh` and `run-tsserver.sh` to local pinned bridge execution with deterministic repo-root resolution and explicit missing-binary guidance.
+- **Verification Guidance Consolidation**:
+  - Added a shared Verification Decision Gate in `AGENTS.md` and `CLAUDE.md` clarifying host-first inner-loop checks versus Docker-required parity checks.
+  - Updated `Documentation/Development.md` MCP setup guidance to align with universal `bash` + wrapper workflow and readiness checks.
+
+### Fixed
+
+- **FCC Tower Interaction Semantics**:
+  - Corrected tower hover/click normalization so FCC towers are no longer treated as generic undersea infrastructure.
+  - Added dedicated tower tooltip/sidebar rendering paths with orange visual identity and FCC metadata (`fcc_id`, owner, tower type, status, height, elevation).
+  - Preserved existing undersea cable and outage behavior while clearing tower hovers correctly as infrastructure-derived entities.
+
 ## [0.40.0] - 2026-03-20
 
 ### Added
