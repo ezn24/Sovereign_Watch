@@ -33,6 +33,8 @@ import asyncio
 import logging
 import math
 import os
+import time
+from datetime import datetime, UTC
 
 import httpx
 import zeep
@@ -72,6 +74,9 @@ class RadioReferenceSource:
         self.redis_client  = redis_client
         self.topic         = topic
         self.interval_sec  = fetch_interval_h * 3600
+        # UTC hour (0-23) at which the weekly RadioReference sync is allowed to run.
+        # Defaults to 4 AM UTC — offset from FCC (3 AM) to spread heavy fetches.
+        self.fetch_hour    = int(os.getenv("RF_RR_FETCH_HOUR", "4"))
 
         self.app_key  = os.getenv("RADIOREF_APP_KEY", "")
         self.username = os.getenv("RADIOREF_USERNAME", "")
@@ -107,9 +112,6 @@ class RadioReferenceSource:
             try:
                 # Check for last-fetch timestamp in Redis to avoid over-fetching on restarts
                 last_fetch = await self.redis_client.get("rf_pulse:radioref:last_fetch")
-                now = asyncio.get_event_loop().time() # Using event loop time for consistency
-                # Wait, Redis uses real time, let's use time.time()
-                import time
                 now = time.time()
 
                 if last_fetch:
@@ -123,6 +125,16 @@ class RadioReferenceSource:
                         )
                         await asyncio.sleep(wait_sec)
                         continue
+
+                current_hour = datetime.now(UTC).hour
+                if current_hour != self.fetch_hour:
+                    logger.info(
+                        "RadioReference: sync due but deferring to %02d:00 UTC "
+                        "(currently %02d:00 UTC) to avoid peak-hour contention.",
+                        self.fetch_hour, current_hour,
+                    )
+                    await asyncio.sleep(3600)  # re-check in 1 hour
+                    continue
 
                 await self._fetch_and_publish()
                 await self.redis_client.set(
