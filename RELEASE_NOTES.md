@@ -1,4 +1,4 @@
-# Release - v0.42.1 - Tactical Mapping & Filtering Refinements
+# Release - v0.42.2 - Tactical Mapping & Filtering Refinements
 
 ## Summary
 

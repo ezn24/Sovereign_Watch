@@ -1,11 +1,21 @@
+## [0.42.2] - 2026-03-21
+
+### Changed
+
+- **RF Mapping Refinement**: Removed clustering logic for RF sites, ensuring all sites render as individual points in both 2D and 3D views for maximum tactical granularity.
+- **Global Network Layer Integration**: Synchronized the "FCC TOWERS" layer with the Global Network master toggle, allowing users to toggle cables, outages, and towers with a single click in the sidebar or header.
+
+### Fixed
+
+- **RF Service Filter Logic**: Resolved a bug where disabling all RF service sub-filters (Ham, NOAA, PSB) would default to displaying all repeaters; the layer now correctly clears when no filters are selected.
+- **Tower Rendering Alignment**: Standardized `ScatterplotLayer` formatting in `buildTowerLayer.ts` to ensure consistent depth-testing and pickable properties.
+
 ## [0.42.1] - 2026-03-21
 
 ### Changed
 
 - **Roadmap & Backlog Modernization**: Integrated strategic research findings for GDELT (Global Database of Events, Language, and Tone), SIGINT Jamming (ADS-B integrity analysis), and Space Weather (NOAA SWPC) into the technical roadmap.
 - **Documentation Pruning**: Performed a massive cleanup of obsolete `agent_docs/tasks/archive/` files (over 17k lines removed) to reduce repository clutter and improve agent token efficiency.
-- **RF Mapping Refinement**: Removed clustering logic for RF sites, ensuring all sites render as individual points in both 2D and 3D views for maximum tactical granularity.
-- **Global Network Layer Integration**: Synchronized the "FCC TOWERS" layer with the Global Network master toggle, allowing users to toggle cables, outages, and towers with a single click in the sidebar or header.
 - **Strategic Features Added to Backlog**:
   - GDELT Events Pulse (GeoJSON news mapping).
   - SIGINT Jamming Pipeline (NIC/NACp inference).
@@ -15,8 +25,6 @@
 
 ### Fixed
 
-- **RF Service Filter Logic**: Resolved a bug where disabling all RF service sub-filters (Ham, NOAA, PSB) would default to displaying all repeaters; the layer now correctly clears when no filters are selected.
-- **Tower Rendering Alignment**: Standardized `ScatterplotLayer` formatting in `buildTowerLayer.ts` to ensure consistent depth-testing and pickable properties.
 - **Roadmap Consistency**: Updated `COMPLETED_ARCHIVE.md` status for FCC Tower datasets and standardized task IDs across documentation.
 
 ## [0.42.0] - 2026-03-21
