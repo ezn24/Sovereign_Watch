@@ -65,25 +65,27 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
               <button
                 onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  const isCurrentlyOn = filters.showCables !== false;
-                  // If turning ON: only turn on cables (landing stations default to OFF)
-                  // If turning OFF: turn off both for clean map state
+                  const isCurrentlyOn = filters.showCables !== false || filters.showTowers === true;
+                  // If turning ON: turn on cables and towers
+                  // If turning OFF: turn off all for clean map state
                   if (isCurrentlyOn) {
                     onFilterChange('showCables', false);
                     onFilterChange('showLandingStations', false);
+                    onFilterChange('showTowers', false);
                   } else {
                     onFilterChange('showCables', true);
+                    onFilterChange('showTowers', true);
                   }
                 }}
-                className={`p-1 rounded transition-colors focus-visible:ring-1 focus-visible:ring-hud-green outline-none ${filters.showCables !== false
+                className={`p-1 rounded transition-colors focus-visible:ring-1 focus-visible:ring-hud-green outline-none ${filters.showCables !== false || filters.showTowers === true
                   ? 'bg-cyan-400/20 text-cyan-400 border border-cyan-400/30'
                   : 'text-white/30 hover:text-white/70 hover:bg-white/5 border border-transparent'
                   }`}
-                title="Toggle Submarine Cables"
-                aria-label="Toggle Submarine Cables"
-                aria-pressed={filters.showCables !== false}
+                title="Toggle Global Network"
+                aria-label="Toggle Global Network"
+                aria-pressed={filters.showCables !== false || filters.showTowers === true}
               >
-                <Network size={12} className={filters.showCables !== false ? 'animate-pulse' : ''} aria-hidden="true" />
+                <Network size={12} className={filters.showCables !== false || filters.showTowers === true ? 'animate-pulse' : ''} aria-hidden="true" />
               </button>
             </div>
           )}
@@ -223,7 +225,7 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
 
           {/* Infra Filter */}
           <div className="flex flex-col gap-1">
-            <div className={`group flex items-center justify-between rounded border transition-all ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true ? 'border-cyan-400/30 bg-cyan-400/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}>
+            <div className={`group flex items-center justify-between rounded border transition-all ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true || filters.showTowers === true ? 'border-cyan-400/30 bg-cyan-400/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}>
               <button
                 className="flex flex-1 items-center justify-between p-2 cursor-pointer text-left focus-visible:ring-1 focus-visible:ring-hud-green outline-none w-full"
                 onClick={(e) => {
@@ -233,7 +235,7 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
                 aria-expanded={infraExpanded}
               >
                 <div className="flex items-center gap-3">
-                  <Network size={14} className={filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true ? 'text-cyan-400' : 'text-white/20'} aria-hidden="true" />
+                  <Network size={14} className={filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true || filters.showTowers === true ? 'text-cyan-400' : 'text-white/20'} aria-hidden="true" />
                   <div className="flex flex-col">
                     <span className="text-mono-sm font-bold tracking-wider uppercase text-white/90">GLOBAL NETWORK</span>
                     <span className="text-[9px] font-mono text-cyan-400/60">Undersea & Terrestrial Infra</span>
@@ -248,22 +250,24 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
                 className="border-l border-white/10 p-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const isAnyOn = filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true;
+                  const isAnyOn = filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true || filters.showTowers === true;
                   onFilterChange('showCables', !isAnyOn);
                   onFilterChange('showLandingStations', false); // Default to off on master toggle
                   onFilterChange('showOutages', !isAnyOn);
+                  onFilterChange('showTowers', !isAnyOn);
                 }}
                 aria-label="Toggle Global Network"
-                aria-pressed={filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true}
+                aria-pressed={filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true || filters.showTowers === true}
               >
-                <input type="checkbox" className="sr-only" checked={filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true} onChange={() => {
-                  const isAnyOn = filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true;
+                <input type="checkbox" className="sr-only" checked={filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true || filters.showTowers === true} onChange={() => {
+                  const isAnyOn = filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true || filters.showTowers === true;
                   onFilterChange('showCables', !isAnyOn);
                   onFilterChange('showLandingStations', false); // Default to off on master toggle
                   onFilterChange('showOutages', !isAnyOn);
+                  onFilterChange('showTowers', !isAnyOn);
                 }} tabIndex={-1} />
-                <div className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true ? 'bg-cyan-400' : 'bg-white/10 hover:bg-white/20'}`}>
-                  <div className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true ? 'left-3.5' : 'left-0.5'}`} />
+                <div className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true || filters.showTowers === true ? 'bg-cyan-400' : 'bg-white/10 hover:bg-white/20'}`}>
+                  <div className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${filters.showCables !== false || filters.showLandingStations !== false || filters.showOutages === true || filters.showTowers === true ? 'left-3.5' : 'left-0.5'}`} />
                 </div>
               </button>
             </div>

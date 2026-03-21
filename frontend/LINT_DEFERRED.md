@@ -75,7 +75,7 @@ Branch where cleanup was done: `claude/cleanup-frontend-linting-X3Rbe`
 
 | Line | Symbol | Notes |
 |------|--------|-------|
-| 2 | `RFService` | Imported from `../types` but not used anywhere in this file. Remove the import. Simple one-liner fix. |
+| 2 | `RFService` | **Resolved on 2026-03-21.** Removed the unused import in `frontend/src/hooks/useRFSites.ts`. |
 
 ### `src/layers/OrbitalLayer.tsx`
 

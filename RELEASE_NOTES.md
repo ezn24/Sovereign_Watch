@@ -1,27 +1,30 @@
-# Release - v0.42.1 - Strategic Update
+# Release - v0.42.1 - Tactical Mapping & Filtering Refinements
 
 ## Summary
 
-This update marks a critical transition from core track ingestion toward high-level analytical utility. Following a deep-dive research phase across GDELT and External SIGINT datasets, we are formally prioritizing features that provide global situational context.
+This hotfix reinforces the tactical reliability of the RF and Infrastructure layers. We have removed data-obscuring clustering for radio sites and synchronized the filtering behavior across the Global Network category (Towers, Cables, Outages). These changes ensure that the "master toggle" consistently controls all related infrastructure and that RF nodes correctly vanish when all service-specific sub-filters are disabled.
 
-This release also performs a "Repo Hygiene" pass, pruning over 17,000 lines of obsolete documentation in `agent_docs` to ensure token-efficient AI operations and faster workspace loading on tactical edge hardware.
+This release also includes a massive "Repo Hygiene" pass, pruning over 17,000 lines of obsolete task logs to optimize repository performance.
 
-## Key Features (Backlog)
+## Key Features
 
-*   **GDELT Intelligence Pulse**: Integrated planned support for the Global Database of Events, Language, and Tone (15-min interval mapping).
-*   **SIGINT Jamming Index (ADS-B)**: Strategic roadmap now includes inference models for GPS jamming detection via ADS-B integrity categories (NIC/NACp).
-*   **Environmental Layer**: Added NOAA Space Weather (Kp-index & Auroral Oval) to the operational backlog.
-*   **Multi-INT HUD Suite**: Roadmap now includes integrated widgets for Polymarket (predictive OSINT), Live News Grids, and Global Threat Levels (DEFCON).
+*   **RF High-Granularity Mapping**: Removed clustering for RF Nodes. All repeater sites are now rendered as individual points across all zoom levels for maximum tactical accuracy.
+*   **Unified Global Network Toggle**: Synchronized "FCC TOWERS" with the master category toggle. Turning "GLOBAL NETWORK" on or off now affects towers, cables, and outages simultaneously.
+*   **Intelligent RF Filtering**: Fixed a bug where disabling all individual service categories (Ham, NOAA, Safety) would leak all sites to the map; nodes now correctly clear when no services are selected.
+*   **Roadmap Modernization**: Integrated strategic research for GDELT, SIGINT Jamming detection, and Space Weather into the formal project backlog.
 
 ## Technical Details
 
-*   **Pruning**: Cleaned up historical `agent_docs/tasks/archive/` directory to remove hundreds of obsolete markdown task logs.
-*   **Roadmap**: Updated `ROADMAP.md` and `COMPLETED_ARCHIVE.md` to ensure ID-level consistency and status accuracy.
+*   **Frontend**: Updated `buildRFLayers.ts`, `useRFSites.ts`, and `SystemStatus.tsx` to handle synchronized filtering and individual node rendering.
+*   **Hygiene**: Deleted `agent_docs/tasks/archive/` comprising ~17.5k lines of historical logs to restore token efficiency and reduce workspace load times.
+*   **Formatting**: Standardized `ScatterplotLayer` configuration and syntax in `buildTowerLayer.ts`.
 
 ## Upgrade Instructions
 
-No code changes in this version; document-only update to roadmap and repository metadata.
+Standard hot-reload deployment. Ensure you pull the latest `frontend/package.json` to track the patch version.
 
 ```bash
 git pull origin main
+docker compose build frontend
+docker compose up -d
 ```

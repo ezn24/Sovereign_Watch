@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, MutableRefObject } from "react";
-import type { RFSite, RFService, RFMode } from "../types";
+import type { RFSite, RFMode } from "../types";
 
 const API_BASE = "/api/rf/sites";
 const DEFAULT_RADIUS_NM = 150;
@@ -26,7 +26,11 @@ export function useRFSites(
   const lastFetchRef = useRef<{ lat: number; lon: number; radiusNm?: number; servicesStr?: string; modeStr?: string; emcommStr?: string } | null>(null);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || (services && services.length === 0)) {
+      rfSitesRef.current = [];
+      lastFetchRef.current = null;
+      return;
+    }
 
     const modeStr = modes && modes.length > 0 ? modes.sort().join(",") : "all";
     const servicesStr = services && services.length > 0 ? services.sort().join(",") : "all";
@@ -112,13 +116,7 @@ export function useRFSites(
     };
   }, [enabled, missionLat, missionLon, radiusNm, services, modes, emcomm_only]);
 
-  // Clear data when layer is disabled
-  useEffect(() => {
-    if (!enabled) {
-      rfSitesRef.current = [];
-      lastFetchRef.current = null;
-    }
-  }, [enabled]);
+
 
   return { rfSitesRef, loading };
 }
