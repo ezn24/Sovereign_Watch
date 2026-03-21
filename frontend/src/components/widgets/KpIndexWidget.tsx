@@ -13,8 +13,8 @@
  * Polls /api/space-weather/status every 5 minutes.
  */
 
-import React, { useEffect, useRef, useState } from "react";
-import { SpaceWeatherStatus } from "../types";
+import { useEffect, useRef, useState } from "react";
+import { SpaceWeatherStatus } from "../../types";
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 min
 
@@ -26,13 +26,7 @@ function kpColor(kp: number | null): string {
   return "#22c55e";               // green-500
 }
 
-function kpBg(kp: number | null): string {
-  if (kp === null) return "rgba(40,40,40,0.85)";
-  if (kp >= 7)  return "rgba(127,29,29,0.88)";
-  if (kp >= 5)  return "rgba(92,45,5,0.88)";
-  if (kp >= 4)  return "rgba(19,78,74,0.88)";
-  return "rgba(20,83,45,0.88)";
-}
+
 
 interface Props {
   /** If false, widget is hidden */
@@ -72,64 +66,57 @@ export function KpIndexWidget({ visible = true }: Props) {
   const aurora = status?.aurora_active ?? false;
 
   const color = kpColor(kp);
-  const bg = kpBg(kp);
 
   return (
     <div
+      className="flex items-center gap-2.5 px-3 py-1 bg-black/30 backdrop-blur-sm border border-white/5 rounded-full shadow-inner transition-all hover:bg-black/40 group"
       style={{
-        background: bg,
-        border: `1px solid ${color}55`,
-        borderRadius: 6,
-        padding: "5px 10px",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
         fontFamily: "monospace",
-        fontSize: 11,
-        letterSpacing: "0.06em",
+        fontSize: 10,
+        letterSpacing: "0.08em",
         userSelect: "none",
         cursor: "default",
-        minWidth: 130,
+        minWidth: 140,
       }}
-      title={`GPS degradation risk: ${risk.toUpperCase()}${aurora ? " | Aurora active" : ""}`}
+      title={`NOAA Kp-index: ${kp?.toFixed(1) || "--"} | GPS Risk: ${risk.toUpperCase()}${aurora ? " | Aurora active" : ""}`}
     >
       {/* Kp indicator dot */}
-      <span
+      <div
+        className="w-2 h-2 rounded-full shadow-lg transition-transform duration-500 group-hover:scale-110"
         style={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
           background: color,
-          flexShrink: 0,
-          boxShadow: `0 0 6px ${color}`,
+          boxShadow: `0 0 10px ${color}`,
         }}
       />
-
+|
       {/* Main label */}
-      <span style={{ color: "#e5e7eb" }}>
-        Kp{" "}
-        <span style={{ color, fontWeight: 700 }}>
+      <div className="flex items-center gap-2">
+        <span className="text-[9px] font-black text-white/40 uppercase">Kp</span>
+        <span 
+          className="text-xs font-bold tabular-nums"
+          style={{ 
+            color,
+            textShadow: `0 0 8px ${color}66`
+          }}
+        >
           {kp !== null ? kp.toFixed(1) : "--"}
         </span>
-        {"  "}
-        <span style={{ color: "#9ca3af", fontSize: 10 }}>
+        <div className="w-[1px] h-3 bg-white/10" />
+        <span className="text-[9px] font-bold text-white/60 uppercase">
           {level.toUpperCase()}
         </span>
-      </span>
+      </div>
 
       {/* Aurora indicator */}
       {aurora && (
-        <span
-          style={{
-            color: "#34d399",
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-          }}
-          title="Aurora active"
-        >
-          ◈
-        </span>
+        <div className="ml-auto">
+          <span
+            className="text-[10px] text-purple-400 animate-pulse drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]"
+            title="Aurora active"
+          >
+            ◈
+          </span>
+        </div>
       )}
     </div>
   );

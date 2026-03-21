@@ -252,6 +252,7 @@ export interface MapFilters {
   showGovernment: boolean;
   showCommercial: boolean;
   showPrivate: boolean;
+  showAurora: boolean;
   [key: string]: boolean;
 }
 

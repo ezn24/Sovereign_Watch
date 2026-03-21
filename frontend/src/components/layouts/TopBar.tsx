@@ -21,6 +21,7 @@ import { AlertsWidget } from '../widgets/AlertsWidget';
 import { AIEngineWidget } from '../widgets/AIEngineWidget';
 import { SystemSettingsWidget } from '../widgets/SystemSettingsWidget';
 import { SystemHealthWidget } from '../widgets/SystemHealthWidget';
+import { KpIndexWidget } from '../widgets/KpIndexWidget';
 
 interface TopBarProps {
     filters: Record<string, boolean | string | number | string[]>;
@@ -184,6 +185,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                         <span className={viewMode === 'DASHBOARD' ? 'block drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]' : 'hidden'}>DASHBOARD</span>
                     </button>
                 </div>
+                {/* Kp Index Space Weather Monitor */}
+                <KpIndexWidget />
             </div>
 
             {/* Right Side - Status and Time */}

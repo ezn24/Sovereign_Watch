@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, ShieldCheck, ChevronDown, ChevronUp, Radio, Network, ChevronRight, Layers } from 'lucide-react';
+import { Database, ShieldCheck, ChevronDown, ChevronUp, Radio, Network, ChevronRight, Layers, Globe } from 'lucide-react';
 import { MapFilters } from '../../types';
 
 interface SystemStatusProps {
@@ -12,6 +12,7 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
   const [showLayers, setShowLayers] = useState(false);
   const [infraExpanded, setInfraExpanded] = useState(false);
   const [rfExpanded, setRfExpanded] = useState(false);
+  const [envExpanded, setEnvExpanded] = useState(false);
   const [integrations, setIntegrations] = useState<{ repeaterbook_enabled?: boolean; radioref_enabled?: boolean } | null>(null);
 
   React.useEffect(() => {
@@ -86,6 +87,21 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
                 aria-pressed={filters.showCables !== false || filters.showTowers === true}
               >
                 <Network size={12} className={filters.showCables !== false || filters.showTowers === true ? 'animate-pulse' : ''} aria-hidden="true" />
+              </button>
+              <button
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onFilterChange('showAurora', !filters.showAurora);
+                }}
+                className={`p-1 rounded transition-colors focus-visible:ring-1 focus-visible:ring-purple-400 outline-none ${filters.showAurora
+                  ? 'bg-purple-400/20 text-purple-400 border border-purple-400/30'
+                  : 'text-white/30 hover:text-white/70 hover:bg-white/5 border border-transparent'
+                  }`}
+                title="Toggle Environmental Forecast"
+                aria-label="Toggle Environmental Forecast"
+                aria-pressed={filters.showAurora}
+              >
+                <Globe size={12} className={filters.showAurora ? 'animate-pulse' : ''} aria-hidden="true" />
               </button>
             </div>
           )}
@@ -334,6 +350,64 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
               </div>
             )}
           </div>
+
+          {/* Environmental Filter */}
+          <div className="flex flex-col gap-1">
+            <div className={`group flex items-center justify-between rounded border transition-all ${filters.showAurora ? 'border-purple-400/30 bg-purple-400/10' : 'border-white/5 bg-white/5 hover:bg-white/10'}`}>
+              <button
+                className="flex flex-1 items-center justify-between p-2 cursor-pointer text-left focus-visible:ring-1 focus-visible:ring-hud-green outline-none w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEnvExpanded(!envExpanded);
+                }}
+                aria-expanded={envExpanded}
+              >
+                <div className="flex items-center gap-3">
+                  <Globe size={14} className={filters.showAurora ? 'text-purple-400 animate-pulse' : 'text-white/20'} aria-hidden="true" />
+                  <div className="flex flex-col">
+                    <span className="text-mono-sm font-bold tracking-wider uppercase text-white/90">Environmental</span>
+                    <span className="text-[9px] font-mono text-purple-400/60">Aurora & Space Weather</span>
+                  </div>
+                </div>
+                <div className="w-4 flex justify-center transition-transform duration-200 shrink-0" style={{ transform: envExpanded ? 'rotate(90deg)' : 'none' }}>
+                  <ChevronRight size={14} className="text-white/40" aria-hidden="true" />
+                </div>
+              </button>
+
+              <button
+                className="border-l border-white/10 p-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFilterChange('showAurora', !filters.showAurora);
+                }}
+                aria-label="Toggle Environmental Layers"
+                aria-pressed={filters.showAurora}
+              >
+                <input type="checkbox" className="sr-only" checked={filters.showAurora || false} onChange={() => onFilterChange('showAurora', !filters.showAurora)} tabIndex={-1} />
+                <div className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showAurora ? 'bg-purple-400' : 'bg-white/10 hover:bg-white/20'}`}>
+                  <div className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${filters.showAurora ? 'left-3.5' : 'left-0.5'}`} />
+                </div>
+              </button>
+            </div>
+
+            {/* Sub-filters for Environmental */}
+            {envExpanded && (
+              <div className="flex flex-col gap-1 px-1 opacity-90 pl-3">
+                <div className="flex items-center gap-2 mb-1 mt-1">
+                  <span className="text-[9px] font-bold text-white/40 tracking-wider uppercase">Layers</span>
+                </div>
+                {/* Aurora Forecast */}
+                <label className={`group flex cursor-pointer items-center justify-between rounded border p-1 transition-all ${filters.showAurora ? 'border-purple-400/20 bg-purple-400/5' : 'border-white/5 bg-white/5'}`}>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px]">✨</span>
+                    <span className={`text-[9px] font-bold tracking-wide ${filters.showAurora ? 'text-purple-400/80' : 'text-white/30'}`}>AURORA FORECAST</span>
+                  </div>
+                  <input type="checkbox" className="sr-only" checked={filters.showAurora || false} onChange={(e) => onFilterChange('showAurora', e.target.checked)} />
+                  <div className={`h-2 w-4 shrink-0 cursor-pointer rounded-full transition-colors relative ${filters.showAurora ? 'bg-purple-400/80' : 'bg-white/10'}`}><div className={`absolute top-0.5 h-1 w-1 rounded-full bg-black transition-all ${filters.showAurora ? 'left-2.5' : 'left-0.5'}`} /></div>
+                </label>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -390,5 +464,5 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({ trackCounts, filters
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

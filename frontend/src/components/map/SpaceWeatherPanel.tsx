@@ -12,8 +12,8 @@
  * Polls /api/space-weather/kp every 5 minutes.
  */
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { KpHistoryPoint, SpaceWeatherStatus } from "../types";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { KpHistoryPoint, SpaceWeatherStatus } from "../../types";
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -104,7 +104,6 @@ function KpGauge({ kp }: { kp: number | null }) {
   const CX = 48;
   const CY = 48;
   const strokeW = 7;
-  const circumference = Math.PI * R; // half circle arc length
   const fraction = kp !== null ? Math.min(kp / 9, 1) : 0;
   const color = kp !== null ? stormColor(
     kp >= 7 ? "G3" : kp >= 5 ? "G1" : kp >= 4 ? "active" : kp >= 3 ? "unsettled" : "quiet"
@@ -120,7 +119,6 @@ function KpGauge({ kp }: { kp: number | null }) {
   const angle = Math.PI * fraction; // 0 → π
   const arcX = CX - R * Math.cos(angle);
   const arcY = CY - R * Math.sin(angle);
-  const largeArc = angle > Math.PI / 2 ? 1 : 0;
 
   return (
     <svg width={96} height={54} style={{ overflow: "visible" }}>
@@ -135,7 +133,7 @@ function KpGauge({ kp }: { kp: number | null }) {
       {/* Filled arc */}
       {kp !== null && kp > 0 && (
         <path
-          d={`M ${startX} ${startY} A ${R} ${R} 0 ${largeArc} 1 ${arcX} ${arcY}`}
+          d={`M ${startX} ${startY} A ${R} ${R} 0 0 1 ${arcX} ${arcY}`}
           fill="none"
           stroke={color}
           strokeWidth={strokeW}
@@ -218,9 +216,11 @@ export function SpaceWeatherPanel({ visible = true }: Props) {
 
   useEffect(() => {
     if (!visible) return;
-    fetchData();
+    // Short delay to avoid cascading renders during mount
+    const initialTimer = setTimeout(fetchData, 50);
     timerRef.current = setInterval(fetchData, POLL_INTERVAL_MS);
     return () => {
+      clearTimeout(initialTimer);
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [visible, fetchData]);

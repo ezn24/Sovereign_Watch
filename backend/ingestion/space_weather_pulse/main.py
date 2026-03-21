@@ -40,7 +40,7 @@ KP_INTERVAL_S = int(os.getenv("KP_INTERVAL_S", "900"))           # 15 min
 
 # NOAA SWPC endpoints — all public, no auth required
 KP_1M_URL = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
-AURORA_URL = "https://services.swpc.noaa.gov/products/aurora-1-hour-forecast.json"
+AURORA_URL = "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json"
 
 STORM_LEVELS = {
     0: "quiet", 1: "quiet", 2: "quiet",
@@ -61,21 +61,37 @@ def fetch_kp() -> list[dict]:
         resp.raise_for_status()
         data = resp.json()
         records = []
+
+        # planetary_k_index_1m.json is a list of dicts: 
+        # [{"time_tag": "...", "kp_index": 7, "estimated_kp": 7.0, "kp": "7Z"}, ...]
         for row in data:
-            # Format: [time_tag, kp, kp_fraction, ...] or dict
-            if isinstance(row, list):
-                time_tag = row[0]
-                kp = float(row[1]) if row[1] is not None else None
-                kp_frac = float(row[2]) if len(row) > 2 and row[2] is not None else kp
-            elif isinstance(row, dict):
-                time_tag = row.get("time_tag") or row.get("time")
-                kp = float(row.get("kp_index", row.get("kp", 0)) or 0)
-                kp_frac = float(row.get("kp", kp) or kp)
-            else:
+            if not isinstance(row, dict):
                 continue
-            if kp is None:
+                
+            time_tag = row.get("time_tag") or row.get("time")
+            if not time_tag:
                 continue
-            records.append({"time": time_tag, "kp": kp, "kp_fraction": kp_frac})
+
+            try:
+                # Prefer kp_index or estimated_kp (both are numbers)
+                # kp field is often a string like "7Z" which causes float errors
+                kp_val = row.get("kp_index")
+                if kp_val is None:
+                    kp_val = row.get("estimated_kp", 0)
+                
+                # If both are None/missing, try to parse 'kp' string but strip suffixes
+                if kp_val is None or isinstance(kp_val, str):
+                    raw_kp = str(row.get("kp", "0"))
+                    # Strip common NOAA suffixes (Z, P, M)
+                    numeric_part = "".join(c for c in raw_kp if c.isdigit() or c == '.')
+                    kp_val = float(numeric_part or 0)
+
+                kp_frac = float(row.get("estimated_kp", kp_val) or kp_val)
+                records.append({"time": time_tag, "kp": float(kp_val), "kp_fraction": kp_frac})
+            except (TypeError, ValueError) as ve:
+                logger.debug("Skipping invalid Kp row: %s", ve)
+                continue
+
         return records
     except Exception as e:
         logger.error("Failed to fetch Kp-index: %s", e)
@@ -89,27 +105,35 @@ def fetch_aurora() -> dict | None:
                             headers={"User-Agent": "SovereignWatch/1.0 (SpaceWeatherPulse)"})
         resp.raise_for_status()
         data = resp.json()
-        # NOAA returns an array: first element is header row, rest are [lon, lat, aurora_level]
-        # We need to reshape this into a proper GeoJSON for the frontend
-        if not isinstance(data, list) or len(data) < 2:
+        
+        # ovation_aurora_latest.json format:
+        # { "Observation Time": "...", "coordinates": [[lon, lat, intensity], ...] }
+        
+        coords = []
+        if isinstance(data, dict):
+            coords = data.get("coordinates", [])
+        elif isinstance(data, list):
+            # Fallback for old format if it ever reappears
+            coords = data
+
+        if not coords:
+            logger.warning("No aurora coordinates found in response")
             return None
 
-        # Check if it's already a GeoJSON FeatureCollection
-        if isinstance(data, dict) and data.get("type") == "FeatureCollection":
-            return data
-
-        # NOAA aurora format: array of arrays [lon, lat, aurora_%]
-        # Build a GeoJSON FeatureCollection of points with aurora intensity
         features = []
-        for row in data:
+        # Build a GeoJSON FeatureCollection of points with aurora intensity
+        for row in coords:
             if not isinstance(row, list) or len(row) < 3:
                 continue
             try:
                 lon = float(row[0])
                 lat = float(row[1])
                 intensity = float(row[2]) if row[2] is not None else 0.0
-                if intensity <= 0:
+                
+                # Performance: Only include points with meaningful intensity
+                if intensity < 5: 
                     continue
+                    
                 features.append({
                     "type": "Feature",
                     "geometry": {"type": "Point", "coordinates": [lon, lat]},
@@ -121,7 +145,10 @@ def fetch_aurora() -> dict | None:
         return {
             "type": "FeatureCollection",
             "features": features,
-            "metadata": {"fetched_at": datetime.now(UTC).isoformat()},
+            "metadata": {
+                "fetched_at": datetime.now(UTC).isoformat(),
+                "observation_time": data.get("Observation Time") if isinstance(data, dict) else None
+            },
         }
     except Exception as e:
         logger.error("Failed to fetch aurora GeoJSON: %s", e)
@@ -211,8 +238,10 @@ def main():
 
         # --- Kp-index poll ---
         if now - last_kp_fetch >= KP_INTERVAL_S:
+            logger.info("Polling Kp-index...")
             records = fetch_kp()
             if records:
+                logger.info(f"Fetched {len(records)} Kp records")
                 store_kp_redis(redis_client, records)
                 # Only write records not yet seen
                 new_records = [r for r in records if r["time"] not in seen_kp_times]
@@ -223,13 +252,20 @@ def main():
                     # Keep seen set bounded (1 week of 1-min samples = ~10 080 entries)
                     if len(seen_kp_times) > 15_000:
                         seen_kp_times.clear()
+                else:
+                    logger.debug("No new Kp records to persist")
+            else:
+                logger.warning("No Kp records returned from poll")
             last_kp_fetch = now
 
         # --- Aurora poll ---
         if now - last_aurora_fetch >= AURORA_INTERVAL_S:
+            logger.info("Polling Aurora GeoJSON...")
             geojson = fetch_aurora()
             if geojson:
                 store_aurora_redis(redis_client, geojson)
+            else:
+                logger.warning("No aurora GeoJSON returned from poll")
             last_aurora_fetch = now
 
         time.sleep(30)

@@ -8,16 +8,21 @@ interface BoundingBox {
     maxLon: number;
 }
 
-export const useTowers = (bounds: BoundingBox | null) => {
+export const useTowers = (bounds: BoundingBox | null, enabled: boolean = false) => {
     const [towers, setTowers] = useState<Tower[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [lastBounds, setLastBounds] = useState<string>('');
 
     useEffect(() => {
-        if (!bounds) {
-            setTowers([]);
+        if (!enabled || !bounds) {
+            if (towers.length > 0) setTowers([]);
+            setLastBounds('');
             return;
         }
+
+        const boundsKey = `${bounds.minLat},${bounds.minLon},${bounds.maxLat},${bounds.maxLon}`;
+        if (boundsKey === lastBounds) return;
 
         const fetchTowers = async () => {
             setIsLoading(true);
@@ -51,7 +56,7 @@ export const useTowers = (bounds: BoundingBox | null) => {
 
         const timer = setTimeout(fetchTowers, 500); // Debounce API calls
         return () => clearTimeout(timer);
-    }, [bounds]);
+    }, [bounds, enabled, lastBounds, towers.length]);
 
     return { towers, isLoading, error };
 };

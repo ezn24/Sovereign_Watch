@@ -1,22 +1,38 @@
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { ChevronDown, ChevronUp, Globe, Minus, Plus, RotateCcw } from "lucide-react";
+import type { FeatureCollection } from "geojson";
+import {
+  ChevronDown,
+  ChevronUp,
+  Globe,
+  Minus,
+  Plus,
+  RotateCcw,
+} from "lucide-react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import React, {
-    lazy,
-    MutableRefObject,
-    Suspense,
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
+  lazy,
+  MutableRefObject,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
-import type { FeatureCollection } from "geojson";
 import type { MapRef } from "react-map-gl/maplibre";
 import { useAnimationLoop } from "../../hooks/useAnimationLoop";
 import { useMapCamera } from "../../hooks/useMapCamera";
-import { parseMissionHash, updateMissionHash } from "../../hooks/useMissionHash";
-import { CoTEntity, JS8Station, MissionLocation, RFSite, Tower } from "../../types";
+import {
+  parseMissionHash,
+  updateMissionHash,
+} from "../../hooks/useMissionHash";
+import {
+  CoTEntity,
+  JS8Station,
+  MissionLocation,
+  RFSite,
+  Tower,
+} from "../../types";
 import { getCompensatedCenter } from "../../utils/map/geoUtils";
 import { AltitudeLegend } from "./AltitudeLegend";
 import { MapContextMenu } from "./MapContextMenu";
@@ -25,7 +41,6 @@ import { RFLegend } from "./RFLegend";
 import { SaveLocationForm } from "./SaveLocationForm";
 import { SpeedLegend } from "./SpeedLegend";
 import { StarField } from "./StarField";
-import { KpIndexWidget } from "../KpIndexWidget";
 
 // Inline MapLibre style for ESRI World Imagery satellite tiles (no API key required)
 const SATELLITE_MAP_STYLE = {
@@ -42,51 +57,44 @@ const SATELLITE_MAP_STYLE = {
         "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
     },
   },
-  layers: [{ id: "satellite-layer", type: "raster" as const, source: "esri-satellite" }],
+  layers: [
+    {
+      id: "satellite-layer",
+      type: "raster" as const,
+      source: "esri-satellite",
+    },
+  ],
 };
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE =
+  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 // Pre-load both adapters so React doesn't re-suspend when toggling Globe mode.
 // react-map-gl v8 bakes the GL library into the entry point, so we lazy-load
 // the correct adapter rather than using the removed `mapLib` prop.
 const _mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
-const _enableMapbox = import.meta.env.VITE_ENABLE_MAPBOX !== 'false';
-const _isValidToken = !!_mapboxToken && _mapboxToken.startsWith('pk.');
+const _enableMapbox = import.meta.env.VITE_ENABLE_MAPBOX !== "false";
+const _isValidToken = !!_mapboxToken && _mapboxToken.startsWith("pk.");
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const MapboxAdapterLazy: React.ComponentType<any> = lazy(() => import("./MapboxAdapter"));
+const MapboxAdapterLazy: React.ComponentType<any> = lazy(
+  () => import("./MapboxAdapter"),
+);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const MapLibreAdapterLazy: React.ComponentType<any> = lazy(() => import("./MapLibreAdapter"));
+const MapLibreAdapterLazy: React.ComponentType<any> = lazy(
+  () => import("./MapLibreAdapter"),
+);
 
 // DeckGLOverlay is defined inside each map adapter (MapLibreAdapter / MapboxAdapter)
 // so that useControl is always called within the correct react-map-gl endpoint context.
 
 // Props for TacticalMap
 interface TacticalMapProps {
-  onCountsUpdate?: (counts: { air: number; sea: number; orbital: number }) => void;
-  filters?: {
-    showAir: boolean;
-    showSea: boolean;
-    showHelicopter?: boolean;
-    showMilitary?: boolean;
-    showGovernment?: boolean;
-    showCommercial?: boolean;
-    showPrivate?: boolean;
-    showDrone?: boolean;
-    showCargo?: boolean;
-    showTanker?: boolean;
-    showPassenger?: boolean;
-    showFishing?: boolean;
-    showSeaMilitary?: boolean;
-    showLawEnforcement?: boolean;
-    showSar?: boolean;
-    showTug?: boolean;
-    showPleasure?: boolean;
-    showHsc?: boolean;
-    showPilot?: boolean;
-    showSpecial?: boolean;
-    [key: string]: boolean | undefined;
-  };
+  onCountsUpdate?: (counts: {
+    air: number;
+    sea: number;
+    orbital: number;
+  }) => void;
+  filters?: import("../../types").MapFilters;
   onEvent?: (event: {
     type: "new" | "lost" | "alert";
     message: string;
@@ -109,7 +117,11 @@ interface TacticalMapProps {
   js8StationsRef?: MutableRefObject<Map<string, JS8Station>>;
   ownGridRef?: MutableRefObject<string>;
   rfSitesRef?: MutableRefObject<RFSite[]>;
-  kiwiNodeRef?: MutableRefObject<{ lat: number; lon: number; host: string } | null>;
+  kiwiNodeRef?: MutableRefObject<{
+    lat: number;
+    lon: number;
+    host: string;
+  } | null>;
   showRepeaters?: boolean;
   repeatersLoading?: boolean;
   // Shared Global State
@@ -117,7 +129,9 @@ interface TacticalMapProps {
   satellitesRef: MutableRefObject<Map<string, CoTEntity>>;
   knownUidsRef: MutableRefObject<Set<string>>;
   drStateRef: MutableRefObject<Map<string, import("../../types").DRState>>;
-  visualStateRef: MutableRefObject<Map<string, import("../../types").VisualState>>;
+  visualStateRef: MutableRefObject<
+    Map<string, import("../../types").VisualState>
+  >;
   prevCourseRef: MutableRefObject<Map<string, number>>;
   alertedEmergencyRef: MutableRefObject<Map<string, string>>;
   currentMissionRef: MutableRefObject<{
@@ -131,7 +145,14 @@ interface TacticalMapProps {
   outagesData: FeatureCollection | null;
   worldCountriesData: FeatureCollection | null;
   towersData?: Tower[];
-  onBoundsChange?: (bounds: { minLat: number; maxLat: number; minLon: number; maxLon: number } | null) => void;
+  onBoundsChange?: (
+    bounds: {
+      minLat: number;
+      maxLat: number;
+      minLon: number;
+      maxLon: number;
+    } | null,
+  ) => void;
   showTerminator?: boolean;
   /** Historical track segments from TrackHistoryPanel — rendered as a path layer */
   historySegments?: import("../../types").HistorySegment[];
@@ -193,7 +214,6 @@ export function TacticalMap({
   onBoundsChange,
   historySegments,
 }: TacticalMapProps) {
-
   // State for UI interactions
   const [hoveredEntity, setHoveredEntity] = useState<CoTEntity | null>(null);
   const [hoverPosition, setHoverPosition] = useState<{
@@ -211,30 +231,40 @@ export function TacticalMap({
   const handleHoveredInfra = useCallback((info: InfraPickInfo) => {
     const obj = info?.object || null;
     if (obj) {
-      let lat = 0, lon = 0;
+      let lat = 0,
+        lon = 0;
       if (info.coordinate) {
         [lon, lat] = info.coordinate;
       } else {
         const geom = obj.geometry;
-        if (geom.type === 'Point') {
+        if (geom.type === "Point") {
           [lon, lat] = geom.coordinates as [number, number];
-        } else if (geom.type === 'LineString') {
+        } else if (geom.type === "LineString") {
           [lon, lat] = (geom.coordinates as [number, number][])[0];
-        } else if (geom.type === 'Polygon') {
+        } else if (geom.type === "Polygon") {
           [lon, lat] = (geom.coordinates as [number, number][][])[0][0];
-        } else if (geom.type === 'MultiPolygon') {
+        } else if (geom.type === "MultiPolygon") {
           [lon, lat] = (geom.coordinates as [number, number][][][])[0][0][0];
         }
       }
 
       const props = obj.properties || {};
-      const isOutage = props.entity_type === 'outage' || props.severity !== undefined;
-      const isTower = obj.type === 'tower' || props.entity_type === 'tower';
-      const entityType = isTower ? 'tower' : (isOutage ? 'outage' : 'infra');
+      const isOutage =
+        props.entity_type === "outage" || props.severity !== undefined;
+      const isTower = obj.type === "tower" || props.entity_type === "tower";
+      const entityType = isTower ? "tower" : isOutage ? "outage" : "infra";
       const entity: CoTEntity = {
         uid: String(props.id || obj.id || `infra-${Date.now()}`),
         type: entityType,
-        callsign: props.name || props.region || props.fcc_id || (isOutage ? 'INTERNET OUTAGE' : isTower ? 'FCC TOWER' : 'Unknown Infra'),
+        callsign:
+          props.name ||
+          props.region ||
+          props.fcc_id ||
+          (isOutage
+            ? "INTERNET OUTAGE"
+            : isTower
+              ? "FCC TOWER"
+              : "Unknown Infra"),
         lat,
         lon,
         altitude: 0,
@@ -243,13 +273,19 @@ export function TacticalMap({
         lastSeen: Date.now(),
         uidHash: 0,
         trail: [],
-        detail: obj
+        detail: obj,
       };
       setHoveredEntity(entity);
       setHoverPosition({ x: info.x || 0, y: info.y || 0 });
     } else {
       // Clear tooltip only if current hovered item is infrastructure-derived
-      setHoveredEntity((prev: CoTEntity | null) => (prev?.type === 'infra' || prev?.type === 'outage' || prev?.type === 'tower' ? null : prev));
+      setHoveredEntity((prev: CoTEntity | null) =>
+        prev?.type === "infra" ||
+        prev?.type === "outage" ||
+        prev?.type === "tower"
+          ? null
+          : prev,
+      );
     }
   }, []);
 
@@ -269,28 +305,39 @@ export function TacticalMap({
           const r = await fetch("/api/jamming/active");
           if (r.ok && !cancelled) setJammingData(await r.json());
         }
-      } catch { /* silently fail */ }
+      } catch {
+        /* silently fail */
+      }
     };
     fetchSpaceWeather();
     const id = setInterval(fetchSpaceWeather, 60_000); // refresh every 60 s
-    return () => { cancelled = true; clearInterval(id); };
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [filters?.showAurora, filters?.showJamming]);
 
   // Map & Style States
   const [mapLoaded, setMapLoaded] = useState(false);
   const [enable3d, setEnable3d] = useState(false);
-  const [mapStyleMode, setMapStyleMode] = useState<'dark' | 'satellite'>('dark');
+  const [mapStyleMode, setMapStyleMode] = useState<"dark" | "satellite">(
+    "dark",
+  );
   const mapToken = _enableMapbox && _isValidToken ? _mapboxToken : undefined;
 
   // Globe mode always uses MapLibre — Mapbox Globe blocks CustomLayerInterface
   // which is required by MapboxOverlay for interleaved rendering. MapLibre globe
   // is fully supported by deck.gl (confirmed in @deck.gl/mapbox limitations docs).
   // Mercator uses Mapbox when a valid token is present for premium basemap quality.
-  const MapComponent = (globeMode || !mapToken) ? MapLibreAdapterLazy : MapboxAdapterLazy;
+  const MapComponent =
+    globeMode || !mapToken ? MapLibreAdapterLazy : MapboxAdapterLazy;
 
-  const mapStyle = (mapToken && !globeMode)
-    ? "mapbox://styles/mapbox/standard"
-    : (mapStyleMode === 'satellite' ? SATELLITE_MAP_STYLE : DARK_MAP_STYLE);
+  const mapStyle =
+    mapToken && !globeMode
+      ? "mapbox://styles/mapbox/standard"
+      : mapStyleMode === "satellite"
+        ? SATELLITE_MAP_STYLE
+        : DARK_MAP_STYLE;
 
   const mapRef = useRef<MapRef>(null);
   const overlayRef = useRef<MapboxOverlay | null>(null);
@@ -298,7 +345,9 @@ export function TacticalMap({
   const mapInstanceRef = useRef<unknown>(null);
 
   // History track segments ref — updated synchronously so the RAF loop picks it up
-  const historySegmentsRef = useRef<import("../../types").HistorySegment[]>(historySegments ?? []);
+  const historySegmentsRef = useRef<import("../../types").HistorySegment[]>(
+    historySegments ?? [],
+  );
   useEffect(() => {
     historySegmentsRef.current = historySegments ?? [];
   }, [historySegments]);
@@ -307,8 +356,18 @@ export function TacticalMap({
   const envLat = import.meta.env.VITE_CENTER_LAT;
   const envLon = import.meta.env.VITE_CENTER_LON;
   const hashState = parseMissionHash();
-  const initialLat = hashState.lat !== null ? hashState.lat : (envLat ? parseFloat(envLat) : 45.5152);
-  const initialLon = hashState.lon !== null ? hashState.lon : (envLon ? parseFloat(envLon) : -122.6784);
+  const initialLat =
+    hashState.lat !== null
+      ? hashState.lat
+      : envLat
+        ? parseFloat(envLat)
+        : 45.5152;
+  const initialLon =
+    hashState.lon !== null
+      ? hashState.lon
+      : envLon
+        ? parseFloat(envLon)
+        : -122.6784;
   const initialZoom = hashState.zoom !== null ? hashState.zoom : 9.5;
 
   // View State (Controlled for bearing tracking)
@@ -325,7 +384,7 @@ export function TacticalMap({
     updateMissionHash({
       lat: viewState.latitude,
       lon: viewState.longitude,
-      zoom: viewState.zoom
+      zoom: viewState.zoom,
     });
   }, [viewState.latitude, viewState.longitude, viewState.zoom]);
 
@@ -369,7 +428,8 @@ export function TacticalMap({
     } else {
       if (prevCables === true) {
         onEvent?.({
-          message: "INFRA: Undersea cable infrastructure data stream terminated",
+          message:
+            "INFRA: Undersea cable infrastructure data stream terminated",
           type: "lost",
           entityType: "infra",
         });
@@ -407,7 +467,7 @@ export function TacticalMap({
       // We skip logging 0 during the initial mount/load phase to avoid the race condition.
       if (!infraNotifiedRef.current.notifiedRepeaters && loadFinished) {
         const count = rfSitesRef?.current?.length || 0;
-        
+
         if (count > 0) {
           onEvent?.({
             message: `RF_NET: ${count} RF stations active in regional sector`,
@@ -431,7 +491,16 @@ export function TacticalMap({
     infraNotifiedRef.current.showCables = currCables;
     infraNotifiedRef.current.showLandingStations = currLanding;
     infraNotifiedRef.current.showRepeaters = currRepeaters;
-  }, [filters?.showCables, filters?.showLandingStations, showRepeaters, cablesData, stationsData, onEvent, rfSitesRef, repeatersLoading]);
+  }, [
+    filters?.showCables,
+    filters?.showLandingStations,
+    showRepeaters,
+    cablesData,
+    stationsData,
+    onEvent,
+    rfSitesRef,
+    repeatersLoading,
+  ]);
 
   const countsRef = useRef({ air: 0, sea: 0, orbital: 0 });
 
@@ -468,7 +537,7 @@ export function TacticalMap({
     setPrevGlobeMode(globeMode);
     setMapLoaded(false);
     if (!globeMode) {
-      setMapStyleMode('dark');
+      setMapStyleMode("dark");
     }
   }
 
@@ -539,10 +608,18 @@ export function TacticalMap({
       if (!info || !info.object) return;
 
       const props = info.object.properties || {};
-      const isTower = info.object.type === 'tower' || props.entity_type === 'tower';
-      const entityType = isTower ? 'tower' : 'infra';
+      const isTower =
+        info.object.type === "tower" || props.entity_type === "tower";
+      const entityType = isTower ? "tower" : "infra";
       const callsign = String(
-        props.name || props.region || props.fcc_id || (props.entity_type === 'outage' ? 'INTERNET OUTAGE' : isTower ? 'FCC TOWER' : 'INFRA')
+        props.name ||
+          props.region ||
+          props.fcc_id ||
+          (props.entity_type === "outage"
+            ? "INTERNET OUTAGE"
+            : isTower
+              ? "FCC TOWER"
+              : "INFRA"),
       );
 
       const infraEntity: CoTEntity = {
@@ -557,7 +634,7 @@ export function TacticalMap({
         lastSeen: Date.now(),
         trail: [],
         uidHash: 0,
-        detail: info.object
+        detail: info.object,
       };
       onEntitySelect(infraEntity);
     },
@@ -606,29 +683,29 @@ export function TacticalMap({
     setContextMenuCoords({ lat: lngLat.lat, lon: lngLat.lng });
   }, []);
 
-  const handleSaveLocation = useCallback((lat: number, lon: number) => {
-    setSaveFormCoords({ lat, lon });
-    setShowSaveForm(true);
-    setContextMenuPos(null);
-  }, [setSaveFormCoords, setShowSaveForm]);
+  const handleSaveLocation = useCallback(
+    (lat: number, lon: number) => {
+      setSaveFormCoords({ lat, lon });
+      setShowSaveForm(true);
+      setContextMenuPos(null);
+    },
+    [setSaveFormCoords, setShowSaveForm],
+  );
 
   const handleOverlayLoaded = useCallback((overlay: MapboxOverlay) => {
     overlayRef.current = overlay;
   }, []);
 
-  const handleMapLoad = useCallback(
-    (evt?: unknown) => {
-      // evt.target = react-map-gl Map WRAPPER — must call .getMap() for the raw MapLibre GL instance
-      if (evt?.target) {
-        mapInstanceRef.current =
-          typeof evt.target.getMap === "function"
-            ? evt.target.getMap()
-            : evt.target;
-      }
-      setMapLoaded(true);
-    },
-    [],
-  );
+  const handleMapLoad = useCallback((evt?: unknown) => {
+    // evt.target = react-map-gl Map WRAPPER — must call .getMap() for the raw MapLibre GL instance
+    if (evt?.target) {
+      mapInstanceRef.current =
+        typeof evt.target.getMap === "function"
+          ? evt.target.getMap()
+          : evt.target;
+    }
+    setMapLoaded(true);
+  }, []);
 
   // Expose mission management to parent via onMissionPropsReady (handled inside useMissionArea)
 
@@ -700,80 +777,89 @@ export function TacticalMap({
       <StarField active={!!globeMode} />
 
       {/* z-index:1 ensures the map canvas stacks above the StarField (z-index:0) */}
-      <div style={{ position: 'relative', zIndex: 1, width: '100vw', height: '100vh' }}>
-      <Suspense fallback={null}>
-        <MapComponent
-          key={globeMode ? "map-globe" : "map-mercator"}
-          ref={mapRef as React.Ref<unknown>}
-          viewState={
-            globeMode ? { ...viewState, pitch: 0, bearing: 0 } : viewState
-          }
-          onLoad={handleMapLoad}
-          onMove={(evt: unknown) => {
-            if (onBoundsChange && evt.target && evt.target.getBounds) {
-              const bounds = evt.target.getBounds();
-              if (bounds && typeof bounds.getSouth === 'function') {
-                onBoundsChange({
-                  minLat: bounds.getSouth(),
-                  maxLat: bounds.getNorth(),
-                  minLon: bounds.getWest(),
-                  maxLon: bounds.getEast()
-                });
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          width: "100vw",
+          height: "100vh",
+        }}
+      >
+        <Suspense fallback={null}>
+          <MapComponent
+            key={globeMode ? "map-globe" : "map-mercator"}
+            ref={mapRef as React.Ref<unknown>}
+            viewState={
+              globeMode ? { ...viewState, pitch: 0, bearing: 0 } : viewState
+            }
+            onLoad={handleMapLoad}
+            onMove={(evt: unknown) => {
+              if (onBoundsChange && evt.target && evt.target.getBounds) {
+                const bounds = evt.target.getBounds();
+                if (bounds && typeof bounds.getSouth === "function") {
+                  onBoundsChange({
+                    minLat: bounds.getSouth(),
+                    maxLat: bounds.getNorth(),
+                    minLon: bounds.getWest(),
+                    maxLon: bounds.getEast(),
+                  });
+                }
               }
-            }
-            // If user interacts (drags/pans), disable Follow Mode to prevent fighting.
-            if (
-              evt.originalEvent &&
-              followModeRef.current &&
-              onFollowModeChange
-            ) {
-              followModeRef.current = false; // Instant kill before next frame
-              onFollowModeChange(false);
-            }
+              // If user interacts (drags/pans), disable Follow Mode to prevent fighting.
+              if (
+                evt.originalEvent &&
+                followModeRef.current &&
+                onFollowModeChange
+              ) {
+                followModeRef.current = false; // Instant kill before next frame
+                onFollowModeChange(false);
+              }
 
-            const nextViewState = { ...evt.viewState };
-            if (globeMode) {
-              // Lock pitch/bearing to 0 in state
-              nextViewState.pitch = 0;
-              nextViewState.bearing = 0;
-            }
-            setViewState(nextViewState as Record<string, number>);
-          }}
-          mapStyle={mapStyle}
-          {...(_enableMapbox && _isValidToken ? { mapboxAccessToken: mapToken } : {})}
-          globeMode={globeMode}
-          style={{
-            width: "100vw",
-            height: "100vh",
-            userSelect: "none",
-            WebkitUserSelect: "none",
-          }}
-          onContextMenu={handleContextMenu}
-          onClick={() => {
-            setContextMenuPos(null);
-            setContextMenuCoords(null);
-          }}
-          antialias={true}
-          projection={globeMode ? { type: 'globe' } : { type: 'mercator' }}
-          dragRotate={!globeMode}
-          pitchWithRotate={!globeMode}
-          touchPitch={!globeMode}
-          keyboard={!globeMode}
-          maxPitch={globeMode ? 0 : 85}
-          deckProps={{
-            key: `overlay-${globeMode ? "globe" : "merc"}-${enable3d ? "3d" : "2d"}`, // Force remount on projection/3D change
-            id: "tactical-overlay",
-            // Globe mode: interleaved shares the Mapbox WebGL context and depth buffer.
-            // The globe sphere writes depth when rendered, so DeckGL layers that come
-            // after in the render pipeline correctly clip far-side geometry via depthTest.
-            // Previous attempts failed due to _full3d conflicts + per-frame projection
-            // being set — both are now removed, so this should work cleanly.
-            interleaved: false,
-            globeMode,
-            onOverlayLoaded: handleOverlayLoaded,
-          }}
-        />
-      </Suspense>
+              const nextViewState = { ...evt.viewState };
+              if (globeMode) {
+                // Lock pitch/bearing to 0 in state
+                nextViewState.pitch = 0;
+                nextViewState.bearing = 0;
+              }
+              setViewState(nextViewState as Record<string, number>);
+            }}
+            mapStyle={mapStyle}
+            {...(_enableMapbox && _isValidToken
+              ? { mapboxAccessToken: mapToken }
+              : {})}
+            globeMode={globeMode}
+            style={{
+              width: "100vw",
+              height: "100vh",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+            }}
+            onContextMenu={handleContextMenu}
+            onClick={() => {
+              setContextMenuPos(null);
+              setContextMenuCoords(null);
+            }}
+            antialias={true}
+            projection={globeMode ? { type: "globe" } : { type: "mercator" }}
+            dragRotate={!globeMode}
+            pitchWithRotate={!globeMode}
+            touchPitch={!globeMode}
+            keyboard={!globeMode}
+            maxPitch={globeMode ? 0 : 85}
+            deckProps={{
+              key: `overlay-${globeMode ? "globe" : "merc"}-${enable3d ? "3d" : "2d"}`, // Force remount on projection/3D change
+              id: "tactical-overlay",
+              // Globe mode: interleaved shares the Mapbox WebGL context and depth buffer.
+              // The globe sphere writes depth when rendered, so DeckGL layers that come
+              // after in the render pipeline correctly clip far-side geometry via depthTest.
+              // Previous attempts failed due to _full3d conflicts + per-frame projection
+              // being set — both are now removed, so this should work cleanly.
+              interleaved: false,
+              globeMode,
+              onOverlayLoaded: handleOverlayLoaded,
+            }}
+          />
+        </Suspense>
       </div>
 
       {/* View Controls & Zoom HUD - Centered at the bottom */}
@@ -836,19 +922,21 @@ export function TacticalMap({
               <>
                 <button
                   onClick={() => setViewMode("2d")}
-                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none ${!enable3d
-                    ? "bg-hud-green/20 text-hud-green shadow-[0_0_8px_rgba(0,255,65,0.3)] border border-hud-green/40"
-                    : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
-                    }`}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none ${
+                    !enable3d
+                      ? "bg-hud-green/20 text-hud-green shadow-[0_0_8px_rgba(0,255,65,0.3)] border border-hud-green/40"
+                      : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
+                  }`}
                 >
                   2D
                 </button>
                 <button
                   onClick={() => setViewMode("3d")}
-                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none ${enable3d
-                    ? "bg-hud-green/20 text-hud-green shadow-[0_0_8px_rgba(0,255,65,0.3)] border border-hud-green/40"
-                    : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
-                    }`}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none ${
+                    enable3d
+                      ? "bg-hud-green/20 text-hud-green shadow-[0_0_8px_rgba(0,255,65,0.3)] border border-hud-green/40"
+                      : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
+                  }`}
                 >
                   3D
                 </button>
@@ -858,10 +946,11 @@ export function TacticalMap({
 
             <button
               onClick={() => onToggleGlobe?.()}
-              className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-2 focus-visible:ring-1 focus-visible:ring-indigo-400 outline-none ${globeMode
-                ? "bg-indigo-500/20 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.4)] border border-indigo-500/50"
-                : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
-                }`}
+              className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-2 focus-visible:ring-1 focus-visible:ring-indigo-400 outline-none ${
+                globeMode
+                  ? "bg-indigo-500/20 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.4)] border border-indigo-500/50"
+                  : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
+              }`}
               title="Toggle Globe View"
             >
               <Globe size={12} className={globeMode ? "animate-pulse" : ""} />
@@ -872,21 +961,23 @@ export function TacticalMap({
               <>
                 <div className="w-[1px] h-4 bg-white/10 my-auto mx-1" />
                 <button
-                  onClick={() => setMapStyleMode('dark')}
-                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1 focus-visible:ring-1 focus-visible:ring-indigo-400 outline-none ${mapStyleMode === 'dark'
-                    ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/50"
-                    : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
-                    }`}
+                  onClick={() => setMapStyleMode("dark")}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1 focus-visible:ring-1 focus-visible:ring-indigo-400 outline-none ${
+                    mapStyleMode === "dark"
+                      ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/50"
+                      : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
+                  }`}
                   title="Dark Tactical View"
                 >
                   DARK
                 </button>
                 <button
-                  onClick={() => setMapStyleMode('satellite')}
-                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1 focus-visible:ring-1 focus-visible:ring-indigo-400 outline-none ${mapStyleMode === 'satellite'
-                    ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/50"
-                    : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
-                    }`}
+                  onClick={() => setMapStyleMode("satellite")}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all flex items-center gap-1 focus-visible:ring-1 focus-visible:ring-indigo-400 outline-none ${
+                    mapStyleMode === "satellite"
+                      ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/50"
+                      : "text-white/40 hover:text-white/80 hover:bg-white/10 border border-transparent"
+                  }`}
                   title="Satellite Terrain View"
                 >
                   SAT
@@ -945,18 +1036,6 @@ export function TacticalMap({
       <SpeedLegend visible={filters?.showSea ?? true} />
       <RFLegend visible={!!showRepeaters} />
 
-      {/* Kp-index space weather badge — top-right corner */}
-      <div
-        style={{
-          position: "absolute",
-          top: 12,
-          right: 12,
-          zIndex: 200,
-          pointerEvents: "none",
-        }}
-      >
-        <KpIndexWidget visible={true} />
-      </div>
     </>
   );
 }

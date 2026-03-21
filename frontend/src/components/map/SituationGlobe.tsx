@@ -10,6 +10,7 @@ import { buildAOTLayers } from '../../layers/buildAOTLayers';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { StarField } from './StarField';
 import { getTerminatorLayer } from './TerminatorLayer';
+import { buildAuroraLayer } from '../../layers/buildAuroraLayer';
 
 interface SituationGlobeProps {
   satellitesRef: React.MutableRefObject<Map<string, CoTEntity>>;
@@ -48,6 +49,21 @@ export const SituationGlobe: React.FC<SituationGlobeProps> = ({
   const [now, setNow] = useState(0);
   const lastFrameTimeRef = useRef(0);
   const visualStateRef = useRef<Map<string, { lat: number; lon: number; alt: number }>>(new Map());
+  const [auroraData, setAuroraData] = useState<any>(null);
+
+  // Poll for aurora data
+  useEffect(() => {
+    let cancelled = false;
+    const fetchAurora = async () => {
+      try {
+        const r = await fetch("/api/space-weather/aurora");
+        if (r.ok && !cancelled) setAuroraData(await r.json());
+      } catch { /* silent fail */ }
+    };
+    fetchAurora();
+    const id = setInterval(fetchAurora, 60_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
 
   // Auto-rotation logic
   useEffect(() => {
@@ -154,12 +170,13 @@ export const SituationGlobe: React.FC<SituationGlobeProps> = ({
     overlayRef.current.setProps({
       layers: [
         getTerminatorLayer(!!showTerminator),
+        ...buildAuroraLayer(auroraData, true, true, now),
         ...infra,
         ...missionLayers,
         ...orbital
       ]
     });
-  }, [now, satellitesRef, drStateRef, cablesData, stationsData, outagesData, worldCountriesData, countryOutageMap, viewState.zoom, showTerminator, mission]);
+  }, [now, satellitesRef, drStateRef, cablesData, stationsData, outagesData, worldCountriesData, countryOutageMap, viewState.zoom, showTerminator, mission, auroraData]);
 
   return (
     <div className="w-full h-full bg-black relative overflow-hidden">

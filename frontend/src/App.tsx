@@ -183,7 +183,6 @@ function App() {
 
   // Infrastructure Data (Shared across TACTICAL/ORBITAL views)
   const { cablesData, stationsData, outagesData } = useInfraData();
-  const { towers, isLoading: towersLoading } = useTowers(mapBounds);
   const [worldCountriesData, setWorldCountriesData] = useState<FeatureCollection | null>(null);
 
   useEffect(() => {
@@ -253,9 +252,11 @@ function App() {
       showCables: false,
       showLandingStations: false,
       showOutages: true,
+      showTowers: false,
       cableOpacity: 0.6,
       showConstellation_Starlink: false,
       showH3Coverage: false,
+      showAurora: false,
     };
 
     // First check hash
@@ -296,6 +297,8 @@ function App() {
   useEffect(() => {
     updateMissionHash(undefined, filters);
   }, [filters]);
+
+  const { towers, isLoading: towersLoading } = useTowers(mapBounds, filters.showTowers);
 
   // Isolated orbital satellite category filter state — never persisted to
   // mapFilters, so it never bleeds into the tactical map filter state.
@@ -404,7 +407,7 @@ function App() {
     filters.showRepeaters as boolean,
     missionProps?.currentMission?.lat ?? 45.5152,
     missionProps?.currentMission?.lon ?? -122.6784,
-    (filters.rfRadius as number) || 300,
+    ((filters.rfRadius as unknown) as number) || 300,
     activeServices,
     (filters.modes as unknown as RFMode[] | undefined),
     filters.rfEmcommOnly || undefined,

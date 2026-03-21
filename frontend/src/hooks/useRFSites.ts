@@ -26,8 +26,10 @@ export function useRFSites(
   const lastFetchRef = useRef<{ lat: number; lon: number; radiusNm?: number; servicesStr?: string; modeStr?: string; emcommStr?: string } | null>(null);
 
   useEffect(() => {
-    if (!enabled || (services && services.length === 0)) {
-      rfSitesRef.current = [];
+    if (!enabled || !services || services.length === 0) {
+      if (rfSitesRef.current.length > 0) {
+        rfSitesRef.current = [];
+      }
       lastFetchRef.current = null;
       return;
     }

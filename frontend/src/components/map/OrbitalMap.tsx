@@ -8,7 +8,7 @@ import React, {
   MutableRefObject,
 } from "react";
 import { Globe, RotateCcw, ChevronUp, ChevronDown, Plus, Minus } from "lucide-react";
-import { SpaceWeatherPanel } from "../SpaceWeatherPanel";
+import { SpaceWeatherPanel } from "./SpaceWeatherPanel";
 import type { FeatureCollection } from "geojson";
 import type { MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -61,29 +61,7 @@ const MapLibreAdapterLazy: React.ComponentType<any> = lazy(() => import("./MapLi
 // Props for TacticalMap
 interface TacticalMapProps {
   onCountsUpdate?: (counts: { air: number; sea: number; orbital: number }) => void;
-  filters?: {
-    showAir: boolean;
-    showSea: boolean;
-    showHelicopter?: boolean;
-    showMilitary?: boolean;
-    showGovernment?: boolean;
-    showCommercial?: boolean;
-    showPrivate?: boolean;
-    showDrone?: boolean;
-    showCargo?: boolean;
-    showTanker?: boolean;
-    showPassenger?: boolean;
-    showFishing?: boolean;
-    showSeaMilitary?: boolean;
-    showLawEnforcement?: boolean;
-    showSar?: boolean;
-    showTug?: boolean;
-    showPleasure?: boolean;
-    showHsc?: boolean;
-    showPilot?: boolean;
-    showSpecial?: boolean;
-    [key: string]: boolean | undefined;
-  };
+  filters?: import("../../types").MapFilters;
   onEvent?: (event: {
     type: "new" | "lost" | "alert";
     message: string;
@@ -132,13 +110,29 @@ interface TacticalMapProps {
   missionArea: import('../../types').MissionLocation | null;
 }
 
+type InfraPickObject = {
+  id?: string;
+  type?: string;
+  geometry?: {
+    type?: string;
+    coordinates?: unknown;
+  };
+  properties?: Record<string, unknown>;
+};
+
+type InfraPickInfo = {
+  object?: InfraPickObject | null;
+  coordinate?: [number, number];
+  x?: number;
+  y?: number;
+};
+
 export function OrbitalMap({
   onCountsUpdate,
   filters,
   onEvent,
   selectedEntity,
   onEntitySelect,
-  onMissionPropsReady,
   onMapActionsReady,
   showVelocityVectors,
   showHistoryTails,
@@ -167,7 +161,6 @@ export function OrbitalMap({
   stationsData,
   outagesData,
   worldCountriesData,
-  showTerminator,
   missionArea,
 }: TacticalMapProps) {
 
@@ -181,19 +174,21 @@ export function OrbitalMap({
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [contextMenuCoords, setContextMenuCoords] = useState<{ lat: number; lon: number } | null>(null);
 
-  const [hoveredInfra, setHoveredInfraState] = useState<unknown>(null);
-  const handleHoveredInfra = useCallback((info: unknown) => {
+  const handleHoveredInfra = useCallback((info: InfraPickInfo) => {
     const obj = info?.object || null;
-    setHoveredInfraState(obj);
     if (obj) {
       const props = obj.properties || {};
-      const lat = obj.geometry.type === 'Point' ? obj.geometry.coordinates[1] : obj.geometry.coordinates[0][1];
-      const lon = obj.geometry.type === 'Point' ? obj.geometry.coordinates[0] : obj.geometry.coordinates[0][0];
+      const lat = obj.geometry?.type === 'Point' 
+        ? (obj.geometry.coordinates as [number, number])[1] 
+        : (obj.geometry?.coordinates as [number, number][])[0][1];
+      const lon = obj.geometry?.type === 'Point' 
+        ? (obj.geometry.coordinates as [number, number])[0] 
+        : (obj.geometry?.coordinates as [number, number][])[0][0];
 
       const entity: CoTEntity = {
         uid: props.id || String(obj.id),
         type: 'infra',
-        callsign: props.name || 'Unknown Infra',
+        callsign: (props.name as string | undefined) || 'Unknown Infra',
         lat,
         lon,
         altitude: 0,
@@ -205,12 +200,35 @@ export function OrbitalMap({
         detail: obj
       };
       setHoveredEntity(entity);
-      setHoverPosition({ x: info.x, y: info.y });
+      setHoverPosition({ x: info.x || 0, y: info.y || 0 });
     } else {
       // Clear tooltip only if current hovered item is infra
       setHoveredEntity(prev => (prev?.type === 'infra' ? null : prev));
     }
   }, []);
+
+  // Space Weather & Jamming data (polled from API, passed to layer composition)
+  const [auroraData, setAuroraData] = useState<any>(null);
+  const [jammingData, setJammingData] = useState<any>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSpaceWeather = async () => {
+      try {
+        if (filters?.showAurora) {
+          const r = await fetch("/api/space-weather/aurora");
+          if (r.ok && !cancelled) setAuroraData(await r.json());
+        }
+        if (filters?.showJamming) {
+          const r = await fetch("/api/jamming/active");
+          if (r.ok && !cancelled) setJammingData(await r.json());
+        }
+      } catch { /* silently fail */ }
+    };
+    fetchSpaceWeather();
+    const id = setInterval(fetchSpaceWeather, 60_000); // refresh every 60 s
+    return () => { cancelled = true; clearInterval(id); };
+  }, [filters?.showAurora, filters?.showJamming]);
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const [enable3d, setEnable3d] = useState(false);
@@ -330,7 +348,6 @@ export function OrbitalMap({
 
     // 3. RF Repeaters Trigger
     if (currRepeaters) {
-      const dataReady = rfSitesRef?.current && rfSitesRef.current.length > 0;
       const loadFinished = !repeatersLoading;
 
       // Notify if loading has explicitly finished AFTER we already transitioned showRepeaters to true
@@ -506,7 +523,9 @@ export function OrbitalMap({
     cablesData,
     stationsData,
     outagesData,
-    setHoveredInfra: handleHoveredInfra,
+    auroraData,
+    jammingData,
+    setHoveredInfra: handleHoveredInfra as any,
     setSelectedInfra: (info: unknown) => {
       if (!info || !info.object) return;
 
@@ -886,10 +905,11 @@ export function OrbitalMap({
       <div
         style={{
           position: "absolute",
-          top: 12,
-          right: 12,
-          zIndex: 200,
-          pointerEvents: "none",
+          top: 70,
+          right: selectedEntity ? 380 : 20,
+          zIndex: 100,
+          pointerEvents: "auto",
+          transition: "right 0.3s ease-in-out",
         }}
       >
         <SpaceWeatherPanel visible={true} />
