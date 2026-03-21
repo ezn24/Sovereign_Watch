@@ -1,3 +1,10 @@
+## [0.43.2] - 2026-03-21
+
+### Changed
+
+- **UI Refinement**: Removed the global \`AIEngineWidget\` from the \`TopBar\` to declutter the interface, as AI functionality is now fully integrated into the Analyst Panel.
+- **AI Analyst**: Disabled auto-run when launching the Analyst Panel. The AI will now enter a "READY FOR INPUT" state, waiting for manual interaction before executing a query.
+
 ## [0.43.1] - 2026-03-21
 
 ### Fixed
