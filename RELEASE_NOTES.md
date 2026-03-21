@@ -1,27 +1,18 @@
-# Release - v0.43.1 - Extreme Latitude Hotfix
+# Release - v0.43.2 - UI Cleanup
 
-## High-Level Summary
+This patch cleans up the TopBar by removing the redundant global AI widget, shifting focus to the fully integrated Analyst Panel. Furthermore, opening the Analyst Panel no longer triggers a potentially expensive or unwanted auto-run analysis, instead correctly waiting for user input.
 
-This release resolves a critical visual distortion issue in the NOAA Auroral Oval layer where points near the poles would "balloon" into massive, screen-filling artifacts when viewed in 2D Web Mercator mode. This ensures the map remains usable and clean for all users, including those near polar regions.
+### Key Features
+- **Decluttered TopBar**: Removed orphaned `AIEngineWidget`.
+- **Analyst UX**: Operator-controlled AI execution instead of auto-running.
 
-## Fixed
+### Technical Details
+- Removed `AIEngineWidget.tsx` and updated `TopBar.tsx` references.
+- Stripped auto-run timing triggers from `App.tsx`.
 
-- **Aurora Blob Distortion**: Implemented a ±85° latitude filter for the `ScatterplotLayer` in 2D mode, preventing Web Mercator's infinite scale at the poles from distorting meter-radius data points. Points remain fully visible in Globe mode where projection is accurate.
-
-## Technical Details
-
-- Updated `frontend/src/layers/buildAuroraLayer.ts` with latitude-based data filtering.
-- Re-calculated `depthBias` and `z-ordering` impact (negligible).
-
-## Upgrade Instructions
-
+### Upgrade Instructions
 ```bash
-# 1. Pull down the latest release
-git pull origin main
-
-# 2. Rebuild the frontend
-docker compose build frontend
-
-# 3. Restart the stack
-docker compose up -d
+git pull origin dev
+docker compose down
+docker compose up -d --build frontend
 ```
