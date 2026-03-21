@@ -1,3 +1,15 @@
+## [0.42.2] - 2026-03-21
+
+### Changed
+
+- **RF Mapping Refinement**: Removed clustering logic for RF sites, ensuring all sites render as individual points in both 2D and 3D views for maximum tactical granularity.
+- **Global Network Layer Integration**: Synchronized the "FCC TOWERS" layer with the Global Network master toggle, allowing users to toggle cables, outages, and towers with a single click in the sidebar or header.
+
+### Fixed
+
+- **RF Service Filter Logic**: Resolved a bug where disabling all RF service sub-filters (Ham, NOAA, PSB) would default to displaying all repeaters; the layer now correctly clears when no filters are selected.
+- **Tower Rendering Alignment**: Standardized `ScatterplotLayer` formatting in `buildTowerLayer.ts` to ensure consistent depth-testing and pickable properties.
+
 ## [0.42.1] - 2026-03-21
 
 ### Changed

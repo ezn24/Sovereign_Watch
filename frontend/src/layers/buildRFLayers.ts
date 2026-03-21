@@ -1,9 +1,13 @@
+import type { Layer, PickingInfo } from "@deck.gl/core";
 import { ScatterplotLayer } from "@deck.gl/layers";
-import type { RFSite, CoTEntity } from "../types";
+import type { CoTEntity, RFSite } from "../types";
 
 /** Colour by service type and digital mode availability */
 /** Colour by service type and digital mode availability */
-function rfSiteColor(r: RFSite, alpha: number): [number, number, number, number] {
+function rfSiteColor(
+  r: RFSite,
+  alpha: number,
+): [number, number, number, number] {
   if (r.service === "noaa_nwr") {
     return [14, 165, 233, alpha]; // sky-500 — NOAA NWR
   }
@@ -13,7 +17,15 @@ function rfSiteColor(r: RFSite, alpha: number): [number, number, number, number]
 
   // Ham / GMRS
   const modes = (r.modes || []).map((m) => (m || "").toLowerCase());
-  if (modes.some((m) => m.includes("d-star") || m.includes("fusion") || m.includes("dmr") || m.includes("p25"))) {
+  if (
+    modes.some(
+      (m) =>
+        m.includes("d-star") ||
+        m.includes("fusion") ||
+        m.includes("dmr") ||
+        m.includes("p25"),
+    )
+  ) {
     return [139, 92, 246, alpha]; // violet-500 — digital
   }
   if (r.status?.toLowerCase().includes("off")) {
@@ -23,7 +35,9 @@ function rfSiteColor(r: RFSite, alpha: number): [number, number, number, number]
 }
 
 /** Determines outline colour based on emcomm flags */
-function rfSiteOutlineColor(r: RFSite): [number, number, number, number] | null {
+function rfSiteOutlineColor(
+  r: RFSite,
+): [number, number, number, number] | null {
   if (r.emcomm_flags && r.emcomm_flags.length > 0) {
     return [239, 68, 68, 255]; // red-500 outline for EMCOMM flagged
   }
@@ -58,20 +72,18 @@ export function rfSiteToEntity(r: RFSite): CoTEntity {
       city: r.city,
       state: r.state,
       modes: modesStr,
-      emcomm: r.emcomm_flags ? r.emcomm_flags.join(", ") : "none"
+      emcomm: r.emcomm_flags ? r.emcomm_flags.join(", ") : "none",
     },
   };
 }
-
-
 
 export function buildRFLayers(
   sites: RFSite[],
   globeMode: boolean | undefined,
   onEntitySelect: (entity: CoTEntity | null) => void,
   setHoveredEntity: (entity: CoTEntity | null) => void,
-  setHoverPosition: (pos: { x: number; y: number } | null) => void
-): any[] {
+  setHoverPosition: (pos: { x: number; y: number } | null) => void,
+): Layer[] {
   if (!sites || sites.length === 0) return [];
 
   const modeKey = globeMode ? "globe" : "merc";
@@ -79,44 +91,50 @@ export function buildRFLayers(
   // occluded by Mapbox's tile depth buffer at the same z-plane. Globe mode needs
   // depthTest:true to prevent geometry bleeding through the Earth.
   // (See buildEntityLayers ground-shadows for the same pattern.)
-  const depthParams = { depthTest: !!globeMode, depthBias: globeMode ? -100.0 : 0 };
-  const layers: any[] = [];
+  const depthParams = {
+    depthTest: !!globeMode,
+    depthBias: globeMode ? -100.0 : 0,
+  };
+  const layers: Layer[] = [];
 
-  // Core dot (pickable — hover tooltip + click to select)
-  layers.push(
-    new ScatterplotLayer({
-      id: `rf-dots-${modeKey}`,
-      data: sites,
-      getPosition: (d: RFSite) => [d.lon, d.lat, 0],
-      getRadius: 6,
-      radiusUnits: "pixels" as const,
-      radiusMinPixels: 5,
-      getFillColor: (d: RFSite) => rfSiteColor(d, 255),
-      getLineColor: (d: RFSite) => rfSiteOutlineColor(d) || [10, 10, 10, 180],
-      stroked: true,
-      getLineWidth: 1.5,
-      lineWidthUnits: "pixels" as const,
-      filled: true,
-      pickable: true,
-      wrapLongitude: !globeMode,
-      billboard: true,
-      parameters: depthParams,
-      onHover: (info: any) => {
-        if (info.object) {
-          setHoveredEntity(rfSiteToEntity(info.object as RFSite));
-          setHoverPosition({ x: info.x, y: info.y });
-        } else {
-          setHoveredEntity(null);
-          setHoverPosition(null);
-        }
-      },
-      onClick: (info: any) => {
-        if (info.object) {
-          onEntitySelect(rfSiteToEntity(info.object as RFSite));
-        }
-      },
-    }),
-  );
+  // Individuals (All points now render as individuals)
+  if (sites.length > 0) {
+    // Core dot (pickable — hover tooltip + click to select)
+    layers.push(
+      new ScatterplotLayer({
+        id: `rf-dots-${modeKey}`,
+        data: sites,
+        getPosition: (d: RFSite) => [d.lon, d.lat, 0],
+        getRadius: 4,
+        radiusUnits: "pixels" as const,
+        radiusMinPixels: 2,
+        getFillColor: (d: RFSite) => rfSiteColor(d, 255),
+        getLineColor: (d: RFSite) => rfSiteOutlineColor(d) || [10, 10, 10, 180],
+        stroked: true,
+        getLineWidth: 1.5,
+        lineWidthUnits: "pixels" as const,
+        filled: true,
+        pickable: true,
+        wrapLongitude: !globeMode,
+        billboard: true,
+        parameters: depthParams,
+        onHover: (info: PickingInfo<RFSite>) => {
+          if (info.object) {
+            setHoveredEntity(rfSiteToEntity(info.object));
+            setHoverPosition({ x: info.x, y: info.y });
+          } else {
+            setHoveredEntity(null);
+            setHoverPosition(null);
+          }
+        },
+        onClick: (info: PickingInfo<RFSite>) => {
+          if (info.object) {
+            onEntitySelect(rfSiteToEntity(info.object));
+          }
+        },
+      }),
+    );
+  }
 
   return layers;
 }
