@@ -45,6 +45,7 @@ redis_data/
 # System-specific
 .antigravity/
 .gemini/
+.claude/worktrees/
 
 # Keep the intelligence, ignore the research noise
 docs/research/
