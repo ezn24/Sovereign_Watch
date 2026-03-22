@@ -16,6 +16,7 @@ import { maidenheadToLatLon } from "../utils/map/geoUtils";
 import { buildAuroraLayer } from "./buildAuroraLayer";
 import { buildJammingLayer } from "./buildJammingLayer";
 import { getSatNOGSLayer } from "./SatNOGSLayer";
+import { buildGdeltLayer } from "./buildGdeltLayer";
 
 import type { H3CellData } from "./buildH3CoverageLayer";
 import type { GroundTrackPoint, SatNOGSStation } from "../types";
@@ -51,6 +52,13 @@ interface LayerCompositionOptions {
   auroraData?: any;
   /** Active GPS jamming zones GeoJSON from JammingAnalyzer */
   jammingData?: any;
+  /** GDELT v2 geolocated news events GeoJSON */
+  gdeltData?: any;
+  /**
+   * Minimum tone threshold for GDELT dots (Goldstein scale).
+   * Default -Infinity = show all.  Pass -2 for conflict+tension only.
+   */
+  gdeltToneThreshold?: number;
   onEntitySelect: (entity: CoTEntity | null) => void;
   setHoveredEntity: (entity: CoTEntity | null) => void;
   setHoverPosition: (pos: { x: number; y: number } | null) => void;
@@ -91,6 +99,8 @@ export function composeAllLayers(options: LayerCompositionOptions) {
     aotShapes,
     auroraData,
     jammingData,
+    gdeltData,
+    gdeltToneThreshold,
     onEntitySelect,
     setHoveredEntity,
     setHoverPosition,
@@ -198,6 +208,14 @@ export function composeAllLayers(options: LayerCompositionOptions) {
     getSatNOGSLayer(satnogsStations || [], !!filters?.showSatNOGS),
     // Jamming zones sit above infra but below entity chevrons
     ...buildJammingLayer(jammingData, !!filters?.showJamming, globeMode, now),
+    // GDELT geolocated news events — sit above infra/jamming, below entity chevrons
+    // Auto-enabled when a mission area is active (shows all events in AOT)
+    ...buildGdeltLayer(
+      gdeltData,
+      !!filters?.showGdelt || !!currentMission,
+      globeMode,
+      gdeltToneThreshold,
+    ),
     ...getOrbitalLayers({
       satellites: filteredSatellites,
       selectedEntity: currentSelected,
