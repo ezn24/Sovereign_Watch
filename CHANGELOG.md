@@ -1,3 +1,27 @@
+## [0.44.0] - 2026-03-21
+
+### Added
+
+- **SatNOGS Integration**: Implemented deep integration with the SatNOGS network for enhanced satellite situational awareness.
+  - **Transmitter Catalog**: Added `SatNOGSDBSource` to track expected satellite frequencies and modes.
+  - **Ground Observation Tracking**: Added `SatNOGSNetworkSource` to pull live ground-station observations for spectrum verification.
+  - **Verification API**: New backend endpoints for cross-referencing live telemetry with historical SatNOGS observations.
+- **Orbital Pass Geometry HUD**: Introduced a high-fidelity floating polar plot for satellite overpasses.
+  - **Real-time Visualization**: Displays current and projected satellite trajectories relative to the ground station.
+  - **Metadata Integration**: Instant visibility of AOS (Acquisition of Signal), TCA (Time of Closest Approach), and Maximum Elevation in a single-line header.
+  - **Next Pass Footer**: Dynamic countdown and parameters for the subsequent orbital pass.
+- **Spectrum Verification Panel**: Dedicated UI for real-time frequency analysis and transmitter confirmation, relocated for better accessibility above Positional Telemetry in the right sidebar.
+
+### Changed
+
+- **Space-Pulse Consolidation**: Merged `orbital_pulse`, `space_weather_pulse`, and `SatNOGS` ingestion into a single, high-concurrency `SpacePulseService`, reducing operational overhead.
+- **InfraPoller Modernization**: Full async rewrite of the infrastructure poller, migrating to `httpx`, `redis.asyncio`, and `asyncio.to_thread` for improved throughput and reliability.
+- **UI Refinement**:
+  - Moved the SatNOGS Network toggle to the `OrbitalCategoryPills` header for better functional grouping.
+  - Centered the `KpIndexWidget` in the `TopBar` for improved visual balance between view modes and status monitors.
+  - Themed the Pass Geometry and Space Weather widgets with `Sovereign Glass` aesthetics and domain-specific purple (`#a855f7`) accents.
+  - Extract Spectrum Verification logic into a dedicated component for better maintainability.
+
 ## [0.43.2] - 2026-03-21
 
 ### Changed
