@@ -54,6 +54,11 @@ interface LayerCompositionOptions {
   jammingData?: any;
   /** GDELT v2 geolocated news events GeoJSON */
   gdeltData?: any;
+  /**
+   * Minimum tone threshold for GDELT dots (Goldstein scale).
+   * Default -Infinity = show all.  Pass -2 for conflict+tension only.
+   */
+  gdeltToneThreshold?: number;
   onEntitySelect: (entity: CoTEntity | null) => void;
   setHoveredEntity: (entity: CoTEntity | null) => void;
   setHoverPosition: (pos: { x: number; y: number } | null) => void;
@@ -95,6 +100,7 @@ export function composeAllLayers(options: LayerCompositionOptions) {
     auroraData,
     jammingData,
     gdeltData,
+    gdeltToneThreshold,
     onEntitySelect,
     setHoveredEntity,
     setHoverPosition,
@@ -203,7 +209,13 @@ export function composeAllLayers(options: LayerCompositionOptions) {
     // Jamming zones sit above infra but below entity chevrons
     ...buildJammingLayer(jammingData, !!filters?.showJamming, globeMode, now),
     // GDELT geolocated news events — sit above infra/jamming, below entity chevrons
-    ...buildGdeltLayer(gdeltData, !!filters?.showGdelt, globeMode),
+    // Auto-enabled when a mission area is active (shows all events in AOT)
+    ...buildGdeltLayer(
+      gdeltData,
+      !!filters?.showGdelt || !!currentMission,
+      globeMode,
+      gdeltToneThreshold,
+    ),
     ...getOrbitalLayers({
       satellites: filteredSatellites,
       selectedEntity: currentSelected,

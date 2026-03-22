@@ -242,6 +242,21 @@ export function OrbitalMap({
     return () => { cancelled = true; clearInterval(id); };
   }, [filters?.showAurora, filters?.showJamming]);
 
+  // GDELT conflict + tension events — always shown in orbital view (tone ≤ -2 only)
+  const [gdeltData, setGdeltData] = useState<any>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const fetch15min = async () => {
+      try {
+        const r = await fetch("/api/gdelt/events");
+        if (r.ok && !cancelled) setGdeltData(await r.json());
+      } catch { /* silently fail */ }
+    };
+    fetch15min();
+    const id = setInterval(fetch15min, 15 * 60_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [enable3d, setEnable3d] = useState(false);
   const [mapStyleMode, setMapStyleMode] = useState<'dark' | 'satellite'>('dark');
@@ -537,6 +552,8 @@ export function OrbitalMap({
     outagesData,
     auroraData,
     jammingData,
+    gdeltData,
+    gdeltToneThreshold: -2,
     setHoveredInfra: handleHoveredInfra as any,
     setSelectedInfra: (info: unknown) => {
       if (!info || !info.object) return;

@@ -37,15 +37,24 @@ export function gdeltToneLabel(tone: number): string {
  *   green   → cooperative (tone ≥ 2)
  *
  * Clicking a dot opens the source article in a new tab.
+ *
+ * @param toneThreshold  Only render events with tone ≤ this value.
+ *                       Default -Infinity shows all events.
+ *                       Pass -2 for conflict+tension only (orbital view).
  */
 export function buildGdeltLayer(
   gdeltData: { type: string; features: GdeltFeature[] } | null,
   visible: boolean,
   globeMode: boolean,
+  toneThreshold: number = -Infinity,
 ): Layer[] {
   if (!visible || !gdeltData?.features?.length) return [];
 
-  const features = gdeltData.features;
+  const features = toneThreshold === -Infinity
+    ? gdeltData.features
+    : gdeltData.features.filter((f) => (f.properties.tone ?? 0) <= toneThreshold);
+
+  if (!features.length) return [];
 
   const data = features.map((f) => ({
     lon: f.geometry.coordinates[0],

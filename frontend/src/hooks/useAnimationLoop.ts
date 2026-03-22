@@ -48,6 +48,8 @@ interface UseAnimationLoopOptions {
   jammingData?: any;
   /** GDELT v2 geolocated news events GeoJSON (from /api/gdelt/events) */
   gdeltData?: any;
+  /** Minimum tone threshold for GDELT; default -Infinity (all events) */
+  gdeltToneThreshold?: number;
   setHoveredInfra?: (info: unknown) => void;
   setSelectedInfra?: (info: unknown) => void;
   worldCountriesData?: FeatureCollection | null;
@@ -111,6 +113,7 @@ export function useAnimationLoop({
   auroraData,
   jammingData,
   gdeltData,
+  gdeltToneThreshold,
   setHoveredInfra,
   setSelectedInfra,
   globeMode,
@@ -461,6 +464,7 @@ export function useAnimationLoop({
         auroraData,
         jammingData,
         gdeltData,
+        gdeltToneThreshold,
         onEntitySelect,
         setHoveredEntity,
         setHoverPosition,
