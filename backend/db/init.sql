@@ -285,3 +285,61 @@ CREATE INDEX IF NOT EXISTS ix_jamming_active     ON jamming_events (active, time
 CREATE INDEX IF NOT EXISTS ix_jamming_centroid   ON jamming_events USING GIST (
     ST_SetSRID(ST_MakePoint(centroid_lon, centroid_lat), 4326)
 ) WHERE centroid_lat IS NOT NULL AND centroid_lon IS NOT NULL;
+
+-- TABLE: satnogs_transmitters (SatNOGS satellite transmitter catalog)
+-- Static/slow-changing: refreshed daily from db.satnogs.org.
+-- Maps NORAD IDs to their registered downlink/uplink frequencies and modes —
+-- the reference catalog for spectrum verification.
+CREATE TABLE IF NOT EXISTS satnogs_transmitters (
+    uuid            TEXT PRIMARY KEY,            -- SatNOGS transmitter UUID
+    norad_id        TEXT NOT NULL,               -- NORAD catalog number (links to satellites table)
+    sat_name        TEXT,                        -- Satellite name from SatNOGS DB
+    description     TEXT,                        -- Human-readable transmitter label
+    alive           BOOLEAN DEFAULT TRUE,        -- Whether SatNOGS considers it active
+    type            TEXT DEFAULT 'Transmitter',  -- 'Transmitter' | 'Transponder' | 'Digitizer'
+    uplink_low      BIGINT,                      -- Hz
+    uplink_high     BIGINT,                      -- Hz (NULL for single-freq uplinks)
+    downlink_low    BIGINT,                      -- Hz
+    downlink_high   BIGINT,                      -- Hz (NULL for single-freq downlinks)
+    mode            TEXT,                        -- 'FM' | 'BPSK' | 'CW' | 'USB' | etc.
+    invert          BOOLEAN DEFAULT FALSE,       -- Inverted sideband (transponders)
+    baud            FLOAT,                       -- Symbol rate (bps) where known
+    status          TEXT DEFAULT 'active',       -- 'active' | 'inactive' | 'unknown'
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_satnogs_tx_norad ON satnogs_transmitters (norad_id);
+CREATE INDEX IF NOT EXISTS ix_satnogs_tx_mode  ON satnogs_transmitters (mode);
+
+-- TABLE: satnogs_observations (SatNOGS ground-station observation records)
+-- Time-series: new records ingested each hour from network.satnogs.org.
+-- Each row = one satellite pass captured by one ground station.
+-- Spectrum verification: compare `frequency` against satnogs_transmitters.downlink_low.
+CREATE TABLE IF NOT EXISTS satnogs_observations (
+    time               TIMESTAMPTZ NOT NULL,     -- Observation start time (partition key)
+    observation_id     BIGINT NOT NULL,           -- SatNOGS network observation ID
+    norad_id           TEXT NOT NULL,             -- NORAD catalog number
+    ground_station_id  INTEGER,                   -- SatNOGS ground station ID
+    transmitter_uuid   TEXT,                      -- FK → satnogs_transmitters.uuid
+    frequency          BIGINT,                    -- Hz (actual observed downlink)
+    mode               TEXT,                      -- Observed modulation mode
+    status             TEXT DEFAULT 'good',       -- 'good' | 'bad' | 'unknown'
+    rise_azimuth       FLOAT,                     -- degrees
+    set_azimuth        FLOAT,                     -- degrees
+    max_altitude       FLOAT,                     -- degrees elevation
+    has_audio          BOOLEAN DEFAULT FALSE,
+    has_waterfall      BOOLEAN DEFAULT FALSE,
+    vetted_status      TEXT,                      -- 'verified' | 'failed' | NULL
+    tle0               TEXT,                      -- TLE name line used for scheduling
+    tle1               TEXT,                      -- TLE line 1 at time of observation
+    tle2               TEXT,                      -- TLE line 2 at time of observation
+    fetched_at         TIMESTAMPTZ DEFAULT NOW()
+);
+
+SELECT create_hypertable('satnogs_observations', 'time', if_not_exists => TRUE, chunk_time_interval => INTERVAL '1 day');
+SELECT add_retention_policy('satnogs_observations', INTERVAL '30 days');
+
+CREATE UNIQUE INDEX IF NOT EXISTS ix_satnogs_obs_id_time ON satnogs_observations (observation_id, time);
+CREATE INDEX IF NOT EXISTS ix_satnogs_obs_norad          ON satnogs_observations (norad_id, time DESC);
+CREATE INDEX IF NOT EXISTS ix_satnogs_obs_station        ON satnogs_observations (ground_station_id);
+CREATE INDEX IF NOT EXISTS ix_satnogs_obs_freq           ON satnogs_observations (frequency);

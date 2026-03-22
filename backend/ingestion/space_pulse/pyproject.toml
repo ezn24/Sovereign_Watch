@@ -1,0 +1,19 @@
+[project]
+name = "sovereign-watch-space-pulse"
+version = "0.1.0"
+description = "Sovereign Watch space domain ingestion: orbital TLE, SatNOGS spectrum, space weather"
+requires-python = ">=3.12"
+dependencies = [
+    # Async Kafka producer
+    "aiokafka==0.13.0",
+    # Async Redis client
+    "redis==7.3.0",
+    # HTTP clients
+    "aiohttp==3.13.3",
+    "httpx==0.28.1",
+    # SGP4 orbital propagation
+    "sgp4==2.25",
+    "numpy==2.4.3",
+    # Direct TimescaleDB writes (space weather Kp/aurora)
+    "psycopg2-binary>=2.9.9",
+]
