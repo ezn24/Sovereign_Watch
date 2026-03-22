@@ -66,7 +66,6 @@ Sovereign Watch uses **LiteLLM** as a unified AI gateway. It supports a triple-m
 
 > The **local model** (`secure-core`) follows a "fail-closed" routing policy—it will never fall back to cloud providers to ensure data sovereignty. Use **Gemini** or **Claude** for higher reasoning capabilities when internet access is available.
 
-
 ---
 
 ## RF Infrastructure
@@ -199,7 +198,6 @@ MY_GRID=FM18
 POSTGRES_PASSWORD=change-me-in-production
 ```
 
-
 ---
 
 ## Forcing Data Refreshes
@@ -207,6 +205,7 @@ POSTGRES_PASSWORD=change-me-in-production
 High-latency infrastructure (FCC Towers, Submarine Cables, RadioReference) uses Redis caching to prevent redundant daily downloads. By default, these sync on a **7-day interval**.
 
 ### Use -1 to Bypass Start-Hour Gating
+
 On a first-time setup, some services wait until a specific UTC hour (e.g., 3:00 AM) to avoid contention. You can force these to run **immediately on boot** by setting their start hour to `-1` in your `.env`:
 
 | Feature | Variable | Force-Sync Value |
@@ -225,6 +224,7 @@ On a first-time setup, some services wait until a specific UTC hour (e.g., 3:00 
 | `KP_INTERVAL_S` | `900` | NOAA Kp-Index fetch (seconds, 15m) |
 
 ### Manual Force-Sync via Redis
+
 If a service has already run and you want to force it to run again before the 7-day cooldown expires, you must clear its timestamp from Redis using the following commands:
 
 ```bash

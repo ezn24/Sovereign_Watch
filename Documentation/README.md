@@ -9,24 +9,24 @@
 
 ### Getting Started
 
-| Document                                      | Description                                          |
-| :-------------------------------------------- | :--------------------------------------------------- |
-| [Deployment & Upgrade Guide](./Deployment.md) | Install, configure, run, and upgrade Sovereign Watch |
-| [Configuration Reference](./Configuration.md) | Complete `.env` variable reference for every service |
-| [Development Setup Guide](./Development.md) | Editor/IDE setup, LSP config, AI coding tools, dev workflow |
+| Document                                      | Description                                                 |
+| :-------------------------------------------- | :---------------------------------------------------------- |
+| [Deployment & Upgrade Guide](./Deployment.md) | Install, configure, run, and upgrade Sovereign Watch        |
+| [Configuration Reference](./Configuration.md) | Complete `.env` variable reference for every service        |
+| [Development Setup Guide](./Development.md)   | Editor/IDE setup, LSP config, AI coding tools, dev workflow |
 
 ### Intelligence Pollers
 
 Each poller is a standalone microservice that ingests data from external sources and publishes it to the Redpanda message bus in TAK-compatible JSON format.
 
-| Document                                      | Poller                              | Container               |
-| :-------------------------------------------- | :---------------------------------- | :---------------------- |
-| [ADS-B Poller Guide](./pollers/ADSB.md)       | Aviation / ADS-B transponders       | `sovereign-adsb-poller` |
-| [AIS Maritime Poller Guide](./pollers/AIS.md) | Maritime vessel positions           | `sovereign-ais-poller`  |
-| [Space Pulse Guide](./pollers/Space.md)       | SGP4, SatNOGS, Space Weather        | `sovereign-space-pulse` |
-| [JS8Call Radio Guide](./pollers/JS8Call.md)   | HF Radio / JS8Call Terminal         | `sovereign-js8call`     |
-| [Infra Poller Guide](./pollers/Infra.md)      | Internet outages + submarine cables | `sovereign-infra-poller`|
-| [RF Pulse Guide](./pollers/RF.md)             | RF repeaters + NOAA weather radio   | `sovereign-rf-pulse`    |
+| Document                                      | Poller                              | Container                |
+| :-------------------------------------------- | :---------------------------------- | :----------------------- |
+| [ADS-B Poller Guide](./pollers/ADSB.md)       | Aviation / ADS-B transponders       | `sovereign-adsb-poller`  |
+| [AIS Maritime Poller Guide](./pollers/AIS.md) | Maritime vessel positions           | `sovereign-ais-poller`   |
+| [Space Pulse Guide](./pollers/Space.md)       | SGP4, SatNOGS, Space Weather        | `sovereign-space-pulse`  |
+| [JS8Call Radio Guide](./pollers/JS8Call.md)   | HF Radio / JS8Call Terminal         | `sovereign-js8call`      |
+| [Infra Poller Guide](./pollers/Infra.md)      | Internet outages + submarine cables | `sovereign-infra-poller` |
+| [RF Pulse Guide](./pollers/RF.md)             | RF repeaters + NOAA weather radio   | `sovereign-rf-pulse`     |
 
 ### Architecture & Protocols
 

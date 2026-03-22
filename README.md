@@ -1,18 +1,18 @@
+# Sovereign Watch
+
 <div align="center">
   <img src="assets/images/logo.png" alt="Sovereign Watch Logo" width="260"/>
 
-# Sovereign Watch
+## Distributed Multi-INT Fusion Center
 
-### Distributed Multi-INT Fusion Center
-
-  <p align="center">
+  <p>
     <a href="https://github.com/d3mocide/Sovereign_Watch/releases"><img src="https://img.shields.io/github/v/release/d3mocide/Sovereign_Watch?color=10B981&label=Release&style=for-the-badge" alt="Release"></a>
     <img src="https://img.shields.io/badge/Status-Phase%202%20(Active)-F97316?style=for-the-badge" alt="Status">
     <a href="https://github.com/d3mocide/Sovereign_Watch/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-06B6D4?style=for-the-badge" alt="License"></a>
     <img src="https://img.shields.io/badge/Docker-Ready-2563EB?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   </p>
 
-  <p align="center">
+  <p>
     <em>A self-hosted, edge-to-cloud intelligence platform for high-velocity telemetry (ADS-B, AIS, Orbital) and OSINT fusion.</em><br/>
     <em>It enforces data sovereignty by running on local hardware, utilizing a "Pulse" architecture and "Tiered AI" cognition.</em>
   </p>

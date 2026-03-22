@@ -1,12 +1,15 @@
 # 2026-03-22-decommission-mcp-support.md
 
 ## Issue
+
 The built-in MCP (Model Context Protocol) server support was not working correctly and was becoming a burden to maintain within the project repository. The user requested to "strip out" this support.
 
 ## Solution
+
 Removed all MCP-related core components, scripts, and documentation. Updated the project's agent rules and development guides to exclude MCP setup and usage instructions.
 
 ## Changes
+
 - **Deleted**:
   - `tools/mcp-language-server/` (MCP-LSP bridge source and build scripts)
   - `tools/check-mcp-context.sh` (MCP readiness check)
@@ -20,10 +23,12 @@ Removed all MCP-related core components, scripts, and documentation. Updated the
   - `Documentation/Development.md`: Removed sections for LSP/MCP installation, tool setup, and cross-references.
 
 ## Verification
+
 - Ran `grep -ir mcp .` to ensure no functional references remain (ignoring historical logs in `CHANGELOG.md` and archived tasks).
 - Verified file deletions using `ls`.
 
 ## Benefits
+
 - Reduced repository complexity and "token bloat" for AI agents.
 - Eliminated confusing/broken setup paths for human contributors.
 - Standardized rule-set in `AGENTS.md` by consolidating useful non-MCP rules.

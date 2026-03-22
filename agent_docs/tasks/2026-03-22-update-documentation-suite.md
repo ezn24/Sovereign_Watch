@@ -3,6 +3,7 @@
 ## Issue
 
 The core documentation in the `Documentation/` directory is outdated following several major updates, including:
+
 - Replacement of `sovereign-orbital-pulse` with the unified `sovereign-space-pulse` (SatNOGS, Aurora, Space Weather).
 - Addition of the `sovereign-js8call` service.
 - Removal of built-in MCP server support.

@@ -97,13 +97,13 @@ Use this gate to avoid unnecessary container overhead while preserving container
 3. **Ingestion poller rule (always containerized for runtime):**
    - Poller code/config changes still require rebuild and restart via Docker Compose.
 4. **Practical fallback order:**
-   - If host toolchain is available, run verification on host first.
-   - If host toolchain is missing or results are environment-sensitive, run inside Docker.
-   - Before merge/release, ensure parity-critical checks have been run in Docker.
+   1. If host toolchain is available, run verification on host first.
+   2. If host toolchain is missing or results are environment-sensitive, run inside Docker.
+   3. Before merge/release, ensure parity-critical checks have been run in Docker.
 
 ## 6. Directory Structure Map
 
-```
+```text
 .
 ├── .agent/           # Focused AI Skills (e.g., specific rules for React, FastAPI, Geo)
 ├── frontend/         # React Application (Vite)

@@ -79,6 +79,7 @@ Point your editor's Python interpreter at `backend/api/.venv`. Pylance and pyrig
 All four are VS Code-family editors and read `.vscode/settings.json` automatically. The file is already committed — no manual configuration required.
 
 **What's pre-configured:**
+
 - Python: Pylance (Pyright engine), Black formatter, import organisation on save
 - TypeScript / TSX: tsserver, Prettier formatter
 - Extra Python paths for all five ingestion pollers
@@ -103,11 +104,13 @@ All four are VS Code-family editors and read `.vscode/settings.json` automatical
 ### JetBrains (PyCharm · WebStorm · IntelliJ IDEA)
 
 **Python (PyCharm or IntelliJ with Python plugin):**
+
 1. **Settings → Python Interpreter** → Add Interpreter → Docker Compose, select `backend-api` service — or point at a local `.venv` if you prefer running tools on the host.
 2. Install the **Pylance** plugin (JetBrains Marketplace) — it reads `pyrightconfig.json` at the project root automatically.
 3. Mark `backend/api` as a Sources Root for correct import resolution.
 
 **TypeScript (WebStorm or IntelliJ):**
+
 1. TypeScript support is bundled — no plugin needed.
 2. **Settings → Languages & Frameworks → TypeScript** → enable *TypeScript Language Service*, point workspace root to `frontend/`.
 3. `frontend/tsconfig.json` is picked up automatically.

@@ -1,3 +1,5 @@
+# Changelog
+
 ## [0.45.0] - 2026-03-22
 
 ### Added
@@ -10,13 +12,13 @@
 - **Space Pulse Unified Ingestion**: Expanded the orbital tracker into a comprehensive Space Domain situational awareness suite.
   - **SatNOGS Integration**: Cross-referencing mission telemetry with SatNOGS ground station observations.
   - **Space Weather Monitor**: Real-time tracking of Aurora GeoJSON and Kp-index risk metrics directly on the tactical HUD.
-- **Dynamic Documentation Suite**: Newly created `Space.md` and `JS8Call.md` guides covering detailed poller logic and integration instructions.
+- **Dynamic Documentation Suite**: Newly created `Space.md`and`JS8Call.md` guides covering detailed poller logic and integration instructions.
 
 ### Changed
 
 - **Documentation Overhaul**: Synchronized `README.md`, `Deployment.md`, `Development.md`, and `Configuration.md` with the current service architecture.
-- **Service Naming Standardization**: Migrated from `sovereign-orbital-pulse` to `sovereign-space-pulse` across all configurations and environment variables (`SPACE_TLE_FETCH_HOUR`).
-- **Tactical Verification Logic**: Updated `AGENTS.md` and `.cursorrules` to implement targeted, component-specific verification to reduce development overhead.
+- **Service Naming Standardization**: Migrated from `sovereign-orbital-pulse`to`sovereign-space-pulse` across all configurations and environment variables (`SPACE_TLE_FETCH_HOUR`).
+- **Tactical Verification Logic**: Updated `AGENTS.md`and`.cursorrules` to implement targeted, component-specific verification to reduce development overhead.
 - **Frontend Tooling**: Formalized `pnpm` as the primary package manager for all UI development tasks.
 
 ### Removed
@@ -39,11 +41,11 @@
 
 ### Changed
 
-- **Space-Pulse Consolidation**: Merged `orbital_pulse`, `space_weather_pulse`, and `SatNOGS` ingestion into a single, high-concurrency `SpacePulseService`, reducing operational overhead.
+- **Space-Pulse Consolidation**: Merged `orbital_pulse`, `space_weather_pulse`, and `SatNOGS`ingestion into a single, high-concurrency`SpacePulseService`, reducing operational overhead.
 - **InfraPoller Modernization**: Full async rewrite of the infrastructure poller, migrating to `httpx`, `redis.asyncio`, and `asyncio.to_thread` for improved throughput and reliability.
 - **UI Refinement**:
   - Moved the SatNOGS Network toggle to the `OrbitalCategoryPills` header for better functional grouping.
-  - Centered the `KpIndexWidget` in the `TopBar` for improved visual balance between view modes and status monitors.
+  - Centered the `KpIndexWidget`in the`TopBar` for improved visual balance between view modes and status monitors.
   - Themed the Pass Geometry and Space Weather widgets with `Sovereign Glass` aesthetics and domain-specific purple (`#a855f7`) accents.
   - Extract Spectrum Verification logic into a dedicated component for better maintainability.
 
@@ -84,7 +86,7 @@
 ### Fixed
 
 - **RF Service Filter Logic**: Resolved a bug where disabling all RF service sub-filters (Ham, NOAA, PSB) would default to displaying all repeaters; the layer now correctly clears when no filters are selected.
-- **Tower Rendering Alignment**: Standardized `ScatterplotLayer` formatting in `buildTowerLayer.ts` to ensure consistent depth-testing and pickable properties.
+- **Tower Rendering Alignment**: Standardized `ScatterplotLayer`formatting in`buildTowerLayer.ts` to ensure consistent depth-testing and pickable properties.
 
 ## [0.42.1] - 2026-03-21
 
@@ -124,14 +126,14 @@
 
 ### Fixed
 
-- **UI Cutoff Protection**: Implemented defensive padding in `ListeningPost` and `RadioTerminal` to prevent bottom controls from being clipped by system taskbars.
+- **UI Cutoff Protection**: Implemented defensive padding in `ListeningPost`and`RadioTerminal` to prevent bottom controls from being clipped by system taskbars.
 - **JS8Bridge Stability**: Resolved a critical missing `socket` import in the bridge server that caused UDP command failures.
 
 ## [0.41.4] - 2026-03-20
 
 ### Changed
 
-- **RadioReference Dynamic Coverage**: Replaced hardcoded `_STATE_IDS` targeting the Pacific Northwest entirely. Utilizing a dynamic FIPS state coordinate mapping inside the ingest container, `RADIOREF_STATE_IDS="AUTO"` now naturally discovers boundaries that correlate to your active Area of Tactical Operations parameters (`CENTER_LAT`/`CENTER_LON`), pulling all required regional nodes gracefully.
+- **RadioReference Dynamic Coverage**: Replaced hardcoded `_STATE_IDS`targeting the Pacific Northwest entirely. Utilizing a dynamic FIPS state coordinate mapping inside the ingest container,`RADIOREF_STATE_IDS="AUTO"` now naturally discovers boundaries that correlate to your active Area of Tactical Operations parameters (`CENTER_LAT`/`CENTER_LON`), pulling all required regional nodes gracefully.
 - **RF Map Capacity**: Increased default spatial query limits on `/api/rf/sites` from 5,000 to 15,000 active nodes, preventing artificial circular rendering cutoffs within large AOR spheres.
 - **Map Range Presets**: Adjusted bounding radius widget settings in `SystemStatus.tsx` to center closer to optimal visual rendering thresholds (150, 300, 600 NM) and removed the oversized 2000 NM filter constraint.
 
@@ -139,11 +141,11 @@
 
 ### Changed
 
-- **AI Analyst Theming**: Synchronized the property card `AnalysisWidget` button styling and the `AIAnalystPanel` modal to accurately inherit domain-specific accent colors (e.g., Orange for FCC Towers, Teal for Repeaters, Cyan for Infrastructure, and Indigo for JS8Call).
+- **AI Analyst Theming**: Synchronized the property card `AnalysisWidget`button styling and the`AIAnalystPanel` modal to accurately inherit domain-specific accent colors (e.g., Orange for FCC Towers, Teal for Repeaters, Cyan for Infrastructure, and Indigo for JS8Call).
 
 ### Fixed
 
-- **FCC Tower Ingestion Identifiers**: Resolved a bug in `infra_poller/main.py` where FCC tower parsing defaulted to the static row indicator `"REG"` instead of the Unique System Identifier (USI). This fix ensures metadata fields such as Owner and Elevation accurately map to their exact registered structure during database ingestion.
+- **FCC Tower Ingestion Identifiers**: Resolved a bug in `infra_poller/main.py`where FCC tower parsing defaulted to the static row indicator`"REG"` instead of the Unique System Identifier (USI). This fix ensures metadata fields such as Owner and Elevation accurately map to their exact registered structure during database ingestion.
 
 ## [0.41.2] - 2026-03-22
 
@@ -155,8 +157,8 @@
 
 ### Fixed
 
-- **RadioReference Sync Deferral**: Resolved an issue where `RadioReference` sync was incorrectly deferred when `RF_RR_FETCH_HOUR` was set to `-1`. The poller now correctly bypasses hour gating when disabled.
-- **FCC Download Resilience**: Improved `infra_poller` download logic for the FCC Antenna Structure Registration (ASR) dataset. Reduced chunk sizes from 8MB to 1MB and enabled progress logging at `INFO` level to provide better visibility during long-running downloads.
+- **RadioReference Sync Deferral**: Resolved an issue where `RadioReference`sync was incorrectly deferred when`RF_RR_FETCH_HOUR`was set to`-1`. The poller now correctly bypasses hour gating when disabled.
+- **FCC Download Resilience**: Improved `infra_poller`download logic for the FCC Antenna Structure Registration (ASR) dataset. Reduced chunk sizes from 8MB to 1MB and enabled progress logging at`INFO` level to provide better visibility during long-running downloads.
 
 ## [0.41.0] - 2026-03-20
 
@@ -169,7 +171,7 @@
 ### Changed
 
 - **Docker Stack Harmonization**: Standardized all Docker service, container, network, and volume names with a persistent `sovereign-` prefix for simplified CLI management and resource tracking.
-- **Frontend pnpm Standardization**: Formally adopted `pnpm` as the sole package manager for the React HUD, removing redundant `package-lock.json` files and improving build parity.
+- **Frontend pnpm Standardization**: Formally adopted `pnpm`as the sole package manager for the React HUD, removing redundant`package-lock.json` files and improving build parity.
 - **Environment Template Synchronization**: Updated `.env.example` to include missing variables for PostgreSQL database names and poll-timing for all ingestion services.
 
 ### Fixed
@@ -180,18 +182,18 @@
 
 ### Added
 
-- **MCP Readiness Health Check**: Added `tools/mcp-language-server/check.sh` to verify host prerequisites (`bash`, Node/npm, `typescript-language-server`, `pyright-langserver`), pinned bridge binary presence, and Graph-it-Live entrypoint discovery with explicit remediation steps.
+- **MCP Readiness Health Check**: Added `tools/mcp-language-server/check.sh`to verify host prerequisites (`bash`, Node/npm,`typescript-language-server`, `pyright-langserver`), pinned bridge binary presence, and Graph-it-Live entrypoint discovery with explicit remediation steps.
 - **MCP Agent Efficiency Playbook**: Added `agent_docs/mcp-agent-playbook.md` with a token-efficient tool selection order (symbol tools first, file/dependency second, impact graph third, broad search last).
 
 ### Changed
 
 - **MCP Runtime Wiring (Portability Pass)**:
-  - Standardized `.mcp.json` to wrapper-based startup for `graph-it-live`, `pyright`, and `tsserver`.
+  - Standardized `.mcp.json`to wrapper-based startup for`graph-it-live`, `pyright`, and `tsserver`.
   - Added `tools/mcp-language-server/run-graph-it-live.sh` for cross-host Graph-it-Live entrypoint resolution.
-  - Simplified `run-pyright.sh` and `run-tsserver.sh` to local pinned bridge execution with deterministic repo-root resolution and explicit missing-binary guidance.
+  - Simplified `run-pyright.sh`and`run-tsserver.sh` to local pinned bridge execution with deterministic repo-root resolution and explicit missing-binary guidance.
 - **Verification Guidance Consolidation**:
-  - Added a shared Verification Decision Gate in `AGENTS.md` and `CLAUDE.md` clarifying host-first inner-loop checks versus Docker-required parity checks.
-  - Updated `Documentation/Development.md` MCP setup guidance to align with universal `bash` + wrapper workflow and readiness checks.
+  - Added a shared Verification Decision Gate in `AGENTS.md`and`CLAUDE.md` clarifying host-first inner-loop checks versus Docker-required parity checks.
+  - Updated `Documentation/Development.md`MCP setup guidance to align with universal`bash` + wrapper workflow and readiness checks.
 
 ### Fixed
 
@@ -219,7 +221,7 @@
 
 ### Fixed
 
-- **FCC Data Migration**: Resolved 404 errors by migrating the ingestion target from the deprecated `wireless2.fcc.gov` domain to the modern `data.fcc.gov` endpoint.
+- **FCC Data Migration**: Resolved 404 errors by migrating the ingestion target from the deprecated `wireless2.fcc.gov`domain to the modern`data.fcc.gov` endpoint.
 - **Coordinate Precision**: Implemented a new Degrees-Minutes-Seconds (DMS) parser to handle the FCC's separate-field coordinate schema, ensuring sub-meter mapping accuracy.
 - **Rendering Z-Ordering**: Standardized tower depth testing and bias parameters to ensure markers render correctly in both 3D Mercator and Globe projections without flickering.
 
@@ -238,9 +240,9 @@
 ### Fixed
 
 - **RadioReference Ingestion**: Resolved a critical crash in the `rf_pulse` poller when RadioReference credentials were provided.
-  - Fixed Zeep `TransportError` (HTTP 403) by explicitly injecting `SovereignWatch/1.0` User-Agent headers into both async and sync WSDL fetch contexts.
-  - Removed calls to the deprecated `getAuthToken` method and appended `&v=9` to the WSDL URL to ensure access to the current API schema.
-  - Stubbed out the hallucinated `getCountrySystemList` method to prevent unhandled `AttributeError` exceptions, stabilizing the poller while a proper trunked-system fetch strategy is designed.
+  - Fixed Zeep `TransportError`(HTTP 403) by explicitly injecting`SovereignWatch/1.0` User-Agent headers into both async and sync WSDL fetch contexts.
+  - Removed calls to the deprecated `getAuthToken`method and appended`&v=9` to the WSDL URL to ensure access to the current API schema.
+  - Stubbed out the hallucinated `getCountrySystemList`method to prevent unhandled`AttributeError` exceptions, stabilizing the poller while a proper trunked-system fetch strategy is designed.
 
 ## [0.39.0] - 2026-03-19
 
@@ -248,8 +250,8 @@
 
 - **Global Watchlist Management**: Added watchlist functionality for tracking specific ICAO24s globally, bypassing spatial filters.
   - **Frontend UI**: Added a comprehensive watchlist management panel to `SystemSettingsWidget` with add/remove capability and visual indicators for permanent vs. expiring entries.
-  - **Frontend API**: Created `watchlist.ts` API client for GET/POST/DELETE operations and integrated polling into the `useEntityWorker` hook matching a 30-second sync interval.
-  - **Backend APIs**: Added three new REST endpoints to `system.py`: `GET /api/watchlist` to return active entries, `POST /api/watchlist` to add/refresh entries with optional TTL, and `DELETE /api/watchlist/{icao24}` to remove entries.
+  - **Frontend API**: Created `watchlist.ts`API client for GET/POST/DELETE operations and integrated polling into the`useEntityWorker` hook matching a 30-second sync interval.
+  - **Backend APIs**: Added three new REST endpoints to `system.py`: `GET /api/watchlist`to return active entries,`POST /api/watchlist`to add/refresh entries with optional TTL, and`DELETE /api/watchlist/{icao24}` to remove entries.
   - **Persistence**: Powered by a Redis sorted set (`opensky:watchlist`) using timestamps as scores, with a far-future sentinel value (01-Jan-3000) for permanent entries.
 
 ### Changed
@@ -257,7 +259,7 @@
 - **UI Refinements**:
   - Moved the Track Log widget in the Right Sidebar to appear centrally before the Positional Telemetry section for improved visibility.
   - Ensured specific actions like the Track Log button are expressly hidden for maritime vessels (AIS) where log functions are unsupported.
-  - Unified dynamic styling of the `CENTER_VIEW` / `TRACK_LOG` buttons and Compass widget to properly reflect physical agent colors (e.g., `sea-accent` for ships).
+  - Unified dynamic styling of the `CENTER_VIEW`/`TRACK_LOG`buttons and Compass widget to properly reflect physical agent colors (e.g.,`sea-accent` for ships).
 
 ## [0.38.0] - 2026-03-19
 
@@ -278,7 +280,7 @@
 
 ### Changed
 
-- **Docker Compose Wiring**: Added OpenSky environment variables to `adsb-poller` in `docker-compose.yml` so OpenSky behavior is fully configurable in containerized deployments.
+- **Docker Compose Wiring**: Added OpenSky environment variables to `adsb-poller`in`docker-compose.yml` so OpenSky behavior is fully configurable in containerized deployments.
 - **Release Documentation**: Updated release notes and operational guidance for OpenSky rollout.
 
 ### Fixed
@@ -287,7 +289,7 @@
   - Falls back cleanly to anonymous mode when credential-based token retrieval fails.
   - Adds backoff for token-refresh retries to avoid repeated 401 log storms.
   - Improves diagnostics with clearer token refresh failure context.
-- **Credential Hygiene**: Trimmed `OPENSKY_CLIENT_ID` and `OPENSKY_CLIENT_SECRET` values in `backend/ingestion/aviation_poller/service.py` to prevent hidden whitespace causing auth failures.
+- **Credential Hygiene**: Trimmed `OPENSKY_CLIENT_ID`and`OPENSKY_CLIENT_SECRET`values in`backend/ingestion/aviation_poller/service.py` to prevent hidden whitespace causing auth failures.
 
 ## [0.37.2] - 2026-03-19
 
@@ -297,20 +299,20 @@
 
 ### Fixed
 
-- **Replay Historian: Temporal Dead Zone Crash**: Resolved an `Uncaught ReferenceError` (`Cannot access 'updateReplayFrame' before initialization`) in `App.tsx` caused by `loadReplayData` referencing `updateReplayFrame` before its `const` declaration. The callback is now correctly hoisted above its consumers.
+- **Replay Historian: Temporal Dead Zone Crash**: Resolved an `Uncaught ReferenceError`(`Cannot access 'updateReplayFrame' before initialization`) in`App.tsx`caused by`loadReplayData`referencing`updateReplayFrame`before its`const` declaration. The callback is now correctly hoisted above its consumers.
 - **Replay Playback Time-Range** (PR #149): Corrected time-range selection logic and resolved a bug where recently active tracks were missing from replay playback.
 - **MCP LSP Configuration** (PR #148): Fixed LSP MCP servers to support a Docker/local-binary dual-path. Wrapper scripts now auto-select the correct backend, and relative workspace paths are used in `.mcp.json` args to ensure portability.
-- **Accessibility: Accordion Toggle Buttons** (PR #151): Converted non-semantic `<div>` toggle elements to `<button>` elements across accordion components, satisfying WCAG 2.1 keyboard-navigation and screen-reader requirements.
+- **Accessibility: Accordion Toggle Buttons** (PR #151): Converted non-semantic `<div>`toggle elements to`<button>` elements across accordion components, satisfying WCAG 2.1 keyboard-navigation and screen-reader requirements.
 
 ## [0.37.1] - 2026-03-18
 
 ### Added
 
 - **Multi-Domain Situational Intelligence**: Enhanced the AI Analyst with deep contextual awareness for fusion analysis.
-    - **Behavioral Trajectory Analysis**: The AI now receives the last 10 waypoints (lat/lon, alt, speed, time) for tracking complex patterns like loitering and interceptions.
-    - **Infrastructure Correlation**: Automated spatial cross-referencing with nearby RF Sites (within 10km) and Submarine Cable landing stations (within 20km).
-    - **Orbital Sensor Awareness**: Integrated real-time SGP4 propagation to identify active INTEL-category satellite overpasses during a target's operational window.
-    - **Satellite Fallback Synthesis**: Implemented on-demand trajectory synthesis for satellites using TLE-based SGP4 propagation when analytical telemetry is required.
+  - **Behavioral Trajectory Analysis**: The AI now receives the last 10 waypoints (lat/lon, alt, speed, time) for tracking complex patterns like loitering and interceptions.
+  - **Infrastructure Correlation**: Automated spatial cross-referencing with nearby RF Sites (within 10km) and Submarine Cable landing stations (within 20km).
+  - **Orbital Sensor Awareness**: Integrated real-time SGP4 propagation to identify active INTEL-category satellite overpasses during a target's operational window.
+  - **Satellite Fallback Synthesis**: Implemented on-demand trajectory synthesis for satellites using TLE-based SGP4 propagation when analytical telemetry is required.
 
 ### Fixed
 
@@ -321,39 +323,47 @@
 ### Added
 
 - **Semantic Intelligence Integration**: Added Model Context Protocol (MCP) support for specialized LSP servers.
-    - **Pyright (Backend)**: Enabled deep semantic analysis and "Go to Definition" capabilities across the multi-poller backend services.
-    - **tsserver (Frontend)**: Standardized TypeScript/React symbol resolution for the 30+ Deck.gl and HUD components.
+  - right (Backend)**: Enabled deep semantic analysis and "Go to Definition" capabilities across the multi-poller backend services.
+
+  - server (Frontend)**: Standardized TypeScript/React symbol resolution for the 30+ Deck.gl and HUD components.
+
 - **Architectural Visualization**: Integrated the `graph-it-live` MCP server to provide real-time dependency graphing and structural analysis of the codebase.
 - **Developer Tooling Isolation**: Introduced `docker-compose-tools.yml` to run MCP and LSP services in isolated containers, eliminating host-side dependencies for AI analysis.
-- **Enhanced IDE Standardization**: Updated `.gitignore` to explicitly preserve `.vscode/settings.json`, ensuring consistent formatting (Black/Prettier) and analysis paths across all contributors.
+- **Enhanced IDE Standardization**: Updated `.gitignore`to explicitly preserve`.vscode/settings.json`, ensuring consistent formatting (Black/Prettier) and analysis paths across all contributors.
 
 ## [0.36.1] - 2026-03-18
 
 ### Fixed
 
 - **AI Analyst Copy-Paste Formatting**: Resolved a bug where text copied from the AI Analyst panel lost its structure (one word per line) in external applications.
-    - Implemented robust text normalization for SSE carriage returns and spacing artifacts.
-    - Unified the cleaning logic between the UI renderer and the clipboard handler.
+  - emented robust text normalization for SSE carriage returns and spacing artifacts.
+
+  - ied the cleaning logic between the UI renderer and the clipboard handler.
+
 
 ## [0.36.0] - 2026-03-18
 
 ### Added
 
 - **WebSDR Discovery Architecture**: Introduced a dedicated global node discovery system for the WebSDR network.
-    - **Global Map View**: A new full-page map interface for browsing available WebSDR nodes worldwide, removing previous radius and coverage restrictions.
-    - **Integrated Receiver**: Selecting a WebSDR node now transitions the terminal to a full-screen receiver view, unmounting automatically when switching modes to conserve resources.
+  - obal Map View**: A new full-page map interface for browsing available WebSDR nodes worldwide, removing previous radius and coverage restrictions.
+
+  - tegrated Receiver**: Selecting a WebSDR node now transitions the terminal to a full-screen receiver view, unmounting automatically when switching modes to conserve resources.
+
 - **WebSDR Node Styling**: Implemented custom tactical themed popups for WebSDR nodes, removing default white outlines and ensuring consistency with the application's dark aesthetic.
 
 ### Changed
 
 - **Radio Terminal Refactoring**:
-    - Renamed the base "Listen" mode to "**KiwiSDR**" for improved clarity and naming consistency across different SDR networks.
-    - Specialized the `KiwiNodeBrowser` widget to focus exclusively on KiwiSDR nodes, reducing UI clutter and state overlap.
+  - med the base "Listen" mode to "**KiwiSDR**" for improved clarity and naming consistency across different SDR networks.
+
+  - ialized the `KiwiNodeBrowser` widget to focus exclusively on KiwiSDR nodes, reducing UI clutter and state overlap.
+
 - **Documentation Overhaul**: Updated the UI Guide and Configuration Reference to reflect the new WebSDR capabilities and the KiwiSDR naming convention.
 
 ### Fixed
 
-- **WebSDR Missing Module**: Resolved a container deployment issue where `websdr_directory.py` was missing from the `js8call` service Docker image, restoring node discovery functionality.
+- **WebSDR Missing Module**: Resolved a container deployment issue where `websdr_directory.py`was missing from the`js8call` service Docker image, restoring node discovery functionality.
 
 ## [0.35.1] - 2026-03-18
 
@@ -371,15 +381,18 @@
 ### Added
 
 - **Multi-Mode AI Analysis**: The AI Analyst now supports specialized operational modes:
-    - **Tactical**: Focuses on telemetry anomalies and trajectory analysis.
-    - **OSINT**: Focuses on entity identification and registration matching.
-    - **SAR**: Optimized for identifying distress patterns and search grids.
+  - ctical**: Focuses on telemetry anomalies and trajectory analysis.
+
+  - INT**: Focuses on entity identification and registration matching.
+
+  - R**: Optimized for identifying distress patterns and search grids.
+
 - **Orbital Tracking Performance**: Implemented a specialized isolated filter state for the Orbital Map to prevent high-frequency satellite updates from impacting tactical map performance.
 - **AI Configuration Guide**: New documentation clarifying the distinction between the UI model catalog (`models.yaml`) and the Backend infrastructure (`litellm_config.yaml`).
 
 ### Changed
 
-- **State Stability**: Memoized filter objects and stabilized prop references in `TacticalMap` and `OrbitalMap` to reduce unnecessary re-renders.
+- **State Stability**: Memoized filter objects and stabilized prop references in `TacticalMap`and`OrbitalMap` to reduce unnecessary re-renders.
 
 ### Fixed
 
@@ -391,52 +404,62 @@
 
 ### Fixed
 
-- **Docker Stability (uv Migration)**: Resolved critical "executable not found" errors after the migration to `uv` by moving the virtual environment to `/opt/venv` to prevent masking by host-mount volumes.
+- **Docker Stability (uv Migration)**: Resolved critical "executable not found" errors after the migration to `uv`by moving the virtual environment to`/opt/venv` to prevent masking by host-mount volumes.
 - **Container Performance Tuning**: Enabled bytecode compilation (`UV_COMPILE_BYTECODE=1`) and disabled redundant startup sync checks (`--no-sync`), reducing cold-boot lag by 3-5 seconds.
 - **JS8Call Compatibility**: Relaxed Python version requirement to `3.10` to match the Ubuntu 22.04 base image, ensuring bridge stability.
-- **Build Context Sanitization**: Implemented global and per-service `.dockerignore` files to prevent large host-side `.venv` folders from breaking Windows→Docker build context transfers.
+- **Build Context Sanitization**: Implemented global and per-service `.dockerignore`files to prevent large host-side`.venv` folders from breaking Windows→Docker build context transfers.
 
 ## [0.34.0] - 2026-03-17
-
 
 ### Added
 
 - **Situation Globe (Dashboard)**: A new interactive, auto-rotating 3D globe integrated into the Dashboard view.
-    - **Split-View HUD**: Dashboard now displays a local tactical map alongside the situational globe for dual-scale awareness.
-    - **Geodesic Mission AO**: The active mission area is rendered as a projection-aware ring on the globe.
+  - lit-View HUD**: Dashboard now displays a local tactical map alongside the situational globe for dual-scale awareness.
+
+  - odesic Mission AO**: The active mission area is rendered as a projection-aware ring on the globe.
+
 - **Starfield Backdrop**: Cinematic deep-space starfield integrated into global map views.
 
 ### Changed
 
 - **Playback / Replay overhaul**: Fixed a cascade of bugs that caused the replay
   feature to show no data after running overnight with no client connected.
+
   - Historian now uses adaptive time-bucket sampling (`DISTINCT ON (entity_id,
     time_bucket(...))`) instead of a raw `LIMIT` that always returned the first
     N chronological rows (typically the first few seconds of a 6-hour window).
     Bucket sizes scale with window duration: 30 s (≤1 h) → 2 min (≤6 h) → 5 min
     (>12 h), giving uniform temporal coverage across the entire requested window.
+
   - Frontend now requests `limit=10000` (API max) instead of the default 1000.
   - Frontend stale threshold raised from 5 min to 10 min to accommodate larger
     bucket sizes without entities flickering out between data points.
-  - Historian supervisor added (`_historian_supervisor` in `main.py`): wraps the
+
+  - Historian supervisor added (`_historian_supervisor`in`main.py`): wraps the
     historian task with exponential-backoff restart (5 s → 60 s) so a transient
     Kafka outage at startup no longer permanently stops data persistence.
-  - `historian_task` now re-raises `CancelledError` and fatal exceptions so the
+
+  - `historian_task`now re-raises`CancelledError` and fatal exceptions so the
     supervisor can distinguish clean shutdown from crash.
 
 - **Orbital tracks removed from database**: The `orbital_tracks` TimescaleDB
   hypertable has been eliminated.  Satellite positions are deterministic (SGP4
   from stored TLEs) and were generating ~2 000 write-rows per second with no
   operational benefit.
-  - `orbital_tracks` table removed from `init.sql` and no longer created on
+
+  - `orbital_tracks`table removed from`init.sql` and no longer created on
     fresh installs.
+
   - Historian no longer writes satellite positions; it continues to upsert TLE
     metadata into the `satellites` table every 6-hour refresh cycle.
+
   - `/api/tracks/history/{SAT-*}` now propagates positions on-demand via SGP4
     from the stored TLE, giving unlimited historical depth (bounded only by TLE
     age) instead of the previous 12-hour retention window.
-  - `/api/tracks/search` satellite results now query the `satellites` catalogue
+
+  - `/api/tracks/search`satellite results now query the`satellites` catalogue
     directly and compute current positions via SGP4 at query time.
+
   - `/api/tracks/replay` already excluded orbital data (satellites exhausted the
     10 000-row budget and the OrbitalMap is hardcoded to `replayMode=false`).
 
@@ -451,20 +474,24 @@
 
 - Historian `CancelledError` was silently swallowed, preventing clean shutdown
   detection by the new supervisor.
-- `docker-compose.yml` does not declare `redpanda` as a health dependency for
+
+- `docker-compose.yml`does not declare`redpanda` as a health dependency for
   `backend-api`; the supervisor now retries automatically if Kafka is not yet
   ready when the API starts.
+
 - **Helicopter & Drone Filtering**: Fixed a precedence bug where platform-specific filters (Helo/Drone) were overridden by ownership filters (CIV/MIL). These filters now take absolute priority.
 - **Dashboard Prop Synchronization**: Fixed multiple React hook dependency and prop-drilling issues in the split-view dashboard.
 
 ## [0.33.0] - 2026-03-16
 
 ### Added
+
 - **Global DASHBOARD View**: Introduced a high-tactical "at-a-glance" dashboard view accessible via the Top Bar. This view provides a unified perspective on system health, stream bitrates, active outages, and RF EmComm monitoring without needing full map immersion.
 - **Stream Health & Sparklines**: Integrated real-time sparkline visualizations for data ingestion rates across Aviation, Maritime, and Orbital domains.
 - **Orbital Constellation Tabs**: Enhanced orbital situational awareness with dedicated dashboard tabs for quick access to Starlink, GPS, and Intel constellation status.
 
 ### Changed
+
 - **High-Frequency Performance Tuning**:
   - **Optimized Date Parsing**: Drastically reduced CPU overhead in rendering and mapping loops by optimizing `Date` instantiation inside hot paths.
   - **Async File I/O for Pollers**: Migrated synchronous file writes to non-blocking async operations in the Orbital Pulse service, preventing I/O stalls during high-volume TLE updates.
@@ -472,19 +499,22 @@
 ## [0.32.2] - 2026-03-15
 
 ### Fixed
-- **Deep Localhost Removal**: Eliminated remaining hardcoded `localhost` string references in `useEntityWorker.ts`, `useKiwiNodes.ts`, and `ListeningPost.tsx`.
+
+- **Deep Localhost Removal**: Eliminated remaining hardcoded `localhost`string references in`useEntityWorker.ts`, `useKiwiNodes.ts`, and `ListeningPost.tsx`.
 - **Intelligent URL Derivation**: Implemented fallback logic that automatically uses the current host IP for all API and WebSocket traffic when environment variables are set to local defaults, ensuring multi-node network deployments work out of the box.
 
 ## [0.32.1] - 2026-03-15
 
 ### Fixed
-- **Network Deployment & CORS**: Centralized `ALLOWED_ORIGINS` in `.env`, resolving Cross-Origin Resource Sharing blocks when running on a server inside a local network.
+
+- **Network Deployment & CORS**: Centralized `ALLOWED_ORIGINS`in`.env`, resolving Cross-Origin Resource Sharing blocks when running on a server inside a local network.
 - **Dynamic WebSocket Detection**: Updated frontend hooks to automatically derive backend WebSocket URLs from the current server IP, eliminating the need for manual `.env` configuration in many network environments.
 - **Non-Secure (HTTP) Support**: Implemented a fallback for `crypto.randomUUID()` in non-secure (HTTP) contexts, preventing application crashes when accessed via IP without SSL.
 
 ## [0.32.0] - 2026-03-15
 
 ### Added
+
 - **Global Raw Payload Stream**: Introduced a high-performance `GlobalTerminalWidget` accessible via the Top Bar. This "god-view" terminal samples the entire system data bus (Aviation, Maritime, Satellite) in real-time, providing deep investigative capabilities into the raw Protobuf/JSON ingestion flow.
 - **Dynamic Sampling Controls**: Integrated live bit-rate decimation controls (REAL, 2X, 5X, 10X) into the global terminal, allowing operators to downsample the high-speed data firehose for better human readability.
 - **Enhanced Entity Payload Inspector**: Re-engineered the individual entity `RAW_PAYLOAD` inspector with standard syntax highlighting and a refined tactical aesthetic.
@@ -493,29 +523,34 @@
 ## [0.31.0] - 2026-03-15
 
 ### Added
+
 - **Enhanced KiwiSDR Demodulation Coverage**: Expanded available modes from 5 to 18, including AM wideband/narrow variants (amn, amw), Sync AM family (sam, sau, sal, sas), and specialized digital modes (DRM, IQ, QAM).
 - **Advanced DSP & Waterfall Controls**: Integrated 8 new real-time DSP methods (Notch Filter, Noise Reduction, Noise Filter, RF Attenuator, Passband tuning, Mute) and 2 waterfall controls (Color Map selection, Aperture/Dynamic Range centering) through the full UI→backend→receiver signal path.
 - **Dual-Protocol SDR Link**: Implemented automatic WebSocket URL fallback for modern (v1.550+) and legacy KiwiSDR nodes, ensuring connectivity across the global hardware fleet.
 - **MD5 Secure SDR Authentication**: Integrated MD5-based password authentication for protected KiwiSDR nodes, matching current KiwiSDR server security protocols.
 
 ### Changed
-- **Unified SDR State Model**: Standardized `KiwiConfig` and `ManualConfig` interfaces across the frontend to resolve type mismatches and ensure consistent connection state across all widgets.
+
+- **Unified SDR State Model**: Standardized `KiwiConfig`and`ManualConfig` interfaces across the frontend to resolve type mismatches and ensure consistent connection state across all widgets.
 - **Radio Terminal UX Refinement**: Optimized vertical spacing and improved typography for station cards and message logs.
 
 ### Fixed
+
 - **Deck.gl v9 & Terminator Layer Stability**: Resolved critical Deck.gl v9 compatibility issues in `TerminatorLayer`, including corrected coordinate wrap-around and type safety for GeoJSON assets.
-- **Radio Terminal Component Restoration**: Implemented missing `LogEntry` and `StationCard` components, resolving blank panels and reference errors in the Radio Terminal.
-- **React Purity for RTL Ops**: Refactored `Date.now()` logic in `RadioTerminal.tsx` to align with strict React purity rules, preventing unstable re-renders in high-traffic SDR sessions.
+- **Radio Terminal Component Restoration**: Implemented missing `LogEntry`and`StationCard` components, resolving blank panels and reference errors in the Radio Terminal.
+- **React Purity for RTL Ops**: Refactored `Date.now()`logic in`RadioTerminal.tsx` to align with strict React purity rules, preventing unstable re-renders in high-traffic SDR sessions.
 - **JS8Call Intelligence Sync**: Fixed property access for signal quality (`sq`) and SNR levels in the SDR node browser, ensuring accurate load visualization.
 - **Task Documentation**: Established standardized task tracking in `agent_docs/tasks/` for all architectural and stability fixes.
 
 ## [0.30.0] - 2026-03-15
 
 ### Added
+
 - **RF Layer Legend Widget**: Introduced a dedicated legend widget for the RF infrastructure layer. It provides instant decoding of site service types (NOAA, Safety, Digital, Standard FM) and explicitly flags EMCOMM-active stations.
 - **HUD Asset Tags for KiwiSDR**: Restored high-tactical information labels for individual KiwiSDR nodes. Asset tags now feature the live host address (e.g., `kk6pr.ddns.net`) in the header for rapid identification.
 
 ### Changed
+
 - **Tactical RF Symbology Overhaul**:
   - Removed aggressive glow halos from RF sites to reduce map clutter and improve visual focus in high-density areas.
   - Standardized "Silent Map" labeling: Most generic site labels are now hidden by default (accessible via tooltips) to maximize situational awareness.
@@ -525,16 +560,19 @@
 ## [0.29.1] - 2026-03-15
 
 ### Added
+
 - **Detailed RF Health Monitoring**: The System Health widget now provides granular connectivity status for individual RF sources (JS8, NWR, ARD).
 - **Data Portability & Custom Presets**: Operators can now save, export, and import custom combinations of map layers as "Mission Presets" via the System Settings panel.
 - **Mission Quick-Presets**: Added one-click tactical configurations for "Air Only", "Sea Only", and "Full Intelligence" views.
 
 ### Changed
+
 - **Sentinel Security Implementation**: Integrated a high-performance rate-limiting layer on the AI Analysis endpoint to mitigate potential API abuse.
 - **Internet Outage Polygon Optimization**: Implemented client-side coordinate simplification for internet outage polygons, reducing the memory footprint and improving frame rates during global outage events.
 - **System Health Toggle UI**: Refined the aesthetics of the system health toggles for a more integrated glassmorphism look.
 
 ### Fixed
+
 - **AI Analyst Stability**: Resolved a critical overtriggering bug in the `AIAnalystPanel` where model analysis would fire multiple times per second due to unstable dependency arrays.
 - **Backend Environment Injection**: Fixed a race condition in the container entrypoint that occasionally prevented microservices from inheriting `.env` configuration.
 - **JSX Runtime Resolution**: Resolved a project-wide regression where the `react/jsx-runtime` module could not be found by the Vite build system.
@@ -547,50 +585,53 @@
 ## [0.29.0] - 2026-03-14
 
 ### Added
-- **Shared Maritime Constants**: Created `frontend/src/constants/maritime.ts` to centralize `SHIP_TYPE_MAP` and `NAV_STATUS_MAP`, eliminating duplication across `SearchWidget` and `SidebarRight`.
-- **Modular Interpolation Utility**: Extracted **Projective Velocity Blending (PVB)** logic into a reusable `interpolatePVB` utility in `frontend/src/utils/interpolation.ts`.
-- **Dedicated Filter Utility**: Extracted `filterEntity` and `filterSatellite` logic to `frontend/src/utils/filters.ts` for better reusability and cleaner data flow.
-- **Layer Composition Module**: Introduced `composeAllLayers` in `frontend/src/layers/composition.ts` to orchestrate the complex Deck.gl layer stack, significantly reducing boilerplate in the main animation loop.
+
+- **Shared Maritime Constants**: Created `frontend/src/constants/maritime.ts`to centralize`SHIP_TYPE_MAP`and`NAV_STATUS_MAP`, eliminating duplication across `SearchWidget`and`SidebarRight`.
+- **Modular Interpolation Utility**: Extracted **Projective Velocity Blending (PVB)** logic into a reusable `interpolatePVB`utility in`frontend/src/utils/interpolation.ts`.
+- **Dedicated Filter Utility**: Extracted `filterEntity`and`filterSatellite`logic to`frontend/src/utils/filters.ts` for better reusability and cleaner data flow.
+- **Layer Composition Module**: Introduced `composeAllLayers`in`frontend/src/layers/composition.ts` to orchestrate the complex Deck.gl layer stack, significantly reducing boilerplate in the main animation loop.
 
 ### Changed
+
 - **Animation Loop Refactor**: Major architectural cleanup of `useAnimationLoop.ts`, reducing its size from 924 to 516 lines while maintaining high-performance real-time rendering.
-- **Database Cleanup**: Removed redundant `migrate_*.sql` files and outdated `retention_policy.sql` as their contents are now fully integrated into the primary `init.sql` schema.
+- **Database Cleanup**: Removed redundant `migrate_*.sql`files and outdated`retention_policy.sql`as their contents are now fully integrated into the primary`init.sql` schema.
 
 ### Fixed
-- **Test Suite Hygiene**: Prefixed unused mock variables with `_` in `test_cors.py`, `test_tracks_validation.py`, and `test_tracks_replay.py` to satisfy linting requirements and improve code clarity.
-- **Frontend Layer Exports**: Removed the unused `TerminatorLayerProps` interface from `TerminatorLayer.tsx`.
+
+- **Test Suite Hygiene**: Prefixed unused mock variables with `_`in`test_cors.py`, `test_tracks_validation.py`, and `test_tracks_replay.py` to satisfy linting requirements and improve code clarity.
+- **Frontend Layer Exports**: Removed the unused `TerminatorLayerProps`interface from`TerminatorLayer.tsx`.
 
 ## [0.28.6] - 2026-03-14
 
 ### Fixed
 
 - **RF Repeater Rendering**: Resolved a regression where RF repeater sites were hidden on the map due to `rfSitesRef` not being passed to the animation loop.
-- **Developer Documentation**: Added a comprehensive **Animation Loop Data Threading Checklist** to `agent_docs/z-ordering.md` and updated `AGENTS.md` to mandate its use, preventing silent failures in future layer work.
+- **Developer Documentation**: Added a comprehensive **Animation Loop Data Threading Checklist** to `agent_docs/z-ordering.md`and updated`AGENTS.md` to mandate its use, preventing silent failures in future layer work.
 
 ## [0.28.5] - 2026-03-14
 
 ### Fixed
 
 - **Tactical RF & Infrastructure Visibility**: Resolved multiple depth-fighting (Z-index) conflicts where RF Infrastructure and Internet Outage layers were buried beneath the map terrain or each other.
-  - **Depth Standardization**: Migrated all tactical underlays (RF, Outages, Cables) to a standardized `depthTest: true` and negative `depthBias` scheme (-50 to -110), pulling them explicitly into the foreground.
+  - **Depth Standardization**: Migrated all tactical underlays (RF, Outages, Cables) to a standardized `depthTest: true`and negative`depthBias` scheme (-50 to -110), pulling them explicitly into the foreground.
   - **Outage Shading**: Fixed a bug where global outage polygons used a positive depth bias, effectively pushing them out of the viewport on 3D/Globe projections.
   - **RF Dot Contrast**: Reintroduced white outlines and increased cluster halos to ensure radio stations remain visible across high-contrast satellite and dark-tactical backgrounds.
 - **Historian Data Recovery Race**: Fixed a race condition where the `historian` service would miss the initial ingestion burst from pollers during a fresh system start, leading to an empty database ("0 RF stations active").
-  - **Kafka Offset Management**: Changed `auto_offset_reset` to `earliest` and bumped the `group_id` to `historian-writer-v2`. This forces the historian to backfill all available events on the Kafka bus into TimescaleDB, ensuring zero data loss during reboots.
+  - **Kafka Offset Management**: Changed `auto_offset_reset`to`earliest`and bumped the`group_id`to`historian-writer-v2`. This forces the historian to backfill all available events on the Kafka bus into TimescaleDB, ensuring zero data loss during reboots.
 - **RF Sidebar Notification Logic**: Refined the IntelliSense notification gating to prevent false-negative "0 RF Stations Active" alerts. The system now waits for a confirmed non-zero data set before broadcasting its availability to the operational feed.
-- **Filter Hook Performance**: Memoized the `activeServices` array in `App.tsx` to prevent the `useRFSites` hook from re-evaluating on every frame, reducing browser CPU usage and stabilizing API polling frequency.
+- **Filter Hook Performance**: Memoized the `activeServices`array in`App.tsx`to prevent the`useRFSites` hook from re-evaluating on every frame, reducing browser CPU usage and stabilizing API polling frequency.
 
 ## [0.28.4] - 2026-03-14
 
 ### Fixed
 
-- **Replay Category Filters Inoperative for AIS and ADS-B**: All vessel and aircraft category filters (cargo, tanker, passenger, military, commercial, etc.) were silently ignored during track replay. `processReplayData` in `replayUtils.ts` parsed `meta.callsign` from the database row but never mapped `meta.classification` to the entity's top-level classification fields. Since `filterEntity()` in `useAnimationLoop` reads from `entity.vesselClassification.category` (ships) and `entity.classification.affiliation/platform` (aircraft), every entity passed all filters regardless of user selection.
-  - **Fix**: For ship entities (CoT type contains `'S'`), `meta.classification.category` is now mapped to `entity.vesselClassification.category`. For aircraft entities, the full `meta.classification` object (including `affiliation`, `platform`, `category`, etc.) is mapped to `entity.classification`. The live path was unaffected — `useEntityWorker` correctly reads these fields from the incoming WebSocket CoT message.
-  - **Tests**: Added three new cases to `replayUtils.test.ts` covering AIS ship category mapping, ADS-B aircraft classification mapping, and graceful handling of rows with no `meta.classification`.
+- **Replay Category Filters Inoperative for AIS and ADS-B**: All vessel and aircraft category filters (cargo, tanker, passenger, military, commercial, etc.) were silently ignored during track replay. `processReplayData`in`replayUtils.ts`parsed`meta.callsign`from the database row but never mapped`meta.classification`to the entity's top-level classification fields. Since`filterEntity()`in`useAnimationLoop`reads from`entity.vesselClassification.category`(ships) and`entity.classification.affiliation/platform` (aircraft), every entity passed all filters regardless of user selection.
+  - **Fix**: For ship entities (CoT type contains `'S'`), `meta.classification.category`is now mapped to`entity.vesselClassification.category`. For aircraft entities, the full `meta.classification`object (including`affiliation`, `platform`, `category`, etc.) is mapped to `entity.classification`. The live path was unaffected — `useEntityWorker` correctly reads these fields from the incoming WebSocket CoT message.
+  - **Tests**: Added three new cases to `replayUtils.test.ts`covering AIS ship category mapping, ADS-B aircraft classification mapping, and graceful handling of rows with no`meta.classification`.
 - **KiwiSDR Audio Stability & Restart**: Resolved a critical infinite loop in the `useListenAudio` hook where the WebSocket connection was repeatedly torn down and restarted on "Playing" state changes.
   - **Hook Refactor**: Removed `isPlaying` from effect dependencies and migrated the watchdog to functional state updates.
   - **AudioContext Management**: Removed over-aggressive `suspend()` calls on temporary connection drops, ensuring the audio engine remains ready for immediate reconnection.
-  - **Backend Cleanup**: Integrated comprehensive cleanup in the `DISCONNECT_KIWI` action handler, explicitly closing audio/waterfall sockets and terminating the `pacat` bridge to prevent phantom audio leaks.
+  - **Backend Cleanup**: Integrated comprehensive cleanup in the `DISCONNECT_KIWI`action handler, explicitly closing audio/waterfall sockets and terminating the`pacat` bridge to prevent phantom audio leaks.
 - **AIS Vessel Identification**: The Right Sidebar now prioritizes displaying the vessel's radio callsign in the **REGISTRATION** field (falling back to IMO number), enabling faster platform identification for maritime contacts.
 
 ## [0.28.3] - 2026-03-13
@@ -598,85 +639,83 @@
 ### Fixed
 
 - **Waterfall WebSocket — React StrictMode Race**: Resolved a compounding bug that caused the WIDE-mode waterfall stream to fail immediately on load.
-  - **Over-specified `useEffect` deps**: `wfOffset` and `zoom` were listed as dependencies of the WebSocket effect in `ListeningPost.tsx`. Since `drawRow` closed over `wfOffset` directly, every slider interaction recreated `drawRow`, which in turn triggered the effect to teardown (close the WS) and re-open — cycling before the first handshake could complete.
-  - **React StrictMode double-invoke**: In development, React 18 StrictMode intentionally runs effect cleanup then re-runs the effect to detect side effects. The cleanup called `ws.close()` while the socket was still in `CONNECTING` state, producing the browser error "WebSocket is closed before the connection is established."
-  - **Fix 1**: Introduced `wfOffsetRef` to mirror `wfOffset` state. `drawRow` now reads `wfOffsetRef.current` and carries an empty `[]` dep array, making it referentially stable across renders.
+  - **Over-specified `useEffect`deps**:`wfOffset`and`zoom`were listed as dependencies of the WebSocket effect in`ListeningPost.tsx`. Since `drawRow`closed over`wfOffset`directly, every slider interaction recreated`drawRow`, which in turn triggered the effect to teardown (close the WS) and re-open — cycling before the first handshake could complete.
+  - **React StrictMode double-invoke**: In development, React 18 StrictMode intentionally runs effect cleanup then re-runs the effect to detect side effects. The cleanup called `ws.close()`while the socket was still in`CONNECTING` state, producing the browser error "WebSocket is closed before the connection is established."
+  - **Fix 1**: Introduced `wfOffsetRef`to mirror`wfOffset`state.`drawRow`now reads`wfOffsetRef.current`and carries an empty`[]` dep array, making it referentially stable across renders.
   - **Fix 2**: The WS effect dep array reduced to `[wfMode, analyserNode]` — the only two values that actually require a new connection.
-  - **Fix 3**: The effect cleanup now checks `ws.readyState`. When `CONNECTING`, it schedules `ws.onopen = () => ws.close()` instead of calling `close()` immediately, satisfying StrictMode's double-invoke without producing a browser error.
+  - **Fix 3**: The effect cleanup now checks `ws.readyState`. When `CONNECTING`, it schedules `ws.onopen = () => ws.close()`instead of calling`close()` immediately, satisfying StrictMode's double-invoke without producing a browser error.
 
 ## [0.28.2] - 2026-03-13
-
 
 Front End Updates
 
 ### Changed
 
 - **Frontend Code Cleanup**: Comprehensive dead code removal and refactor across the frontend codebase.
-  - **`useAnimationLoop.ts`**: Removed unused `useMemo` import; removed `mapToken` and `mapStyle` from hook options (never read inside the loop); removed dead `speedKts` computation that was calculated every frame then discarded; removed invalid `// eslint-disable-next-line react-hooks/purity` comment; extracted duplicated sea/air entity filter logic into a standalone `filterEntity()` helper; extracted duplicated satellite category classification into a standalone `filterSatellite()` helper, eliminating verbatim duplication between the orbital count pass and the rendered satellite pass.
-  - **`useEntityWorker.ts`**: Removed misleading `smoothedCourse` alias — the variable was assigned directly from `computedCourse` with no transformation, implying smoothing that no longer exists.
+  - **`useAnimationLoop.ts`**: Removed unused `useMemo`import; removed`mapToken`and`mapStyle`from hook options (never read inside the loop); removed dead`speedKts`computation that was calculated every frame then discarded; removed invalid`// eslint-disable-next-line react-hooks/purity`comment; extracted duplicated sea/air entity filter logic into a standalone`filterEntity()`helper; extracted duplicated satellite category classification into a standalone`filterSatellite()` helper, eliminating verbatim duplication between the orbital count pass and the rendered satellite pass.
+  - **`useEntityWorker.ts`**: Removed misleading `smoothedCourse`alias — the variable was assigned directly from`computedCourse` with no transformation, implying smoothing that no longer exists.
   - **`useMissionLocations.ts`**: Removed `updateMission` — defined, memoised, and exported but never imported or called anywhere in the codebase.
-  - **`useRFSites.ts`**: Removed `rfSites` array state and `error` state from the hook; both were populated but never consumed by any component. The hook now returns only `{ rfSitesRef, loading }`.
+  - **`useRFSites.ts`**: Removed `rfSites`array state and`error`state from the hook; both were populated but never consumed by any component. The hook now returns only`{ rfSitesRef, loading }`.
   - **`useMissionArea.ts`**: Removed 4 debug `console.log` statements that fired on every 2-second poll cycle and every mission change.
-  - **`useSystemHealth.ts`**: Removed dead `if (latency > 1000) status = 'degraded'` branch — unreachable because the preceding `latency > 200` condition already set the same value.
-  - **`useInfraData.ts`**: Removed duplicate consecutive `setOutagesData(fallbackEmpty)` call in the `catch` block.
-  - **`missionArea.ts`**: Replaced hardcoded `VITE_API_URL` base URL with relative `/api/config/location` paths, consistent with all other API modules.
-  - **`App.tsx`**: Collapsed two identical `<SidebarRight>` renders (one under `TACTICAL`, one under `ORBITAL`) into a single conditional render.
-  - **`TacticalMap.tsx` / `OrbitalMap.tsx`**: Removed `mapToken` and `mapStyle` props from `useAnimationLoop` calls after those options were removed from the hook interface.
+  - **`useSystemHealth.ts`**: Removed dead `if (latency > 1000) status = 'degraded'`branch — unreachable because the preceding`latency > 200` condition already set the same value.
+  - **`useInfraData.ts`**: Removed duplicate consecutive `setOutagesData(fallbackEmpty)`call in the`catch` block.
+  - **`missionArea.ts`**: Replaced hardcoded `VITE_API_URL`base URL with relative`/api/config/location` paths, consistent with all other API modules.
+  - **`App.tsx`**: Collapsed two identical `<SidebarRight>`renders (one under`TACTICAL`, one under `ORBITAL`) into a single conditional render.
+  - **`TacticalMap.tsx`/`OrbitalMap.tsx`**: Removed `mapToken`and`mapStyle`props from`useAnimationLoop` calls after those options were removed from the hook interface.
   - **`replayUtils.test.ts`**: Replaced trivial benchmark test (`expect(end - start).toBeGreaterThan(0)`) with a meaningful data-integrity assertion verifying all entities and point counts are preserved across a large dataset. Removed in-test `console.log`.
-  - **Multiple components**: Removed invalid `// eslint-disable-next-line react-hooks/purity` and `// eslint-disable-next-line react-hooks/set-state-in-effect` comments from `PassPredictorWidget.tsx`, `SearchWidget.tsx`, `SidebarRight.tsx`, `KiwiNodeBrowser.tsx`, and `TacticalMap.tsx` — these ESLint rule names do not exist.
+  - **Multiple components**: Removed invalid `// eslint-disable-next-line react-hooks/purity`and`// eslint-disable-next-line react-hooks/set-state-in-effect`comments from`PassPredictorWidget.tsx`, `SearchWidget.tsx`, `SidebarRight.tsx`, `KiwiNodeBrowser.tsx`, and `TacticalMap.tsx` — these ESLint rule names do not exist.
 
 Backend Updates
 
 ### Fixed
 
-- **RF Alias Endpoint**: Corrected `service=` keyword argument to `services=["ham"]` in the `/api/repeaters` backwards-compatibility alias; previously caused a `TypeError` at runtime on every call.
-- **Internet Outage Poller**: Removed an unreachable duplicate `except` block in `fetch_internet_outages()` that could never execute; only the first handler ran.
-- **Analysis Request Schema**: Removed unused `uid` field from `AnalyzeRequest` — the entity identifier is correctly sourced from the URL path parameter and the body field was validated but silently ignored.
+- **RF Alias Endpoint**: Corrected `service=`keyword argument to`services=["ham"]`in the`/api/repeaters`backwards-compatibility alias; previously caused a`TypeError` at runtime on every call.
+- **Internet Outage Poller**: Removed an unreachable duplicate `except`block in`fetch_internet_outages()` that could never execute; only the first handler ran.
+- **Analysis Request Schema**: Removed unused `uid`field from`AnalyzeRequest` — the entity identifier is correctly sourced from the URL path parameter and the body field was validated but silently ignored.
 - **AIS Ingestion Pipeline**: Resolved a critical regression where AIS-sourced maritime vessels were not appearing on the Tactical Map.
-  - **Missing `await`**: The `publish_tak_event` coroutine was called without `await` in the main message loop, causing all Kafka sends to be silently dropped.
-  - **Interruptible Stream Loop**: Redesigned the main WebSocket receive loop to use `asyncio.wait` with a `reconnect_event`, allowing the poller to immediately react to mission area updates from Redis without blocking.
-  - **Classification Key Alignment**: The historian and Intelligence Feed expected a `classification` key on each TAK event; the poller was only emitting `vesselClassification`. Both keys are now populated for full pipeline compatibility.
-  - **`ShipType` Field Fix**: `StaticDataReport` (Class B, Message 24) messages use `ShipType` instead of `Type` for the vessel category. `handle_static_data` now checks both keys.
-  - **`ShipName` Fallback**: Added `ShipName` as a secondary lookup in `handle_static_data` for vessels whose static data does not carry a `Name` field.
-- **AIS Classification Heuristics**: Significantly expanded name-based vessel classification in `maritime_poller/classification.py` to reduce `[UNKNOWN]` tags in the Intelligence Stream.
+  - **Missing `await`**: The `publish_tak_event`coroutine was called without`await` in the main message loop, causing all Kafka sends to be silently dropped.
+  - **Interruptible Stream Loop**: Redesigned the main WebSocket receive loop to use `asyncio.wait`with a`reconnect_event`, allowing the poller to immediately react to mission area updates from Redis without blocking.
+  - **Classification Key Alignment**: The historian and Intelligence Feed expected a `classification`key on each TAK event; the poller was only emitting`vesselClassification`. Both keys are now populated for full pipeline compatibility.
+  - **`ShipType`Field Fix**:`StaticDataReport`(Class B, Message 24) messages use`ShipType`instead of`Type`for the vessel category.`handle_static_data` now checks both keys.
+  - **`ShipName`Fallback**: Added`ShipName`as a secondary lookup in`handle_static_data`for vessels whose static data does not carry a`Name` field.
+- **AIS Classification Heuristics**: Significantly expanded name-based vessel classification in `maritime_poller/classification.py`to reduce`[UNKNOWN]` tags in the Intelligence Stream.
   - **Passenger/Ferries**: Added `WSF`, `FERRY`, `SPIRIT`, `QUEEN`, `BREEZE` patterns.
   - **Tug/Towing**: Added `FOSS`, `PUSH`, `VALIANT`, `TITAN` patterns.
-  - **Military**: Added `CGC`, `RFA` patterns; broadened `USS` to include full prefix.
+  - **Military**: Added `CGC`, `RFA`patterns; broadened`USS` to include full prefix.
   - **Pleasure Craft**: Added `MY `, `M/Y`, `SY ` patterns.
   - **Law Enforcement**: Added `POLICE`, `SHERIFF`, `PATROL` patterns.
-  - **SAR**: Broadened match from `SAR ` to `SAR`.
-
+  - **SAR**: Broadened match from `SAR `to`SAR`.
 
 ### Changed
 
 - **Dead Code Removal**: Deleted several unused code paths identified during backend code review:
-  - `teme_to_ecef_vectorized` in `sgp4_utils.py` — replaced by `teme_to_ecef` scalar variant, never imported.
-  - Intel Reports stub in `analysis.py` — commented-out embedding scaffolding and `intel_reports = []` placeholder removed along with the now-unused `json` import.
-  - `calculate_polling_points()` in `aviation_poller/service.py` — superseded by H3 sharding, no remaining call sites.
-  - `poll_point()` in `multi_source_poller.py` — superseded by the H3 `source_loop`/`_fetch` path, no remaining call sites.
-  - `Settings.LITELLM_MODEL` in `config.py` — `AI_MODEL_DEFAULT` in `system.py` is the actual source of truth; this setting was never read.
-- **Import Hygiene**: Moved inline `import math` to the top of `infra_poller/main.py`; removed unused `import sys` from `benchmark_search.py`; removed unused `List` from `multi_source_poller.py` imports.
-- **Redis Cleanup Guards**: Simplified `hasattr(x, 'aclose')` ternary guards in `database.py` and `aviation_poller/service.py` to direct `aclose()` calls — `redis.asyncio` has provided this method since v4.2 and the fallback is no longer needed.
+  - `teme_to_ecef_vectorized`in`sgp4_utils.py`— replaced by`teme_to_ecef` scalar variant, never imported.
+  - Intel Reports stub in `analysis.py`— commented-out embedding scaffolding and`intel_reports = []`placeholder removed along with the now-unused`json` import.
+  - `calculate_polling_points()`in`aviation_poller/service.py` — superseded by H3 sharding, no remaining call sites.
+  - `poll_point()`in`multi_source_poller.py`— superseded by the H3`source_loop`/`_fetch` path, no remaining call sites.
+  - `Settings.LITELLM_MODEL`in`config.py`—`AI_MODEL_DEFAULT`in`system.py` is the actual source of truth; this setting was never read.
+- **Import Hygiene**: Moved inline `import math`to the top of`infra_poller/main.py`; removed unused `import sys`from`benchmark_search.py`; removed unused `List`from`multi_source_poller.py` imports.
+- **Redis Cleanup Guards**: Simplified `hasattr(x, 'aclose')`ternary guards in`database.py`and`aviation_poller/service.py`to direct`aclose()`calls —`redis.asyncio` has provided this method since v4.2 and the fallback is no longer needed.
 
 ### Removed
 
-- **Infra Poller Debug Scripts**: Deleted 6 one-off HTTP probe scripts from `backend/ingestion/infra_poller/test/` (`debug_ioda_structure.py`, `test_ioda.py`, `test_ioda_events.py`, `test_ioda_events_refined.py`, `test_ioda_summary.py`, `test_ioda_summary_v2.py`) — these made live network calls and were not pytest-compatible unit tests.
-- **Orbital Pulse Test Directory**: Moved `benchmark_parsing.py` from `orbital_pulse/tests/` to the package root and removed the now-empty `tests/` directory.
+- **Infra Poller Debug Scripts**: Deleted 6 one-off HTTP probe scripts from `backend/ingestion/infra_poller/test/`(`debug_ioda_structure.py`,`test_ioda.py`, `test_ioda_events.py`, `test_ioda_events_refined.py`, `test_ioda_summary.py`, `test_ioda_summary_v2.py`) — these made live network calls and were not pytest-compatible unit tests.
+- **Orbital Pulse Test Directory**: Moved `benchmark_parsing.py`from`orbital_pulse/tests/`to the package root and removed the now-empty`tests/` directory.
 
 JS8CALL Updates
 
 ### Changed
 
 - **JS8Call — Dead Code Removal**: Audited all files in the `js8call/` poller for dead code, unused symbols, and structural redundancies.
-  - Removed unused `import shlex` from `server.py` (was made redundant when `shell=True` was replaced with secure subprocess pipelines).
-  - Removed unused `import sys` from `manual_test_kiwi.py`.
-  - Removed unused `import traceback` from `tests/test_json.py`.
+  - Removed unused `import shlex`from`server.py`(was made redundant when`shell=True` was replaced with secure subprocess pipelines).
+  - Removed unused `import sys`from`manual_test_kiwi.py`.
+  - Removed unused `import traceback`from`tests/test_json.py`.
   - Removed three dead dummy-variable assignments (`callsign`, `grid`, `freq`) that were immediately overwritten in the WebSocket handler.
-  - Removed dead `haversine_distance_km()` function from `server.py` — duplicate of logic already present in `kiwi_directory.py` and never called.
-  - Removed no-op `if closed_ok: pass` branch from `kiwi_client.py` receive loop.
-  - Consolidated five repeated inline `socket.socket()` UDP send blocks in `server.py` into a single `_udp_send()` helper, reducing boilerplate and centralising error handling.
-  - Fixed type mismatch: `SET_KIWI` handler now correctly parses `freq` as `int` (was `float`), matching the `_start_kiwi_pipeline()` signature and validation logic.
-  - Renamed root-level `test_kiwi.py` → `manual_test_kiwi.py` and `test_wvm.py` → `manual_test_wvm.py` to clearly distinguish live integration/smoke scripts from the pytest unit test suite in `tests/`.
+  - Removed dead `haversine_distance_km()`function from`server.py`— duplicate of logic already present in`kiwi_directory.py` and never called.
+  - Removed no-op `if closed_ok: pass`branch from`kiwi_client.py` receive loop.
+  - Consolidated five repeated inline `socket.socket()`UDP send blocks in`server.py`into a single`_udp_send()` helper, reducing boilerplate and centralising error handling.
+  - Fixed type mismatch: `SET_KIWI`handler now correctly parses`freq`as`int`(was`float`), matching the `_start_kiwi_pipeline()` signature and validation logic.
+  - Renamed root-level `test_kiwi.py`→`manual_test_kiwi.py`and`test_wvm.py`→`manual_test_wvm.py`to clearly distinguish live integration/smoke scripts from the pytest unit test suite in`tests/`.
 
 ## [0.28.1] - 2026-03-12
 
@@ -699,7 +738,7 @@ JS8CALL Updates
 ### Changed
 
 - **Tactical HUD Condensation**: Optimized vertical spacing in the Listening Post sidebar to reduce scrolling and improve situational awareness.
-- **Documentation Migration**: Completed the transition of all persistent documentation from `docs/` to `agent_docs/` for better agent resonance.
+- **Documentation Migration**: Completed the transition of all persistent documentation from `docs/`to`agent_docs/` for better agent resonance.
 
 ## [0.28.0] - 2026-03-11
 
@@ -727,7 +766,7 @@ JS8CALL Updates
 
 - **Hybrid Globe Architecture**: Integrated ESRI World Imagery satellite basemap as a high-resolution alternative to the dark tactical style in Globe mode.
 - **Deep Space Starfield**: Implemented a dynamic StarField canvas with 320 twinkling stars, rendered behind the map to provide a cinematic backdrop when atmospheric layers are translucent.
-- **Globe Style Switcher**: New `DARK` / `SAT` toggle buttons exclusively in Globe mode for seamless transition between tactical and reconnaissance views.
+- **Globe Style Switcher**: New `DARK`/`SAT` toggle buttons exclusively in Globe mode for seamless transition between tactical and reconnaissance views.
 - **Atmospheric Tuning**: Refined the globe's atmosphere in `useMapCamera.ts` to allow starfield visibility while maintaining a high-altitude glow.
 
 ### Changed
@@ -740,9 +779,9 @@ JS8CALL Updates
 ### Fixed
 
 - **High-Load AIS Stability**: Implemented an exponential backoff (5s to 300s) and a 30s minimum cooldown strategy for the maritime poller to prevent IP rate-limiting during rapid mission re-centering.
-- **Websocket Lifecycle**: Fixed an `AttributeError` in `service.py` where stale connection delay variables were causing poller crashes during reconnection cycles.
-- **Orbital UI Missing Assets**: Resolved a `ReferenceError` in `OrbitalMap.tsx` where move/tilt icons were missing from the `lucide-react` module imports.
-- **Layer Re-application**: Fixed a bug where graticule and background layers would disappear after basemap style changes by migrating to persistent `.on("style.load")` listeners in `MapboxAdapter.tsx`.
+- **Websocket Lifecycle**: Fixed an `AttributeError`in`service.py` where stale connection delay variables were causing poller crashes during reconnection cycles.
+- **Orbital UI Missing Assets**: Resolved a `ReferenceError`in`OrbitalMap.tsx`where move/tilt icons were missing from the`lucide-react` module imports.
+- **Layer Re-application**: Fixed a bug where graticule and background layers would disappear after basemap style changes by migrating to persistent `.on("style.load")`listeners in`MapboxAdapter.tsx`.
 
 ## [0.26.1] - 2026-03-12
 
@@ -768,13 +807,13 @@ JS8CALL Updates
 
 ### Added
 
-- **Global COT State Persistence**: Re-engineered the map view lifecycle by hoisting the `useEntityWorker` hook and all tactical track state to the root `App.tsx`. This ensures that tactical tracks, dead reckoning state, and satellite telemetry persist instantly when switching between Tactical and Orbital map views.
+- **Global COT State Persistence**: Re-engineered the map view lifecycle by hoisting the `useEntityWorker`hook and all tactical track state to the root`App.tsx`. This ensures that tactical tracks, dead reckoning state, and satellite telemetry persist instantly when switching between Tactical and Orbital map views.
 
 ### Fixed
 
 - **Map View Transition Performance**: Eliminated the 5-10 second "re-sync" delay when switching map views by preserving the WebSocket and Worker thread throughout the session.
-- **State Reset Bug**: Fixed a critical `TypeError` in `App.tsx` where changing map filters would crash the application due to a missing return in the `setFilters` state updater.
-- **Prop Consistency**: Corrected `alertedEmergencyRef` and `repeatersLoading` type mismatches and interface duplications across `App.tsx`, `TacticalMap.tsx`, and `OrbitalMap.tsx`.
+- **State Reset Bug**: Fixed a critical `TypeError`in`App.tsx`where changing map filters would crash the application due to a missing return in the`setFilters` state updater.
+- **Prop Consistency**: Corrected `alertedEmergencyRef`and`repeatersLoading`type mismatches and interface duplications across`App.tsx`, `TacticalMap.tsx`, and `OrbitalMap.tsx`.
 
 ## [0.24.0] - 2026-03-10
 
@@ -786,7 +825,7 @@ JS8CALL Updates
 ### Fixed
 
 - **AIS Poller Footprint Optimization**: Standardized AIS ingestion to a fixed 350 NM radius per mission area to prevent reconnection churn while filtering visible data locally.
-- **H3 Layer Rendering**: Optimized H3 mesh with `depthTest: false` and `depthWrite: false` to ensure perfect visibility of grounded tactical entities (AIS/ADS-B) regardless of mesh overlay.
+- **H3 Layer Rendering**: Optimized H3 mesh with `depthTest: false`and`depthWrite: false` to ensure perfect visibility of grounded tactical entities (AIS/ADS-B) regardless of mesh overlay.
 - **System UI Centering**: Re-aligned the System Settings widget to be perfectly centered beneath the "SYS" button with corrected horizontal translation.
 
 ## [0.23.0] - 2026-03-10
@@ -799,7 +838,7 @@ JS8CALL Updates
 
 ### Changed
 
-- **RF Infrastructure Documentation**: Expanded the `README.md` to cleanly document the `rf_pulse` configuration variables, pipeline architecture, and supported upstream APIs.
+- **RF Infrastructure Documentation**: Expanded the `README.md`to cleanly document the`rf_pulse` configuration variables, pipeline architecture, and supported upstream APIs.
 
 ## [0.22.1] - 2026-03-10
 
@@ -807,7 +846,7 @@ JS8CALL Updates
 
 - **KiwiSDR Node Limits:** Increased the backend node limit from 50 to 10,000 to enable the frontend "Global" radius toggle to correctly display all cached KiwiSDR receivers.
 - **Node Filtering Logic:** Updated the `useKiwiNodes` hook to properly trigger refetches when node limits change. Hardcoded limits applied to Mission (50), Regional (500), and Global (All) modes.
-- **Tactical Map Controls:** Restored MapLibre `NavigationControl` (+/- zoom buttons) to the bottom-right of the tactical map and themed them in the Sovereign Glass style. Extracted MapLibre CSS overrides from Tailwind's `@layer` directive to prevent the JIT compiler from purging them.
+- **Tactical Map Controls:** Restored MapLibre `NavigationControl`(+/- zoom buttons) to the bottom-right of the tactical map and themed them in the Sovereign Glass style. Extracted MapLibre CSS overrides from Tailwind's`@layer` directive to prevent the JIT compiler from purging them.
 
 ## [0.22.0] - 2026-03-09
 
@@ -835,7 +874,7 @@ JS8CALL Updates
 ### Changed
 
 - **KiwiSDR Beacon Scaling**: Refined the radii and font sizes of the map beacon by ~40% for better proportionality within the tactical view.
-- **Radio Terminal Variable Standardization**: Standardized all internal variable names in `RadioTerminal.tsx` (`bridgeConnected`, `kiwiIsConnecting`, `sharedStatusLine`, etc.) to match the unified state provider.
+- **Radio Terminal Variable Standardization**: Standardized all internal variable names in `RadioTerminal.tsx`(`bridgeConnected`,`kiwiIsConnecting`, `sharedStatusLine`, etc.) to match the unified state provider.
 
 ### Fixed
 
@@ -851,8 +890,8 @@ JS8CALL Updates
 
 ### Fixed
 
-- **Orbital Parameters in Right Sidebar (Period & Inclination)**: Corrected camelCase property access after protobuf compilation. `period_min` → `periodMin` and `inclination_deg` → `inclinationDeg` were being read with snake_case names, causing PERIOD and INC to always show "---" in the entity inspector. Now displays live values correctly.
-- **Protobuf Schema Sync**: Added `period_min`, `inclination_deg`, and `eccentricity` fields to both `backend/api/proto/tak.proto` and `frontend/public/tak.proto`, and updated `tak_pb2.py` and `tak.py` serialization to populate them from the orbital data stream.
+- **Orbital Parameters in Right Sidebar (Period & Inclination)**: Corrected camelCase property access after protobuf compilation. `period_min`→`periodMin`and`inclination_deg`→`inclinationDeg` were being read with snake_case names, causing PERIOD and INC to always show "---" in the entity inspector. Now displays live values correctly.
+- **Protobuf Schema Sync**: Added `period_min`, `inclination_deg`, and `eccentricity`fields to both`backend/api/proto/tak.proto`and`frontend/public/tak.proto`, and updated `tak_pb2.py`and`tak.py` serialization to populate them from the orbital data stream.
 - **AIS Poller Reconnection Churn**: The maritime AIS poller was reconnecting to AISStream.io on every Redis mission-area pub/sub message, causing a cascade of connection timeouts whenever the user rapidly clicked radius presets (30 nm → 100 nm → 150 nm). Fixed with two defenses:
   - **Minimum-change threshold** — ignores updates where lat/lon changes < 0.05° and radius changes < 1 nm, filtering out floating-point drift and same-value re-selections.
   - **5-second debounce** — rapid preset clicks now collapse into a single reconnect once the user stops interacting.
@@ -877,21 +916,22 @@ JS8CALL Updates
 
 ### Fixed
 
-- **HUD Z-Indexing**: Explicitly set the TopBar zone's z-index to `z-50` in `MainHud` to ensure that dropdown widgets render correctly over the sidebars and map content.
+- **HUD Z-Indexing**: Explicitly set the TopBar zone's z-index to `z-50`in`MainHud` to ensure that dropdown widgets render correctly over the sidebars and map content.
 
 ## [0.18.2] - 2026-03-06
 
 ### Fixed
 
 - **Globe Mode Rendering (Tactical & Orbital Map):**
-  - Resolved a platform-level incompatibility that caused Deck.gl layers to go blank when enabling Globe mode with a Mapbox token. Mapbox Globe explicitly blocks `CustomLayerInterface`, which `MapboxOverlay` requires. Both `TacticalMap` and `OrbitalMap` now dynamically switch to the **MapLibre adapter** in Globe mode, falling back to the Mapbox adapter for 2D/3D Mercator views where Mapbox Standard remains available.
-  - Fixed an incorrect `map.setProjection()` call in `useMapCamera` that passed the Mapbox-only bare string form (`"globe"`) to a MapLibre instance. The hook now correctly detects the active adapter and passes the MapLibre object form `{ type: "globe" }` when in Globe mode.
-  - Fixed a race-condition crash (`Cannot read properties of undefined (reading 'destroy')`) triggered when toggling Globe off. A manual `map.remove()` call was racing with `react-map-gl`'s own internal cleanup — removed the redundant call since the GL context lifecycle is fully managed by `react-map-gl` on unmount.
+  - Resolved a platform-level incompatibility that caused Deck.gl layers to go blank when enabling Globe mode with a Mapbox token. Mapbox Globe explicitly blocks `CustomLayerInterface`, which `MapboxOverlay`requires. Both`TacticalMap`and`OrbitalMap` now dynamically switch to the **MapLibre adapter** in Globe mode, falling back to the Mapbox adapter for 2D/3D Mercator views where Mapbox Standard remains available.
+  - Fixed an incorrect `map.setProjection()`call in`useMapCamera`that passed the Mapbox-only bare string form (`"globe"`) to a MapLibre instance. The hook now correctly detects the active adapter and passes the MapLibre object form`{ type: "globe" }` when in Globe mode.
+  - Fixed a race-condition crash (`Cannot read properties of undefined (reading 'destroy')`) triggered when toggling Globe off. A manual `map.remove()`call was racing with`react-map-gl`'s own internal cleanup — removed the redundant call since the GL context lifecycle is fully managed by `react-map-gl` on unmount.
   - `mapStyle` now correctly switches to the CartoDB Dark Matter style in Globe mode, matching the MapLibre adapter requirement.
 
 ## [0.18.1] - 2026-03-06
 
 ### Fixed
+
 - **KiwiNodeBrowser**: Resolved `NaN, NaN` crash in MapLibre by adding defensive guards for invalid coordinates.
 - **geoUtils**: Robust Maidenhead grid conversion to handle non-digit characters in square locators.
 - **Linting**: Fixed all remaining frontend lint errors (purity, setState in effect, etc.).
@@ -903,8 +943,8 @@ JS8CALL Updates
   - Standardized the "Sovereign Glass" design aesthetic across the entire tactical and orbital HUD.
   - Eliminated harsh 30px drop shadows from the left sidebar widgets (Mission Navigator, Search, JS8, System Status, Intel Feed, Doppler, Altitude/Speed Legends) in favor of a cohesive 12px blur with slight rounded corners, matching the orbital design.
   - Slimmed down the global TopBar height by 10px, refining icon and text padding to eliminate edge-hugging.
-  - Revamped the Historian (TimeControls) widget to perfectly align with the glassmorphism properties, active/inactive pill button states (`hud-green` / `amber-500`), and tabular typography of the main HUD.
-  - Updated all bottom map controls (2D/3D toggle, Globe toggle, ± Zoom controls, and 3D Rotation/Tilt controls) to use tightly fitted `p-1` and `p-1.5` transparent borders with interactive `bg-white/10` hover states and `hud-green`/`indigo-500` active halos.
+  - Revamped the Historian (TimeControls) widget to perfectly align with the glassmorphism properties, active/inactive pill button states (`hud-green`/`amber-500`), and tabular typography of the main HUD.
+  - Updated all bottom map controls (2D/3D toggle, Globe toggle, ± Zoom controls, and 3D Rotation/Tilt controls) to use tightly fitted `p-1`and`p-1.5`transparent borders with interactive`bg-white/10`hover states and`hud-green`/`indigo-500` active halos.
 
 ### Fixed
 
@@ -914,32 +954,32 @@ JS8CALL Updates
 
 ### Added
 
-- **Nginx Reverse Proxy:** All services now route through a single nginx entry point on **port 80**. The `sovereign-nginx` container proxies `/api/` to the backend, `/ws/js8` to the JS8Call WebSocket bridge, and `/` to the Vite frontend. No other container exposes host ports.
-- **KiwiSDR Public Directory Search:** Integrated a new `KiwiDirectory` module in the `js8call` service to fetch and parse the global KiwiSDR receiver list. Features proximity-sorting using Haversine distance and frequency-based filtering to select the optimal SDR node for tactical operations.
+- **Nginx Reverse Proxy:** All services now route through a single nginx entry point on **port 80**. The `sovereign-nginx`container proxies`/api/`to the backend,`/ws/js8`to the JS8Call WebSocket bridge, and`/` to the Vite frontend. No other container exposes host ports.
+- **KiwiSDR Public Directory Search:** Integrated a new `KiwiDirectory`module in the`js8call` service to fetch and parse the global KiwiSDR receiver list. Features proximity-sorting using Haversine distance and frequency-based filtering to select the optimal SDR node for tactical operations.
 
 ### Changed
 
-- **Port Consolidation:** Removed host port mappings from `frontend` (3700), `backend-api` (8000), `js8call` (8082), `timescaledb` (5432), `redis` (6379), and `redpanda` (28081/28082/29092). All inter-service communication routed exclusively over Docker internal networks.
-- **Vite Configuration:** Removed the `/api` proxy block (nginx now handles API routing). Set `hmr.clientPort: 80` so Vite HMR WebSocket tunnels correctly through nginx. Set `allowedHosts: true` to allow proxied requests from nginx.
+- **Port Consolidation:** Removed host port mappings from `frontend`(3700),`backend-api`(8000),`js8call`(8082),`timescaledb`(5432),`redis`(6379), and`redpanda` (28081/28082/29092). All inter-service communication routed exclusively over Docker internal networks.
+- **Vite Configuration:** Removed the `/api`proxy block (nginx now handles API routing). Set`hmr.clientPort: 80`so Vite HMR WebSocket tunnels correctly through nginx. Set`allowedHosts: true` to allow proxied requests from nginx.
 - **Frontend Port:** Vite dev server moved from port 3000 → 3700.
 - **Sidebar Glassmorphism Restoration**: Reverted to individual glass containers for each sidebar widget (`Search`, `Mission Navigator`, `Intel Feed`, `JS8`, `Layer Filters`, `System Status`) to restore visual separation and tactical depth.
-- **Shadow Refinement**: Toned down the global drop shadow blur from `30px` to `12px` across all glass widgets for a cleaner, high-end aesthetic.
+- **Shadow Refinement**: Toned down the global drop shadow blur from `30px`to`12px` across all glass widgets for a cleaner, high-end aesthetic.
 - **Search Widget Enhancement**: Boosted text prominence in the search input using `text-cyan-300`, increased placeholder opacity, and added a subtle cyan outer glow on focus for better interactivity.
-- **Tactical Legend Restyling**: Redesigned the `Altitude` and `Maritime` map legends to match the **Mission Navigator** widget's visual language, featuring a header/body structure, `hud-green` tactical typography, and dedicated `Crosshair`/`Anchor` icons.
+- **Tactical Legend Restyling**: Redesigned the `Altitude`and`Maritime`map legends to match the **Mission Navigator** widget's visual language, featuring a header/body structure,`hud-green`tactical typography, and dedicated`Crosshair`/`Anchor` icons.
 - **Legend Alignment**: Precisely aligned the map legends to the vertical gutter right of the tactical sidebar to optimize map real estate.
 - **JS8Call Backend Architecture:** Replaced the legacy `pyjs8call` bridge with a native **AsyncIO DatagramProtocol** (UDP) implementation to permanently resolve the Qt headless socket thread crash bug on Windows-based hosts.
 - **Radio Terminal Styling**: Refined frequency input fields and terminal sidebars with glassmorphism principles.
 
 ### Fixed
 
-- **Database Initialization (`init.sql`):** Wrapped `ALTER EXTENSION timescaledb UPDATE` and `CREATE EXTENSION ai` in `DO $$ ... EXCEPTION ... $$` blocks to prevent fatal errors from aborting the init script on fresh volumes. The `ai` extension is unavailable in `timescale/timescaledb-ha:pg16` and the `ALTER EXTENSION` call requires a fresh session context.
-- **Idempotent DB Policies:** Added `if_not_exists => true` to `add_compression_policy` and `add_retention_policy` calls in `init.sql` to prevent errors on repeated initializations.
-- **JS8Call Bridge Startup:** Fixed a `NameError` in `js8call/server.py` caused by the `logger` variable being used before initialization inside the `kiwi_client` import exception handler. Moved `logging.basicConfig` and `logger` declaration above the `try/except` block.
-- **CORS (Backend & JS8Call):** Updated `ALLOWED_ORIGINS` to `http://localhost` for both `backend-api` and `js8call` services. With nginx as the single entry point, all browser requests originate from one host — eliminating cross-origin errors.
+- **Database Initialization (`init.sql`):** Wrapped `ALTER EXTENSION timescaledb UPDATE`and`CREATE EXTENSION ai`in`DO $$ ... EXCEPTION ... $$`blocks to prevent fatal errors from aborting the init script on fresh volumes. The`ai`extension is unavailable in`timescale/timescaledb-ha:pg16`and the`ALTER EXTENSION` call requires a fresh session context.
+- **Idempotent DB Policies:** Added `if_not_exists => true`to`add_compression_policy`and`add_retention_policy`calls in`init.sql` to prevent errors on repeated initializations.
+- **JS8Call Bridge Startup:** Fixed a `NameError`in`js8call/server.py`caused by the`logger`variable being used before initialization inside the`kiwi_client`import exception handler. Moved`logging.basicConfig`and`logger`declaration above the`try/except` block.
+- **CORS (Backend & JS8Call):** Updated `ALLOWED_ORIGINS`to`http://localhost`for both`backend-api`and`js8call` services. With nginx as the single entry point, all browser requests originate from one host — eliminating cross-origin errors.
 
 ### Removed
 
-- **Redpanda Console:** Removed the `sovereign-redpanda-console` service. It was a development debugging tool that served no runtime function and conflicts with the single-port architecture. Can be re-added temporarily via `docker compose run` when Kafka topic inspection is needed.
+- **Redpanda Console:** Removed the `sovereign-redpanda-console`service. It was a development debugging tool that served no runtime function and conflicts with the single-port architecture. Can be re-added temporarily via`docker compose run` when Kafka topic inspection is needed.
 
 ## [0.17.2] - 2026-03-04
 
@@ -947,11 +987,11 @@ JS8CALL Updates
 
 - **PVB Satellite Rendering:** Satellites now use Projective Velocity Blending (PVB) for smooth, 60fps rendering in the Orbital map, replacing the previous 5-second snapping updates.
 - **Orbital History Tails & Gap Bridges:** Real-time trails are now seamlessly grafted onto the PVB satellite models. A new "Gap Bridge" rendering layer connects the delayed 3D orbital track directly to the live 60fps icon for a fluid UI experience.
-- **Right Sidebar Safeguards:** Passing `selectedEntity` conditionally into the `MainHud` right slot prevents the `SidebarRight` transparent container from blocking user mouse events on the underlying tactical map when closed.
+- **Right Sidebar Safeguards:** Passing `selectedEntity`conditionally into the`MainHud`right slot prevents the`SidebarRight` transparent container from blocking user mouse events on the underlying tactical map when closed.
 
 ### Fixed
 
-- **Gap Bridge Elevation Logic:** The `Gap Bridge` component in `OrbitalLayer` now correctly uses `d.altitude` to position the line segments in 3D space, instead of drawing the orbital trails on the physical ground.
+- **Gap Bridge Elevation Logic:** The `Gap Bridge`component in`OrbitalLayer`now correctly uses`d.altitude` to position the line segments in 3D space, instead of drawing the orbital trails on the physical ground.
 
 ## [0.17.1] - 2026-03-04
 
@@ -963,7 +1003,7 @@ JS8CALL Updates
 
 ### Fixed
 
-- **Constellation Filtering Schema:** Restored the missing `constellation` and `category` fields to the `tak.proto` Protobuf schema, re-enabling selective constellation filtering in the frontend worker and `useAnimationLoop`.
+- **Constellation Filtering Schema:** Restored the missing `constellation`and`category`fields to the`tak.proto`Protobuf schema, re-enabling selective constellation filtering in the frontend worker and`useAnimationLoop`.
 - **Backend Serialization:** Updated the `sovereign-orbital-pulse` and TAK serialization services to correctly map and transmit the restored fields over WebSocket.
 
 ## [0.17.0] - 2026-03-04
@@ -971,49 +1011,49 @@ JS8CALL Updates
 ### Added
 
 - **Orbital Map: Observer AOI Horizon Ring:** `buildAOTLayers` now renders a soft purple geodesic circle centered on the active mission lat/lon, with radius matching the configured mission area in nautical miles. A small purple dot marks the precise observer position. Works in both mercator and globe projections. The ring updates automatically when the mission area changes.
-- **Orbital Map: Right-Click Mission Control:** Right-clicking the orbital map now opens the full `MapContextMenu` (matching the tactical map), exposing **Set Mission Focus**, **Save Location**, and **Return Home** actions. Includes `SaveLocationForm` for bookmarking clicked coordinates. Changing focus also updates the observer AOI ring immediately.
-- **Pass Prediction: COMMS Layer Safety Guard (Frontend):** `OrbitalSidebarLeft` now skips the category-level pass prediction request when the active filter is `comms`. The `PassPredictorWidget` displays a clear informational message explaining that individual satellite selection is required for comms pass prediction.
-- **Pass Prediction: COMMS Layer Safety Guard (Backend):** `GET /api/orbital/passes` returns `HTTP 400` when `category=comms` is requested without explicit `norad_ids`. Prevents accidental or buggy clients from triggering an 8-10k-satellite SGP4 scan that would OOM the server.
+- **Orbital Map: Right-Click Mission Control:** Right-clicking the orbital map now opens the full `MapContextMenu`(matching the tactical map), exposing **Set Mission Focus**, **Save Location**, and **Return Home** actions. Includes`SaveLocationForm` for bookmarking clicked coordinates. Changing focus also updates the observer AOI ring immediately.
+- **Pass Prediction: COMMS Layer Safety Guard (Frontend):** `OrbitalSidebarLeft`now skips the category-level pass prediction request when the active filter is`comms`. The `PassPredictorWidget` displays a clear informational message explaining that individual satellite selection is required for comms pass prediction.
+- **Pass Prediction: COMMS Layer Safety Guard (Backend):** `GET /api/orbital/passes`returns`HTTP 400`when`category=comms`is requested without explicit`norad_ids`. Prevents accidental or buggy clients from triggering an 8-10k-satellite SGP4 scan that would OOM the server.
 
 ### Fixed
 
-- **SidebarRight Header Clipping:** Removed `overflow-hidden` from the main header `div` in `SidebarRight`. The TYPE_TAG and REGISTRATION badge row was being clipped behind the Position Telemetry section. The header now expands naturally to contain all content.
+- **SidebarRight Header Clipping:** Removed `overflow-hidden`from the main header`div`in`SidebarRight`. The TYPE_TAG and REGISTRATION badge row was being clipped behind the Position Telemetry section. The header now expands naturally to contain all content.
 - **SidebarRight Actions Bar (Satellite Entities):** The TRACK_LOG button and its parent actions bar `div` are now conditionally hidden when viewing satellite entities, preventing phantom spacing and irrelevant controls from appearing in the orbital sidebar.
 
 ### Changed
 
-- **`buildAOTLayers`:** Accepts an optional `observer` argument `{ lat, lon, radiusKm }` for the orbital horizon ring. The `ScatterplotLayer` import added alongside the existing `PathLayer`.
-- **`useAnimationLoop`:** Added optional `observerRef` parameter (`MutableRefObject<{ lat, lon, radiusKm } | null>`) threaded through to `buildAOTLayers`.
-- **`OrbitalMap`:** Maintains an `observerRef` derived from `currentMissionRef`, kept in sync each render cycle.
+- **`buildAOTLayers`:** Accepts an optional `observer`argument`{ lat, lon, radiusKm }`for the orbital horizon ring. The`ScatterplotLayer`import added alongside the existing`PathLayer`.
+- **`useAnimationLoop`:** Added optional `observerRef`parameter (`MutableRefObject<{ lat, lon, radiusKm } | null>`) threaded through to`buildAOTLayers`.
+- **`OrbitalMap`:** Maintains an `observerRef`derived from`currentMissionRef`, kept in sync each render cycle.
 
 ## [0.16.0] - 2026-03-04
 
 ### Added
 
-- **Satellite Inspector (SidebarRight):** `SatelliteInspectorSection` sub-component shows `inclination_deg` and `eccentricity` in the identity header; live azimuth, elevation, and slant range computed at 1 Hz via `satAzEl()` with green highlight when elevation ≥ 10°; next-pass AOS countdown, max elevation, and duration sourced from `usePassPredictions` filtered by NORAD ID.
-- **Pass Predictor UX — Live Countdown:** Each pass row in `PassPredictorWidget` shows a live `T-HH:MM:SS` countdown to AOS. In-progress passes pulse purple and switch to a LOS countdown.
-- **Pass Predictor UX — Min Elevation Filter:** `MIN EL: [10° ▾]` dropdown (0/5/10/15/20/30°) added to the pass list header, wired to `usePassPredictions` `minElevation` option.
-- **Pass Predictor UX — CSV Export:** Download icon in the pass list header serialises `passes[]` to a `passes_YYYY-MM-DD.csv` file via `Blob` + `createObjectURL`.
-- **Category Counts per Pill:** `OrbitalCategoryPills` fetches `GET /api/orbital/stats` on mount and renders per-category satellite counts (e.g., `GPS (127)`).
+- **Satellite Inspector (SidebarRight):** `SatelliteInspectorSection`sub-component shows`inclination_deg`and`eccentricity`in the identity header; live azimuth, elevation, and slant range computed at 1 Hz via`satAzEl()`with green highlight when elevation ≥ 10°; next-pass AOS countdown, max elevation, and duration sourced from`usePassPredictions` filtered by NORAD ID.
+- **Pass Predictor UX — Live Countdown:** Each pass row in `PassPredictorWidget`shows a live`T-HH:MM:SS` countdown to AOS. In-progress passes pulse purple and switch to a LOS countdown.
+- **Pass Predictor UX — Min Elevation Filter:** `MIN EL: [10° ▾]`dropdown (0/5/10/15/20/30°) added to the pass list header, wired to`usePassPredictions` `minElevation` option.
+- **Pass Predictor UX — CSV Export:** Download icon in the pass list header serialises `passes[]`to a`passes_YYYY-MM-DD.csv`file via`Blob`+`createObjectURL`.
+- **Category Counts per Pill:** `OrbitalCategoryPills`fetches`GET /api/orbital/stats`on mount and renders per-category satellite counts (e.g.,`GPS (127)`).
 - **NORAD ID / Name Search:** Compact search input above category pills filters the pass list client-side by name or NORAD ID substring; no additional API call.
-- **Predicted Ground Track PathLayer:** When a satellite is selected and history tails are enabled, `OrbitalMap` fetches `/api/orbital/groundtrack/{norad_id}?minutes=90` and renders it as a dashed `PathLayer` (future orbit) via `predictedGroundTrackRef` threaded through `useAnimationLoop`.
-- **`GET /api/orbital/stats` Endpoint:** Returns `COUNT GROUP BY category` from the `satellites` table for the category-pill UI.
+- **Predicted Ground Track PathLayer:** When a satellite is selected and history tails are enabled, `OrbitalMap`fetches`/api/orbital/groundtrack/{norad_id}?minutes=90`and renders it as a dashed`PathLayer`(future orbit) via`predictedGroundTrackRef`threaded through`useAnimationLoop`.
+- **`GET /api/orbital/stats`Endpoint:** Returns`COUNT GROUP BY category`from the`satellites` table for the category-pill UI.
 - **Redis Caching for Pass Predictions:** Pass prediction results are cached in Redis for 5 minutes, keyed by `orbital:passes:{lat}:{lon}:{hours}:{el}:{norad_ids}:{limit}`. Falls back gracefully when Redis is unavailable.
-- **Pass Prediction `limit` Param:** `GET /api/orbital/passes` gains a `limit` query parameter (max 500) to cap results returned.
-- **`useMissionLocation` Hook:** Extracted shared observer-location resolution (getMissionArea + env-var fallback) used by both `OrbitalSidebarLeft` and `SidebarRight`.
-- **`usePassPredictions` `skip` Option:** Suppresses fetches when not applicable (used by `SatelliteInspectorSection` for non-satellite entities).
-- **`satAzEl()` Utility:** New `geoUtils.ts` export computing observer→satellite azimuth, elevation, and slant range using spherical ECEF/ENZ math.
-- **`GroundTrackPoint` Type:** Exported from `OrbitalLayer.tsx` for use across the ground track data pipeline.
+- **Pass Prediction `limit`Param:**`GET /api/orbital/passes`gains a`limit` query parameter (max 500) to cap results returned.
+- **`useMissionLocation`Hook:** Extracted shared observer-location resolution (getMissionArea + env-var fallback) used by both`OrbitalSidebarLeft`and`SidebarRight`.
+- **`usePassPredictions``skip` Option:** Suppresses fetches when not applicable (used by`SatelliteInspectorSection` for non-satellite entities).
+- **`satAzEl()`Utility:** New`geoUtils.ts` export computing observer→satellite azimuth, elevation, and slant range using spherical ECEF/ENZ math.
+- **`GroundTrackPoint`Type:** Exported from`OrbitalLayer.tsx` for use across the ground track data pipeline.
 
 ### Changed
 
-- **`OrbitalSidebarLeft`:** Refactored observer location resolution to `useMissionLocation`; `minElevation` state now wired to `usePassPredictions`; search input added above category pills.
-- **`SidebarRight`:** Normalised `React.useState`/`React.useEffect` to destructured `useState`/`useEffect`.
+- **`OrbitalSidebarLeft`:** Refactored observer location resolution to `useMissionLocation`; `minElevation`state now wired to`usePassPredictions`; search input added above category pills.
+- **`SidebarRight`:** Normalised `React.useState`/`React.useEffect`to destructured`useState`/`useEffect`.
 
 ### Removed
 
-- **`OrbitalDashboard.tsx`:** Deleted — confirmed unused (App.tsx renders `OrbitalMap` + `OrbitalSidebarLeft` directly). 130 lines of dead code removed.
-- **Stale `Satellite` icon import** removed from `OrbitalCategoryPills.tsx`.
+- **`OrbitalDashboard.tsx`:** Deleted — confirmed unused (App.tsx renders `OrbitalMap`+`OrbitalSidebarLeft` directly). 130 lines of dead code removed.
+- **Stale `Satellite`icon import** removed from`OrbitalCategoryPills.tsx`.
 
 ## [0.15.0] - 2026-03-04
 
@@ -1021,11 +1061,11 @@ JS8CALL Updates
 
 - **Orbital Pass Prediction API:** New `GET /api/orbital/passes` endpoint that computes upcoming satellite passes for an observer location using SGP4 propagation. Returns AOS, TCA, LOS, max elevation, azimuth at AOS/LOS, duration, and a full 10-second point array per pass for polar plot and Doppler rendering.
 - **Ground Track API:** New `GET /api/orbital/groundtrack/{norad_id}` endpoint returning lat/lon/alt arrays for one configurable propagation window.
-- **Satellites Table:** Persistent `satellites` database table (no retention policy) storing the latest TLE and orbital metadata per NORAD ID, independent of the 24-hour `tracks` hypertable retention.
-- **Historian TLE Upsert:** The Historian service now upserts TLE data into `satellites` on every consumed `orbital_raw` Kafka message, ensuring TLEs are always fresh for pass prediction.
-- **SGP4 Coordinate Utilities:** New `backend/api/utils/sgp4_utils.py` with TEME→ECEF→topocentric helpers including `ecef_to_topocentric` for azimuth/elevation/slant-range computation.
-- **`usePassPredictions` Hook:** React hook that polls `GET /api/orbital/passes` every 5 minutes, cancels in-flight requests on unmount, and returns typed `PassResult[]` data.
-- **Live Widget Wiring:** `OrbitalSidebarLeft` now feeds live pass data to `PassPredictorWidget`, `DopplerWidget`, and `PolarPlotWidget` using the active mission area as the observer location.
+- **Satellites Table:** Persistent `satellites`database table (no retention policy) storing the latest TLE and orbital metadata per NORAD ID, independent of the 24-hour`tracks` hypertable retention.
+- **Historian TLE Upsert:** The Historian service now upserts TLE data into `satellites`on every consumed`orbital_raw` Kafka message, ensuring TLEs are always fresh for pass prediction.
+- **SGP4 Coordinate Utilities:** New `backend/api/utils/sgp4_utils.py`with TEME→ECEF→topocentric helpers including`ecef_to_topocentric` for azimuth/elevation/slant-range computation.
+- **`usePassPredictions`Hook:** React hook that polls`GET /api/orbital/passes`every 5 minutes, cancels in-flight requests on unmount, and returns typed`PassResult[]` data.
+- **Live Widget Wiring:** `OrbitalSidebarLeft`now feeds live pass data to`PassPredictorWidget`, `DopplerWidget`, and `PolarPlotWidget` using the active mission area as the observer location.
 
 ### Changed
 
@@ -1069,10 +1109,10 @@ JS8CALL Updates
 ### Fixed
 
 - **Globe 3D Rendering & Projections:**
-  - Fixed an issue in Mapbox v3 Globe mode where Deck.gl layers (undersea cables, satellites, repeaters) would clip through the Earth when the camera was tilted. Added explicit `depthBias` to all layer builders (`-210.0` to `-100.0`).
+  - Fixed an issue in Mapbox v3 Globe mode where Deck.gl layers (undersea cables, satellites, repeaters) would clip through the Earth when the camera was tilted. Added explicit `depthBias`to all layer builders (`-210.0` to`-100.0`).
   - Implemented dynamic `wrapLongitude` disabling to prevent visual artifacting and streaking when the map is in spherical projection.
   - Mitigated a "Planet Sized Satellite" visual bug by capping the maximum pixel-to-degree scaling radius of `OrbitalLayer` assets based on altitude, preventing over-expansion at low zoom levels.
-  - Disabled explicit forced `GlobeView` projection in the DeckGL MapboxAdapter, allowing it to natively read the Mapbox camera matrix for `_full3d` synchronization.
+  - Disabled explicit forced `GlobeView`projection in the DeckGL MapboxAdapter, allowing it to natively read the Mapbox camera matrix for`_full3d` synchronization.
 
 ### Known Issues
 
@@ -1082,7 +1122,7 @@ JS8CALL Updates
 
 ### Fixed
 
-- **JS8Call Container Runtime:** Fixed a crucial issue preventing the `js8call` container from starting on Windows-based host machines. Added a `.gitattributes` file to enforce `LF` line endings across all shell scripts and Docker files, preventing fatal `\r` (CRLF) errors during execution inside the Linux container.
+- **JS8Call Container Runtime:** Fixed a crucial issue preventing the `js8call`container from starting on Windows-based host machines. Added a`.gitattributes`file to enforce`LF`line endings across all shell scripts and Docker files, preventing fatal`\r` (CRLF) errors during execution inside the Linux container.
 - **Database Initialization:** Re-aligned `POSTGRES_PASSWORD` environment defaults to prevent authentication failures when standing up fresh TimescaleDB volumes.
 
 ## [0.13.1] - 2026-03-02
@@ -1094,8 +1134,8 @@ JS8CALL Updates
 ### Fixed
 
 - **Infinite Re-Renders:** Resolved a critical infinite re-render loop (`Maximum update depth exceeded`) in `useInfraData` that was triggered by unstable object references.
-- **Repeater API Authentication:** Fixed a `502 Bad Gateway` error on the RepeaterBook integration by adding support for `REPEATERBOOK_API_TOKEN` bearer authentication to comply with upstream security changes.
-- **Async LLM Blocking (NEW-003):** Migrated the Analysis API's streaming generator to use `acompletion` and `async for`, preventing LLM streaming from blocking the FastAPI event loop.
+- **Repeater API Authentication:** Fixed a `502 Bad Gateway`error on the RepeaterBook integration by adding support for`REPEATERBOOK_API_TOKEN` bearer authentication to comply with upstream security changes.
+- **Async LLM Blocking (NEW-003):** Migrated the Analysis API's streaming generator to use `acompletion`and`async for`, preventing LLM streaming from blocking the FastAPI event loop.
 - **API Validation & Cleanup (NEW-001, NEW-002, NEW-004, NEW-005):** Added lower-bound validation to replay endpoints, removed deprecated asyncio loop calls, and cleared residual debug logs from production.
 
 ## [0.13.0] - 2026-03-01
@@ -1103,26 +1143,26 @@ JS8CALL Updates
 ### Fixed
 
 - **Stability Audit (20 bugs resolved across 13 files):**
-  - **BUG-001** — Aviation Poller double rate-limiter: Removed redundant `async with source.limiter` wrapper in `source_loop()`. The inner `_fetch()` already holds the limiter; double-acquisition halved the effective polling rate.
+  - **BUG-001** — Aviation Poller double rate-limiter: Removed redundant `async with source.limiter`wrapper in`source_loop()`. The inner `_fetch()` already holds the limiter; double-acquisition halved the effective polling rate.
   - **BUG-002** — Historian shutdown data loss: Added batch flush in the `finally` block before consumer teardown. In-flight data was silently discarded on SIGTERM.
-  - **BUG-003** — Signal handler `asyncio.create_task()` crash: Changed to `loop.create_task()` in both `aviation_poller/main.py` and `maritime_poller/main.py`. Signal handlers run outside the async context, making `asyncio.create_task()` raise `RuntimeError`.
-  - **BUG-004** — Analysis API crash on NULL `avg_speed`/`avg_alt`: Added `or 0` guards before `.1f`/`.0f` format specifiers. `PostgreSQL AVG()` returns `None` on all-NULL groups, causing `TypeError`.
-  - **BUG-005** — Blocking LLM call stalling event loop: Wrapped synchronous `litellm.completion()` in `asyncio.to_thread()` within the analysis SSE generator, restoring API concurrency.
+  - **BUG-003** — Signal handler `asyncio.create_task()`crash: Changed to`loop.create_task()`in both`aviation_poller/main.py`and`maritime_poller/main.py`. Signal handlers run outside the async context, making `asyncio.create_task()`raise`RuntimeError`.
+  - **BUG-004** — Analysis API crash on NULL `avg_speed`/`avg_alt`: Added `or 0`guards before`.1f`/`.0f`format specifiers.`PostgreSQL AVG()`returns`None`on all-NULL groups, causing`TypeError`.
+  - **BUG-005** — Blocking LLM call stalling event loop: Wrapped synchronous `litellm.completion()`in`asyncio.to_thread()` within the analysis SSE generator, restoring API concurrency.
   - **BUG-006** — Replay endpoint accepts reversed time windows: Added `dt_end <= dt_start` validation; previously a negative duration silently produced empty results.
-  - **BUG-007** — Track history accepts zero/negative `limit` and `hours`: Added positive-value guard on both query parameters.
-  - **BUG-008** — CORS misconfiguration (`allow_credentials=True` with `allow_origins=["*"]`): Removed `allow_credentials` from JS8Call bridge CORSMiddleware — the combination is rejected by all browsers per spec.
+  - **BUG-007** — Track history accepts zero/negative `limit`and`hours`: Added positive-value guard on both query parameters.
+  - **BUG-008** — CORS misconfiguration (`allow_credentials=True`with`allow_origins=["*"]`): Removed `allow_credentials` from JS8Call bridge CORSMiddleware — the combination is rejected by all browsers per spec.
   - **BUG-009** — Historian silently drops batch when DB pool unavailable: Retained batch and logged a warning instead of clearing; data is retried on the next flush cycle.
-  - **BUG-010** — ECEF→LLA division by zero at the poles: Clamped `lat` with `np.clip` before dividing by `cos(lat)` in `orbital_pulse/utils.py`.
-  - **BUG-011** — Deprecated `asyncio.get_event_loop()` in JS8Call WebSocket handlers: Replaced with `asyncio.get_running_loop()` (correct inside a running coroutine, Python 3.10+).
-  - **BUG-012** — Historian clears batch after write failure: Moved `batch.clear()` inside the `try` block so data is only discarded after a confirmed successful DB write.
+  - **BUG-010** — ECEF→LLA division by zero at the poles: Clamped `lat`with`np.clip`before dividing by`cos(lat)`in`orbital_pulse/utils.py`.
+  - **BUG-011** — Deprecated `asyncio.get_event_loop()`in JS8Call WebSocket handlers: Replaced with`asyncio.get_running_loop()` (correct inside a running coroutine, Python 3.10+).
+  - **BUG-012** — Historian clears batch after write failure: Moved `batch.clear()`inside the`try` block so data is only discarded after a confirmed successful DB write.
   - **BUG-013** — Debug `console.log` in production hot paths: Removed 5 console log calls from WebSocket connect/open/close, followMode effect, and map load events.
   - **BUG-014** — Redundant inner `if action == "SEND"` guard in JS8Call WebSocket handler: Removed always-True dead check and unified variable naming.
-  - **BUG-015** — Duplicate DR-state lookup in `useEntityWorker.ts`: Consolidated `currentDr` / `previousDr` (identical `drStateRef.current.get()` calls before any write) into a single `existingDr`.
-  - **BUG-016** — `_message_queue` type annotation in JS8Call server: Corrected from `asyncio.Queue` → `Optional[asyncio.Queue]` to match actual `None` initialization.
-  - **BUG-017** — Deprecated `@app.on_event("startup/shutdown")` lifecycle hooks: Migrated `backend/api/main.py` to the modern `@asynccontextmanager` `lifespan` pattern (FastAPI ≥ 0.93).
-  - **BUG-018** — Hex debug computation in protobuf decode hot path: Removed `Array.from().map().join()` byte-to-hex conversion that ran on every decoded TAK message; no UI feature consumed `.raw`.
+  - **BUG-015** — Duplicate DR-state lookup in `useEntityWorker.ts`: Consolidated `currentDr`/`previousDr`(identical`drStateRef.current.get()`calls before any write) into a single`existingDr`.
+  - **BUG-016** — `_message_queue`type annotation in JS8Call server: Corrected from`asyncio.Queue`→`Optional[asyncio.Queue]`to match actual`None` initialization.
+  - **BUG-017** — Deprecated `@app.on_event("startup/shutdown")`lifecycle hooks: Migrated`backend/api/main.py`to the modern`@asynccontextmanager` `lifespan` pattern (FastAPI ≥ 0.93).
+  - **BUG-018** — Hex debug computation in protobuf decode hot path: Removed `Array.from().map().join()`byte-to-hex conversion that ran on every decoded TAK message; no UI feature consumed`.raw`.
   - **BUG-019** — AIS magic number 511: Defined `AIS_HEADING_NOT_AVAILABLE = 511` module constant (per ITU-R M.1371) and replaced bare literals in both position report handlers.
-  - **BUG-020** — AISStream bounding box unclamped latitude: Clamped `min_lat`/`max_lat` to `[-90.0, 90.0]` in `maritime_poller/utils.py` to prevent invalid subscription coordinates for large-radius or polar-centered AORs.
+  - **BUG-020** — AISStream bounding box unclamped latitude: Clamped `min_lat`/`max_lat`to`[-90.0, 90.0]`in`maritime_poller/utils.py` to prevent invalid subscription coordinates for large-radius or polar-centered AORs.
 
 ## [0.12.1] - 2026-03-01
 
@@ -1131,11 +1171,11 @@ JS8CALL Updates
 - **Drone Classification Accuracy (ADS-B Aviation Poller):**
   - Introduced dedicated constants for Military, Commercial, Civil, and Generic UAS identification strings.
   - Improved `classify_aircraft` detection logic, now cross-referencing ICAO category, type code, description, squawk code, operator, callsign, and registration fields for higher-confidence classification.
-  - Added granular `drone_class` sub-assignments (`MILITARY_UAS`, `COMMERCIAL_UAS`, `CIVIL_UAS`, `UNKNOWN_UAS`) emitted alongside `aircraft_class = "drone"` in the classification payload.
+  - Added granular `drone_class`sub-assignments (`MILITARY_UAS`,`COMMERCIAL_UAS`, `CIVIL_UAS`, `UNKNOWN_UAS`) emitted alongside `aircraft_class = "drone"` in the classification payload.
   - Expanded `test_classification.py` with comprehensive drone fixture coverage to prevent classification regressions.
 
 - **API Security — Information Disclosure via Error Handling:**
-  - Hardened `backend/api/routers/analysis.py` and `backend/api/routers/system.py` to suppress internal stack traces and implementation details from HTTP error responses (MEDIUM severity).
+  - Hardened `backend/api/routers/analysis.py`and`backend/api/routers/system.py` to suppress internal stack traces and implementation details from HTTP error responses (MEDIUM severity).
   - Structured error responses now return generic operator-safe messages, preventing inadvertent leakage of backend internals to external callers.
 
 ## [0.12.0] - 2026-03-01
@@ -1166,12 +1206,12 @@ JS8CALL Updates
 
 - **HUD Terminology:** Renamed "Total Objects" → "Total Tracking" in `SystemStatus.tsx` for more accurate tactical terminology.
 - **Landing Stations Default:** Landing stations now default to **OFF** when submarine cables are first enabled, preventing UI overload on first toggle.
-- **Architecture Diagram:** Fixed a node ID collision in `README.md` Mermaid diagram (node `J` was dual-assigned to JS8Call and Claude). Added RF Repeaters, Submarine Cables, and Infrastructure Layers to the Presentation block.
-- **Data Sources Documentation:** Added a comprehensive `## 🗂️ Data Sources` section to `README.md` documenting all upstream APIs with URLs, auth requirements, and caching behavior.
+- **Architecture Diagram:** Fixed a node ID collision in `README.md`Mermaid diagram (node`J` was dual-assigned to JS8Call and Claude). Added RF Repeaters, Submarine Cables, and Infrastructure Layers to the Presentation block.
+- **Data Sources Documentation:** Added a comprehensive `## 🗂️ Data Sources`section to`README.md` documenting all upstream APIs with URLs, auth requirements, and caching behavior.
 
 ### Fixed
 
-- **`ReferenceError` in `IntelFeed.tsx`:** Restored missing variable declarations that were causing the intelligence stream to crash on toggle.
+- **`ReferenceError`in`IntelFeed.tsx`:** Restored missing variable declarations that were causing the intelligence stream to crash on toggle.
 - **Map Tooltip Sync:** Verified and corrected tooltip color themes for Repeaters (Emerald), Cables (Cyan), and JS8Call stations.
 
 ## [0.11.0] - 2026-03-01
@@ -1193,9 +1233,9 @@ JS8CALL Updates
 ### Fixed
 
 - **Orbital Entity Tooltips:**
-  - Added an `isOrbital` type check to `MapTooltip.tsx` to ensure satellites display correct purple tactical styling.
-  - Orbital tooltips now output speeds accurately in `km/s` instead of converting `kts`.
-  - Updated icon to `Satellite` instead of `Plane` for orbital metadata popups.
+  - Added an `isOrbital`type check to`MapTooltip.tsx` to ensure satellites display correct purple tactical styling.
+  - Orbital tooltips now output speeds accurately in `km/s`instead of converting`kts`.
+  - Updated icon to `Satellite`instead of`Plane` for orbital metadata popups.
 
 ## [0.10.3] - 2026-02-25
 
@@ -1207,7 +1247,7 @@ JS8CALL Updates
 ### Changed
 
 - **Globe Rendering Overhaul:**
-  - **Polygon-Based Tactical Symbols:** Replaced `IconLayer` chevrons with geographic `PolygonLayer` triangles in Globe mode. This completely bypasses MapLibre v5 billboarding/depth-testing bugs, ensuring entities drape perfectly over the 3D sphere and scale/rotate with zero artifacts.
+  - **Polygon-Based Tactical Symbols:** Replaced `IconLayer`chevrons with geographic`PolygonLayer` triangles in Globe mode. This completely bypasses MapLibre v5 billboarding/depth-testing bugs, ensuring entities drape perfectly over the 3D sphere and scale/rotate with zero artifacts.
   - **Optimized Zoom Fly-out:** Adjusted globe transition easing to prioritize stability at high altitudes.
 
 ### Fixed
@@ -1220,7 +1260,7 @@ JS8CALL Updates
 ### Added
 
 - **Backend Architecture:**
-  - **Broadcast WebSocket Service:** Implemented a new `BroadcastManager` service for `/api/tracks/live`, shifting Kafka consumer overhead from O(N) to O(1) and drastically increasing throughput for concurrent clients.
+  - **Broadcast WebSocket Service:** Implemented a new `BroadcastManager`service for`/api/tracks/live`, shifting Kafka consumer overhead from O(N) to O(1) and drastically increasing throughput for concurrent clients.
 
 ### Changed
 
@@ -1236,11 +1276,11 @@ JS8CALL Updates
 ### Fixed
 
 - **Data Integrity & Security:**
-  - **History Validation:** Added bounded input validation for `limit` and `hours` query parameters in the `get_track_history` endpoint to prevent resource exhaustion and potential DoS attacks.
+  - **History Validation:** Added bounded input validation for `limit`and`hours`query parameters in the`get_track_history` endpoint to prevent resource exhaustion and potential DoS attacks.
 - **Code Health & Configuration:**
   - **Dynamic Kafka Broker:** Replaced hardcoded broker references with the `KAFKA_BROKERS` environment variable in the API core configuration.
 - **Globe Rendering Architecture:**
-  - **Icon Visibility Issues:** Disabled `wrapLongitude` in Globe projection mode across multiple tactical layers (`entity-tactical-halo`, `satellite-markers`, `js8-labels`) to resolve Deck.gl billboarding conflicts that caused entity icons to disappear.
+  - **Icon Visibility Issues:** Disabled `wrapLongitude`in Globe projection mode across multiple tactical layers (`entity-tactical-halo`,`satellite-markers`, `js8-labels`) to resolve Deck.gl billboarding conflicts that caused entity icons to disappear.
 - **JS8Call UI Synchronization:**
   - **Frequency Sync:** Corrected an issue where the JS8Call widget and Radio Terminal would display stale frequency data. They now bind directly to the validated `activeKiwiConfig` payload via WebSocket.
 
@@ -1260,7 +1300,7 @@ JS8CALL Updates
 - **KIWI_RX Audio Pipeline:** Implemented a robust virtual audio pipeline for JS8Call using PulseAudio null-sinks, allowing seamless ingestion from network SDRs.
 - **TopBar Streamlining:** Redesigned the top navigation bar with a compact view switcher (Globe vs Radio), an icon-based status bar, and subtle UI animations.
 - **Dynamic Alerts & Tactical Clock:** Replaced the static alerts text with a pulsing red tactical pill and upgraded the UTC clock to a segmented green ZULU HUD display.
-- **Tactical Map Zoom Controls:** Integrated floating `+` and `-` zoom controls on the tactical map for precise view adjustments.
+- **Tactical Map Zoom Controls:** Integrated floating `+`and`-` zoom controls on the tactical map for precise view adjustments.
 
 ### Improved
 
@@ -1272,20 +1312,20 @@ JS8CALL Updates
 ### Fixed
 
 - **Critical System Stability:**
-  - **API Startup:** Fixed a critical `NameError` crash in `backend/api/main.py` by adding a missing `import os`.
-  - **Redis Key Mismatch:** Corrected `backend/ingestion/maritime_poller/service.py` to use the standardized `mission:active` Redis key, ensuring the maritime poller respects the active mission area.
-  - **Memory Leaks & Stale State:** Fixed critical stale closures in `frontend/src/hooks/useAnimationLoop.ts` by correctly managing `aotShapes`, `hoveredEntity`, and `selectedEntity` dependencies, preventing UI state drift.
+  - **API Startup:** Fixed a critical `NameError`crash in`backend/api/main.py`by adding a missing`import os`.
+  - **Redis Key Mismatch:** Corrected `backend/ingestion/maritime_poller/service.py`to use the standardized`mission:active` Redis key, ensuring the maritime poller respects the active mission area.
+  - **Memory Leaks & Stale State:** Fixed critical stale closures in `frontend/src/hooks/useAnimationLoop.ts`by correctly managing`aotShapes`, `hoveredEntity`, and `selectedEntity` dependencies, preventing UI state drift.
   - **Kafka Consumer Cleanup:** Removed `group_id` from the API track consumer to enable true "Broadcast Mode" and prevent the accumulation of thousands of orphaned consumer groups on the Redpanda broker.
 
 - **Data Integrity & Visualization:**
-  - **Mission Switching Teleport Glitch:** Implemented `visualStateRef` clearing in `useMissionArea.ts` to prevent entity "teleportation" artifacts when switching mission areas.
+  - **Mission Switching Teleport Glitch:** Implemented `visualStateRef`clearing in`useMissionArea.ts` to prevent entity "teleportation" artifacts when switching mission areas.
   - **Ground Vehicle Classification:** Correctly mapped ADS-B categories C1 (Emergency), C2 (Service), and C3 (Obstacle) to Ground Vehicle types (`a-f-G-E-V-C`) to prevent them from appearing as ships.
   - **Orbital Count in HUD:** Updated `onCountsUpdate` to include orbital asset counts, fixing the "0" satellite count bug in the sidebar.
 
 - **Performance & Reliability:**
   - **Orbital Propagation:** Vectorized the SGP4 satellite propagation loop in `backend/ingestion/orbital_pulse/service.py`, replacing slow iterative Python loops with optimized `sgp4_array` calls for a massive performance boost.
   - **Maritime Poller Resilience:** Implemented a robust connection retry loop in the maritime `navigation_listener` to recover automatically from Redis outages.
-  - **Graceful Shutdown:** Added `SIGTERM` handling to the maritime poller and modernized `asyncio` loop management in the aviation poller to ensure clean container shutdowns.
+  - **Graceful Shutdown:** Added `SIGTERM`handling to the maritime poller and modernized`asyncio` loop management in the aviation poller to ensure clean container shutdowns.
   - **Redis Compatibility:** Updated Redis connection closing logic to support `aclose()` for compatibility with redis-py 5.x.
 
 ## [0.9.7] - 2026-02-24
@@ -1294,11 +1334,11 @@ JS8CALL Updates
 
 - **Frontend Testing Infrastructure:**
   - **Vitest Integration:** Added `vitest` and test scripts to the frontend project for unit testing.
-  - **GeoUtils Testing:** Implemented comprehensive unit tests for `chaikinSmooth` geometric algorithm in `utils/map/geoUtils.test.ts`.
+  - **GeoUtils Testing:** Implemented comprehensive unit tests for `chaikinSmooth`geometric algorithm in`utils/map/geoUtils.test.ts`.
 
 ### Refactored
 
-- **Code Deduplication:** Removed duplicate `chaikinSmooth` implementation from `OrbitalLayer.tsx` and centralized usage to `utils/map/geoUtils.ts`.
+- **Code Deduplication:** Removed duplicate `chaikinSmooth`implementation from`OrbitalLayer.tsx`and centralized usage to`utils/map/geoUtils.ts`.
 
 ## [0.9.6] - 2026-02-24
 
@@ -1316,19 +1356,29 @@ JS8CALL Updates
 - **TacticalMap Modularization (Structural — no behavioral changes):**
   - **Decomposed monolith:** `TacticalMap.tsx` reduced from **2,762 lines → 556 lines** (80% reduction) by extracting all logic into purpose-scoped modules.
   - **New hooks:**
-    - `hooks/useEntityWorker.ts` (561L) — TAK worker lifecycle, WebSocket management, dead-reckoning state
-    - `hooks/useAnimationLoop.ts` (733L) — RAF loop, PVB interpolation, per-frame layer assembly
-    - `hooks/useMapCamera.ts` (237L) — globe projection switching, graticule overlay, 3D terrain/fog
-    - `hooks/useMissionArea.ts` (303L) — mission area polling, AOT geometry calculation, entity clearing
+  - ks/useEntityWorker.ts` (561L) — TAK worker lifecycle, WebSocket management, dead-reckoning state
+
+  - ks/useAnimationLoop.ts` (733L) — RAF loop, PVB interpolation, per-frame layer assembly
+
+  - ks/useMapCamera.ts` (237L) — globe projection switching, graticule overlay, 3D terrain/fog
+
+  - ks/useMissionArea.ts` (303L) — mission area polling, AOT geometry calculation, entity clearing
+
   - **New layer builders:**
-    - `layers/buildAOTLayers.ts` (52L) — maritime box + aviation circle `PathLayer`s
-    - `layers/buildTrailLayers.ts` (137L) — history trail + gap-bridge `PathLayer`/`LineLayer`
-    - `layers/buildEntityLayers.ts` (244L) — halos, glow sprites, altitude shadows, heading arrows, velocity vectors
+  - ers/buildAOTLayers.ts`(52L) — maritime box + aviation circle`PathLayer`s
+
+  - ers/buildTrailLayers.ts`(137L) — history trail + gap-bridge`PathLayer`/`LineLayer`
+
+  - ers/buildEntityLayers.ts` (244L) — halos, glow sprites, altitude shadows, heading arrows, velocity vectors
+
   - **New utilities:**
-    - `utils/map/colorUtils.ts` (86L) — altitude/speed color gradient functions
-    - `utils/map/geoUtils.ts` (142L) — haversine, bearing, Chaikin smoothing, graticule, zoom helpers
-    - `utils/map/iconAtlas.ts` (60L) — canvas icon-atlas singleton
-  - **Lazy-loaded adapter selection:** `TacticalMap.tsx` now dynamically picks Mapbox vs. MapLibre adapter via `VITE_MAPBOX_TOKEN` using `React.lazy`.
+  - ls/map/colorUtils.ts` (86L) — altitude/speed color gradient functions
+
+  - ls/map/geoUtils.ts` (142L) — haversine, bearing, Chaikin smoothing, graticule, zoom helpers
+
+  - ls/map/iconAtlas.ts` (60L) — canvas icon-atlas singleton
+
+  - **Lazy-loaded adapter selection:** `TacticalMap.tsx`now dynamically picks Mapbox vs. MapLibre adapter via`VITE_MAPBOX_TOKEN`using`React.lazy`.
   - **TypeScript health:** Pre-existing error count reduced from **56 → 33**; zero new errors introduced.
 
 ## [0.9.4] - 2026-02-23
@@ -1336,27 +1386,27 @@ JS8CALL Updates
 ### Refactored
 
 - **Backend Architecture:**
-  - **Modular API Structure:** Decomposed the monolithic `backend/api/main.py` into a scalable package structure with `routers`, `services`, `core`, and `models`.
+  - **Modular API Structure:** Decomposed the monolithic `backend/api/main.py`into a scalable package structure with`routers`, `services`, `core`, and `models`.
   - **Core Logic Migration:** Centralized configuration (`config.py`) and database management (`database.py`) in the `core` module.
   - **Service Extraction:** Moved background tasks (`historian`) and protocol helpers (`tak`) to dedicated `services` modules.
   - **Route Separation:** Split API endpoints into `system`, `tracks`, and `analysis` routers for better organization.
 - **Aviation Poller:**
-  - **Renaming:** Renamed `backend/ingestion/poller` to `backend/ingestion/aviation_poller` to clearly distinguish it from other ingestion sources.
+  - **Renaming:** Renamed `backend/ingestion/poller`to`backend/ingestion/aviation_poller` to clearly distinguish it from other ingestion sources.
   - **Code Modularization:** Refactored the aviation poller into `service.py`, `classification.py`, `arbitration.py`, and `utils.py`, with a clean `main.py` entry point.
-  - **Docker Configuration:** Updated `docker-compose.yml` to reflect the new build context for the `adsb-poller` service.
+  - **Docker Configuration:** Updated `docker-compose.yml`to reflect the new build context for the`adsb-poller` service.
 - **Maritime Poller:**
-  - **Code Modularization:** Refactored `backend/ingestion/maritime_poller` into `service.py`, `classification.py`, and `utils.py` for consistency and maintainability.
+  - **Code Modularization:** Refactored `backend/ingestion/maritime_poller`into`service.py`, `classification.py`, and `utils.py` for consistency and maintainability.
 - **Orbital Pulse:**
-  - **Code Modularization:** Refactored `backend/ingestion/orbital_pulse` into `service.py` and `utils.py` to decouple SGP4 propagation and TLE fetching logic from the main entry point.
+  - **Code Modularization:** Refactored `backend/ingestion/orbital_pulse`into`service.py`and`utils.py` to decouple SGP4 propagation and TLE fetching logic from the main entry point.
 
 ## [0.9.3] - 2026-02-23
 
 ### Fixed
 
 - **Globe Rendering Architecture:**
-  - **Interleaved Binding Reversion:** Explicitly disabled interleaved mode in `TacticalMap` (`interleaved: false`) and restored the pure `useControl` prop passthrough in `MapboxAdapter.tsx` to ensure absolute stability and prevent "double-wrapping" projection crashes in Deck.GL v9.
-  - **Explicit Projection Mapping:** Manually pass `projection: { name: 'globe' }` to the `MapboxOverlay` init when in globe mode to correctly warp the 2D WebGL canvas over Mapbox's 3D sphere without requiring interleave integration.
-  - **Camera Synchronization:** Removed the hardcoded `viewState` lock in `deckProps` for globe mode, allowing the 2D Deck.GL overlay to natively query Mapbox for real-time pitch and bearing during rotation and panning.
+  - **Interleaved Binding Reversion:** Explicitly disabled interleaved mode in `TacticalMap`(`interleaved: false`) and restored the pure`useControl`prop passthrough in`MapboxAdapter.tsx` to ensure absolute stability and prevent "double-wrapping" projection crashes in Deck.GL v9.
+  - **Explicit Projection Mapping:** Manually pass `projection: { name: 'globe' }`to the`MapboxOverlay` init when in globe mode to correctly warp the 2D WebGL canvas over Mapbox's 3D sphere without requiring interleave integration.
+  - **Camera Synchronization:** Removed the hardcoded `viewState`lock in`deckProps` for globe mode, allowing the 2D Deck.GL overlay to natively query Mapbox for real-time pitch and bearing during rotation and panning.
 
 ## [0.9.2] - 2026-02-21
 
@@ -1403,7 +1453,7 @@ JS8CALL Updates
   - **Spherical Projection:** Enabled native globe rendering in `TacticalMap.tsx`, supported by Mapbox v3+ or the newly verified MapLibre v5 upgrade.
   - **Projection Stabilization:** Re-aligned all tactical overlays (trails, footprints, stems) to track accurately on spherical surfaces with zero terrestrial clipping.
 - **Unified Tactical UI:**
-  - **Map View Control Relocation:** Moved the 2D/3D and Globe View toggles from the global `TopBar.tsx` directly onto the `TacticalMap.tsx` map surface for localized, context-aware interaction.
+  - **Map View Control Relocation:** Moved the 2D/3D and Globe View toggles from the global `TopBar.tsx`directly onto the`TacticalMap.tsx` map surface for localized, context-aware interaction.
   - **Topbar Cleanup:** Removed the redundant `Orb_Layer` and map projection buttons from the Topbar to maximize HUD space for mission-critical intelligence.
   - **Layer Filter Header Refinement:** Relocated the expansion chevrons (AIR, SEA, ORBITAL) to the right-side gutter for cleaner visual alignment with toggle switches.
   - **Orbital Header Unification:** Standardized the ORBITAL filter group to match the AIR and SEA tactical styles.
@@ -1417,7 +1467,8 @@ JS8CALL Updates
   4. Tactical Halo (`-209.0`)
   5. Trails / Footprints (`-101.0`)
   6. Altitude Stems (`-100.0`)
-- **Visual Stylization:** Upgraded velocity vectors and ground tracks to `jointRounded` and `capRounded` PathLayers for professional tactical aesthetics.
+
+- **Visual Stylization:** Upgraded velocity vectors and ground tracks to `jointRounded`and`capRounded` PathLayers for professional tactical aesthetics.
 
 ### Fixed
 
@@ -1434,32 +1485,32 @@ JS8CALL Updates
 - **Orbital Pulse Ingestion (Backend):**
   - **Celestrak Tracking:** New `sovereign-orbital-pulse` Python service continually fetching TLEs for active satellites across five categories (GPS, Weather, Active, Surveillance, Comms).
   - **Live SGP4 Propagation:** In-memory numpy-accelerated 30s micro-batched positional resolution simulating live orbit characteristics.
-  - **Kafka Ingestion:** Produces `a-s-K` TAK Protocol messages to a new `orbital_raw` Redpanda topic.
+  - **Kafka Ingestion:** Produces `a-s-K`TAK Protocol messages to a new`orbital_raw` Redpanda topic.
 - **Orbital Visualization Layer (Frontend):**
   - **Deck.gl Overlays:** Implemented `OrbitalLayer.tsx` featuring marker rendering, continuous ground-track projection, and orbital footprints.
   - **Satellite Telemetry UI:** Enriched `SidebarRight.tsx` with orbital contact metadata — altitude (km), velocity (km/s), orbital period, NORAD ID, and category.
   - **Layer Filtering:** Robust satellite-category filtering (`GPS`, `Weather`, `Comms`, `Surveillance`) integrated into global layer controls and `TacticalMap.tsx`.
   - **AOR Intel Feeds:** Footprint-overlap detection emits categorized `orbital` INTEL events for satellites passing over the mission AOR.
-- **Orbital Layer TopBar Controls:** Added `Orb_Layer` and `Globe_View` toggle buttons to `TopBar.tsx`, state persisted to `localStorage`.
+- **Orbital Layer TopBar Controls:** Added `Orb_Layer`and`Globe_View`toggle buttons to`TopBar.tsx`, state persisted to `localStorage`.
 - **Globe View Groundwork:** Full wiring implemented through `App.tsx`, `TopBar.tsx`, and `TacticalMap.tsx`. Dual-path projection logic ready — `map.setProjection()` (Mapbox GL v3+) with style-injection fallback (MapLibre GL). Pending MapLibre GL v5 upgrade to activate.
 
 ### Fixed
 
 - **Satellite Category Filtering:** Corrected category extraction path `entity.detail?.category ?? entity.detail?.classification?.category` — sub-filters (GPS/Weather/Comms/Surveillance) were silently passing all satellites through.
-- **Satellite Color Synchronization:** `getSatColor()` in `OrbitalLayer.tsx` now exactly matches filter chip colors in `LayerFilters.tsx` (GPS→`sky-400`, Weather→`amber-400`, Comms→`emerald-400`, Surveillance→`rose-400`).
+- **Satellite Color Synchronization:** `getSatColor()`in`OrbitalLayer.tsx`now exactly matches filter chip colors in`LayerFilters.tsx` (GPS→`sky-400`, Weather→`amber-400`, Comms→`emerald-400`, Surveillance→`rose-400`).
 - **Intel Stream Noise:** Suppressed per-frame `onEvent` calls from orbital footprint detections that flooded the intelligence feed.
 
 ### Known Issues / Technical Debt
 
-- **Globe View Requires MapLibre GL v5:** `setProjection()` is not present in MapLibre GL JS v3.x. The button UI and code wiring are complete; activation requires upgrading `maplibre-gl` to v5 (see `FEATURE-ROADMAP-PHASE-8.md` for research checklist).
+- **Globe View Requires MapLibre GL v5:** `setProjection()`is not present in MapLibre GL JS v3.x. The button UI and code wiring are complete; activation requires upgrading`maplibre-gl`to v5 (see`FEATURE-ROADMAP-PHASE-8.md` for research checklist).
 
 ## [0.7.3] - 2026-02-19
 
 ### Added
 
-- **Maritime Ingestion Payload Enhancement:** Extended the AIS poller to ingest `ShipStaticData` and `StandardClassBPositionReport`. Built specific ship cache handling with TTL cleanup for dynamic metadata enrichment.
+- **Maritime Ingestion Payload Enhancement:** Extended the AIS poller to ingest `ShipStaticData`and`StandardClassBPositionReport`. Built specific ship cache handling with TTL cleanup for dynamic metadata enrichment.
 - **TAK Protocol Evolution:** Upgraded the TAK Protocol (`tak.proto`) to include granular `vesselClassification` attributes (ship category, nav status, flag, dimensions, etc).
-- **Expanded Filtering Matrix:** Added detailed sub-class toggles in `IntelFeed` and `TacticalMap` to separate sea traffic into 11 categories (Cargo, Tanker, Fishing, SAR, Military, Tug, etc) plus Drones for the air.
+- **Expanded Filtering Matrix:** Added detailed sub-class toggles in `IntelFeed`and`TacticalMap` to separate sea traffic into 11 categories (Cargo, Tanker, Fishing, SAR, Military, Tug, etc) plus Drones for the air.
 - **Tactical Entity Selection:** Added tactical orange outline and text color highlighting for priority special entities (SAR, Military, Law enforcement vessels, helicopters, drones) across the map and HUD.
 
 ### Changed
@@ -1471,9 +1522,9 @@ JS8CALL Updates
 
 ### Fixed
 
-- **Dead Reckoning Heading Fallback:** Corrected a read-after-write bug where `drStateRef.current.get()` was called after `drStateRef.current.set()` for the same entity. The previous position used for bearing calculation was always identical to the new position (distance = 0), making the kinematic heading fallback dead code. New entities and entities with short trails now compute heading correctly from delta position.
-- **Animation Loop Smoothing After Pause:** Capped the lerp `smoothDt` to 33ms independently of the outer `dt` (which is capped at 100ms for physics safety). At `dt=100ms` the old `smoothFactor` reached ~0.73, causing a 73% position jump in one frame when resuming after a GC pause or tab-switch. The new cap keeps blending gradual on resume.
-- **Icon Rotation at 0°/360° Boundary:** `blendCourseRad` is now normalized to `[0°, 360°]` before being assigned as the entity `course`. The angle interpolation code uses `[-π, π]` range internally, which could produce negative degree values and incorrect icon rotation direction when crossing north.
+- **Dead Reckoning Heading Fallback:** Corrected a read-after-write bug where `drStateRef.current.get()`was called after`drStateRef.current.set()` for the same entity. The previous position used for bearing calculation was always identical to the new position (distance = 0), making the kinematic heading fallback dead code. New entities and entities with short trails now compute heading correctly from delta position.
+- **Animation Loop Smoothing After Pause:** Capped the lerp `smoothDt`to 33ms independently of the outer`dt`(which is capped at 100ms for physics safety). At`dt=100ms`the old`smoothFactor` reached ~0.73, causing a 73% position jump in one frame when resuming after a GC pause or tab-switch. The new cap keeps blending gradual on resume.
+- **Icon Rotation at 0°/360° Boundary:** `blendCourseRad`is now normalized to`[0°, 360°]`before being assigned as the entity`course`. The angle interpolation code uses `[-π, π]` range internally, which could produce negative degree values and incorrect icon rotation direction when crossing north.
 - **ADS-B MLAT Duplicate Suppression:** Raised `ARBI_MIN_SPATIAL_M` from 30m to 100m in the backend poller arbitration logic. MLAT multilateration noise across ground station networks is typically 50–150m; the old 30m threshold caused reports from two sources triangulating the same aircraft to both bypass the temporal gate and publish near-simultaneous snapping position updates.
 
 ## [0.7.1] - 2026-02-18
@@ -1547,8 +1598,10 @@ JS8CALL Updates
 - **Performance Tuning:**
   - **Animation Loop:** Optimized `TacticalMap` render loop to use refs, eliminating ~30Hz cleanup/setup cycles during selection updates.
   - **Backend Arbitration:**
-    - Reduced `ARBI_MIN_DELTA_S` from 0.8s to 0.5s for lower latency.
-    - Added 30m spatial bypass to instantly capture fast maneuvers (high-G turns) that would otherwise be rate-limited.
+  - ced `ARBI_MIN_DELTA_S` from 0.8s to 0.5s for lower latency.
+
+  - d 30m spatial bypass to instantly capture fast maneuvers (high-G turns) that would otherwise be rate-limited.
+
 
 ### Fixed
 
@@ -1603,9 +1656,12 @@ JS8CALL Updates
   - **Dual-Mode Rendering:** Automatically switches between **Mapbox GL JS** (Photorealistic 3D) and **MapLibre GL** (Lightweight 2D) based on token availability.
   - **CARTO Integration:** Implemented **CARTO Dark Matter** as the default high-performance basemap for disconnected/local-only operations.
   - **3D Tactical Visualization:**
-    - **Altitude Stems:** Vertical "drop lines" connecting aircraft to their ground shadow for precise 3D spatial awareness.
-    - **Ground Shadows:** Dynamic projected shadows for airborne assets to aid depth perception.
-    - **Camera Control:** New Pitch ($0^{\circ}-85^{\circ}$) and Bearing controls for tactical perspective.
+  - titude Stems:** Vertical "drop lines" connecting aircraft to their ground shadow for precise 3D spatial awareness.
+
+  - ound Shadows:** Dynamic projected shadows for airborne assets to aid depth perception.
+
+  - mera Control:** New Pitch ($0^{\circ}-85^{\circ}$) and Bearing controls for tactical perspective.
+
 
 ### Changed
 
@@ -1655,8 +1711,10 @@ JS8CALL Updates
   - Canvas-based icon atlas for high-performance aircraft and vessel rendering.
   - Distinct silhouettes for aircraft (chevron) and vessels (hull).
   - Dynamic color gradients:
-    - Aviation: 10-stop Green -> Red (Altitude)
-    - Maritime: 5-stop Blue -> Orange (Speed)
+  - tion: 10-stop Green -> Red (Altitude)
+
+  - time: 5-stop Blue -> Orange (Speed)
+
   - Smooth trail rendering using Chaikin's corner-cutting algorithm.
   - Velocity vectors (45s projection) for moving entities.
   - Pulsating glow effects with pre-computed phase offsets.
@@ -1677,10 +1735,10 @@ JS8CALL Updates
   - Clamp relaxed to **2.5x** (from 1.5x) to allow coasting through data gaps.
   - Visual smoothing set to **0.05** for organic, responsive movement.
 - **Data Model:**
-  - Extended `CoTEntity` with `lastSourceTime` and `uidHash`.
-  - Extended `TrailPoint` to 4-tuple `[lon, lat, alt, speed]`.
+  - Extended `CoTEntity`with`lastSourceTime`and`uidHash`.
+  - Extended `TrailPoint`to 4-tuple`[lon, lat, alt, speed]`.
 - **Refactoring:**
-  - Removed legacy `aviation_ingest.yaml` and `maritime_ingest.yaml`.
+  - Removed legacy `aviation_ingest.yaml`and`maritime_ingest.yaml`.
   - Cleaned up unused imports in `MapContextMenu.tsx`.
 
 ### Fixed

@@ -1,7 +1,7 @@
 # Sovereign Watch — Cursor / Windsurf / Antigravity AI Context
-#
-# This file is auto-loaded by Cursor, Windsurf, and compatible VS Code forks.
-# For full development rules, see AGENTS.md.
+
+This file is auto-loaded by Cursor, Windsurf, and compatible VS Code forks.
+For full development rules, see [AGENTS.md](file:///d:/Projects/SovereignWatch/AGENTS.md).
 
 ## Project Overview
 
@@ -11,6 +11,7 @@ ingests and visualizes real-time aviation (ADS-B), maritime (AIS), orbital
 tactical map.
 
 Stack:
+
 - Frontend: TypeScript · React 18.2 · Vite 7.3 · Deck.gl 9.0 · MapLibre/Mapbox
 - Backend API: Python 3.11 · FastAPI · asyncpg · LiteLLM · Redis · aiokafka
 - Database: TimescaleDB (PostgreSQL 16 + PostGIS + pgvector)
@@ -19,7 +20,8 @@ Stack:
 
 ## Directory Map
 
-```
+```text
+
 frontend/src/
   components/map/        — Deck.gl + MapLibre/Mapbox map components
   components/layouts/    — HUD shell, sidebars, top bar

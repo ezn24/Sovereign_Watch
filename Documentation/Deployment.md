@@ -14,6 +14,7 @@
 | **Internet connectivity** | Required for external data feeds (ADS-B, AIS, Celestrak, etc.) |
 
 **Minimum hardware:**
+
 - 4 CPU cores
 - 8 GB RAM
 - 40 GB disk (for TimescaleDB data — 72-hour AIS/ADS-B retention with compression)
@@ -155,7 +156,7 @@ Some releases include database schema changes. The release notes will specify if
 
 Check [RELEASE_NOTES.md](../RELEASE_NOTES.md) before upgrading.
 
-**Example: Applying a migration**
+#### Example: Applying a migration
 
 ```bash
 docker compose exec -T timescaledb psql -U postgres -d sovereign_watch < ./backend/db/migrate_rf_plus.sql
