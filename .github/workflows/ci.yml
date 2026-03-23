@@ -13,10 +13,66 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # Detect which component trees actually changed.
+  # Every test job reads these outputs and skips itself when its tree is
+  # unchanged.  Changes to this workflow file always set every flag to true
+  # so the full suite re-validates after pipeline edits.
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      frontend:        ${{ steps.filter.outputs.frontend }}
+      backend-api:     ${{ steps.filter.outputs.backend-api }}
+      aviation-poller: ${{ steps.filter.outputs.aviation-poller }}
+      maritime-poller: ${{ steps.filter.outputs.maritime-poller }}
+      rf-pulse:        ${{ steps.filter.outputs.rf-pulse }}
+      space-pulse:     ${{ steps.filter.outputs.space-pulse }}
+      infra-poller:    ${{ steps.filter.outputs.infra-poller }}
+      gdelt-pulse:     ${{ steps.filter.outputs.gdelt-pulse }}
+      js8call:         ${{ steps.filter.outputs.js8call }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+            backend-api:
+              - 'backend/api/**'
+              - '.github/workflows/ci.yml'
+            aviation-poller:
+              - 'backend/ingestion/aviation_poller/**'
+              - '.github/workflows/ci.yml'
+            maritime-poller:
+              - 'backend/ingestion/maritime_poller/**'
+              - '.github/workflows/ci.yml'
+            rf-pulse:
+              - 'backend/ingestion/rf_pulse/**'
+              - '.github/workflows/ci.yml'
+            space-pulse:
+              - 'backend/ingestion/space_pulse/**'
+              - '.github/workflows/ci.yml'
+            infra-poller:
+              - 'backend/ingestion/infra_poller/**'
+              - '.github/workflows/ci.yml'
+            gdelt-pulse:
+              - 'backend/ingestion/gdelt_pulse/**'
+              - '.github/workflows/ci.yml'
+            js8call:
+              - 'js8call/**'
+              - '.github/workflows/ci.yml'
+
+  # ---------------------------------------------------------------------------
   # Frontend — lint + unit tests
   # ---------------------------------------------------------------------------
   frontend:
     name: Frontend (lint + test)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -50,6 +106,8 @@ jobs:
   # ---------------------------------------------------------------------------
   backend-api:
     name: Backend API (pytest)
+    needs: changes
+    if: needs.changes.outputs.backend-api == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,6 +139,8 @@ jobs:
   # ---------------------------------------------------------------------------
   aviation-poller:
     name: Aviation Poller (pytest)
+    needs: changes
+    if: needs.changes.outputs.aviation-poller == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -107,6 +167,8 @@ jobs:
   # ---------------------------------------------------------------------------
   maritime-poller:
     name: Maritime Poller (pytest)
+    needs: changes
+    if: needs.changes.outputs.maritime-poller == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -128,6 +190,8 @@ jobs:
   # ---------------------------------------------------------------------------
   rf-pulse:
     name: RF Pulse (pytest)
+    needs: changes
+    if: needs.changes.outputs.rf-pulse == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -149,6 +213,8 @@ jobs:
   # ---------------------------------------------------------------------------
   space-pulse:
     name: Space Pulse (pytest)
+    needs: changes
+    if: needs.changes.outputs.space-pulse == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -174,6 +240,8 @@ jobs:
   # ---------------------------------------------------------------------------
   infra-poller:
     name: Infrastructure Poller (pytest)
+    needs: changes
+    if: needs.changes.outputs.infra-poller == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -195,6 +263,8 @@ jobs:
   # ---------------------------------------------------------------------------
   gdelt-pulse:
     name: GDELT Pulse (pytest)
+    needs: changes
+    if: needs.changes.outputs.gdelt-pulse == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -216,6 +286,8 @@ jobs:
   # ---------------------------------------------------------------------------
   js8call:
     name: JS8Call Bridge (pytest)
+    needs: changes
+    if: needs.changes.outputs.js8call == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
