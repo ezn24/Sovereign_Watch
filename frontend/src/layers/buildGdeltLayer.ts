@@ -11,6 +11,7 @@ export interface GdeltPoint {
   tone: number;
   goldstein: number;
   toneColor: [number, number, number, number];
+  actor1?: string;
   actor2?: string;
   actor1_country?: string;
   actor2_country?: string;
@@ -47,6 +48,7 @@ interface GdeltFeature {
     toneColor?: [number, number, number, number];
     dateadded?: string;
     timestamp?: string;
+    actor1?: string;
     actor2?: string;
     actor1_country?: string;
     actor2_country?: string;
@@ -117,6 +119,7 @@ export function buildGdeltLayer(
     tone: f.properties.tone ?? 0,
     goldstein: f.properties.goldstein ?? 0,
     toneColor: f.properties.toneColor || [163, 230, 53, 180],
+    actor1: f.properties.actor1,
     actor2: f.properties.actor2,
     actor1_country: f.properties.actor1_country,
     actor2_country: f.properties.actor2_country,
