@@ -181,10 +181,15 @@ export const GlobalTerminalWidget: React.FC<GlobalTerminalWidgetProps> = ({ onCl
       </div>
 
       {/* Terminal Body */}
-      <div className="flex-1 overflow-y-auto p-3 custom-scrollbar font-mono text-[10px] space-y-3">
+      <div
+        className="flex-1 overflow-y-auto p-3 custom-scrollbar font-mono text-[10px] space-y-3"
+        aria-live="polite"
+        aria-busy={logs.length === 0}
+      >
         {logs.length === 0 ? (
-           <div className="h-full flex items-center justify-center text-white/30 tracking-widest animate-pulse">
-               AWAITING_PAYLOAD_STREAM...
+           <div className="h-full flex flex-col items-center justify-center gap-3 text-white/30 tracking-widest animate-pulse">
+               <Terminal size={24} className="text-white/10" aria-hidden="true" />
+               <span>AWAITING_PAYLOAD_STREAM...</span>
            </div>
         ) : (
             logs.map((log) => (
