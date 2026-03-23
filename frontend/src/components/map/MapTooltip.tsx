@@ -357,9 +357,9 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({ entity, position }) => {
               TONE (GS)
             </span>
             <span
-              className={`text-[10px] font-mono font-bold leading-tight ${Number(entity.detail?.tone || 0) <= -2 ? "text-red-400" : "text-hud-green"}`}
+              className={`text-[10px] font-mono font-bold leading-tight ${Number(entity.detail?.goldstein ?? 0) <= -2 ? "text-red-400" : "text-hud-green"}`}
             >
-              {(entity.detail?.tone as number)?.toFixed(1) || "0.0"}
+              {(entity.detail?.goldstein as number)?.toFixed(1) ?? "0.0"}
             </span>
           </div>
           <div>
@@ -367,11 +367,11 @@ export const MapTooltip: React.FC<MapTooltipProps> = ({ entity, position }) => {
               STATUS
             </span>
             <span
-              className={`text-[10px] font-mono font-bold leading-tight ${Number(entity.detail?.tone || 0) <= -2 ? "text-red-400" : "text-hud-green"}`}
+              className={`text-[10px] font-mono font-bold leading-tight ${Number(entity.detail?.goldstein ?? 0) <= -2 ? "text-red-400" : "text-hud-green"}`}
             >
-              {Number(entity.detail?.tone || 0) <= -5
+              {Number(entity.detail?.goldstein ?? 0) <= -5
                 ? "CRITICAL"
-                : Number(entity.detail?.tone || 0) <= -2
+                : Number(entity.detail?.goldstein ?? 0) <= -2
                   ? "TENSION"
                   : "STABLE"}
             </span>
