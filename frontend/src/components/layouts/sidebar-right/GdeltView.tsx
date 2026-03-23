@@ -67,7 +67,8 @@ export const GdeltView: React.FC<BaseViewProps> = ({
 }) => {
   const detail = entity.detail as any;
   const tone = detail.tone ?? 0;
-  const theme = getGdeltTheme(tone);
+  const goldstein = detail.goldstein ?? 0;
+  const theme = getGdeltTheme(goldstein);
 
   return (
     <div className="pointer-events-auto flex flex-col h-auto max-h-full overflow-hidden animate-in slide-in-from-right duration-500 font-mono">
