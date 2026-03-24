@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.47.1] - 2026-03-24
+
+### Added
+
+- **Alert Engine Modules**: Added domain-specific alert engines in `frontend/src/alerts/` for aviation emergency squawk and maritime distress-state detection with consistent alert message composition.
+- **Event Filter Modules**: Added reusable event filter utilities in `frontend/src/filters/` for aviation, maritime, and orbital feed filtering paths.
+- **Dashboard Widget Components**: Added extracted widget components in `frontend/src/components/widgets/` (`MiniMap`, `StreamStatusMonitor`, `OutageAlertPanel`, `RFSiteSearchPanel`, `TrackSparkline`) to isolate UI concerns.
+- **Worker/Utility Modules**: Added `frontend/src/workers/WorkerProtocol.ts`, `frontend/src/utils/trailSmoothing.ts`, and `frontend/src/utils/EventCategorizer.ts` to centralize worker lifecycle, trail smoothing, and event styling logic.
+
+### Changed
+
+- **Entity Worker Architecture**: Refactored `frontend/src/hooks/useEntityWorker.ts` to import alert engines, trail smoothing, and worker protocol helpers instead of maintaining inline implementations.
+- **Dashboard Composition**: Refactored `frontend/src/components/DashboardView.tsx` to consume extracted widget components and reduce inline rendering/state logic.
+- **Intel Feed Processing**: Updated `frontend/src/components/IntelFeed.tsx` to use centralized domain filters and shared event style categorization.
+
+### Fixed
+
+- **Logic Drift Risk in Duplicated Paths**: Reduced risk of behavioral drift and inconsistent emergency/distress handling by consolidating previously duplicated inline logic into single-source modules.
+
 ## [0.47.0] - 2026-03-24
 
 ### Added
