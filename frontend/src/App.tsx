@@ -100,9 +100,19 @@ function App() {
 
   const [events, setEvents] = useState<IntelEvent[]>([]);
 
+  const lastEventTimesRef = useRef<Record<string, number>>({});
   const addEvent = useCallback((event: Omit<IntelEvent, "id" | "time">) => {
     const now = Date.now();
     const oneHourAgo = now - 3600000;
+
+    // Throttle 'new' and 'lost' events to 1 every 1s per category (dash/tactical) to prevent visual spam
+    // Critical alerts (type: 'alert') always bypass this throttle.
+    if (event.type !== 'alert') {
+      const typeKey = `${event.type}-${event.entityType || 'unknown'}`;
+      const lastTime = lastEventTimesRef.current[typeKey] || 0;
+      if (now - lastTime < 1000) return;
+      lastEventTimesRef.current[typeKey] = now;
+    }
 
     setEvents((prev: IntelEvent[]) =>
       [
@@ -120,7 +130,6 @@ function App() {
         .slice(0, 500),
     );
   }, []);
-
   // Initialize Global Entity Worker
   const {
     entitiesRef,

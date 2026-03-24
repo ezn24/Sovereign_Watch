@@ -1034,6 +1034,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       : passCategory === "weather"
                         ? "text-sky-400"
                         : "text-emerald-400";
+                  const accentColorMuted =
+                    passCategory === "intel"
+                      ? "text-purple-400/70"
+                      : passCategory === "weather"
+                        ? "text-sky-400/70"
+                        : "text-emerald-400/70";
                   const accentBg =
                     passCategory === "intel"
                       ? "bg-purple-500/5"
@@ -1048,14 +1054,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span
-                          className={`text-[9px] font-bold truncate mr-1 ${accentColor}/90 group-hover:${accentColor}`}
+                          className={`text-[9px] font-bold truncate mr-1 ${accentColor}`}
                         >
                           {pass.name.length > 15
                             ? pass.name.substring(0, 12) + "…"
                             : pass.name}
                         </span>
                         <span className="text-[7px] text-white/15 tabular-nums">
-                          {pass.norad_id.slice(-5)}
+                          {pass.norad_id.toString().slice(-5)}
                         </span>
                       </div>
 
@@ -1070,7 +1076,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           </span>
                         </div>
                         <span
-                          className={`text-[8px] font-bold tabular-nums ${isNow ? "text-white animate-pulse" : accentColor.replace("400", "300")}`}
+                          className={`text-[8px] font-bold tabular-nums ${isNow ? "text-white animate-pulse" : accentColorMuted}`}
                         >
                           {untilPass(pass.aos)}
                         </span>

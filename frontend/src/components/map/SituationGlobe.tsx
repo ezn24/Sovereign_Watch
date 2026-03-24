@@ -278,6 +278,23 @@ export const SituationGlobe: React.FC<SituationGlobeProps> = ({
                 bearing: next.bearing ?? prev.bearing,
               }));
             }}
+            onLoad={(evt: any) => {
+              const map = evt.target;
+              const style = map.getStyle();
+              if (style && style.layers) {
+                style.layers.forEach((layer: any) => {
+                  if (
+                    layer.type === "symbol" ||
+                    layer.id.includes("label") ||
+                    layer.id.includes("place")
+                  ) {
+                    if (map.getLayer(layer.id)) {
+                      map.removeLayer(layer.id);
+                    }
+                  }
+                });
+              }
+            }}
             mapStyle={DARK_MAP_STYLE}
             style={{ width: "100%", height: "100%" }}
             globeMode={true}
