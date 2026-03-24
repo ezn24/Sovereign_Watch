@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.47.0] - 2026-03-24
+
+### Added
+
+- **Intelligence Feed Throttling**: Implemented a 1-second rate-limiting throttle for 'new' and 'lost' entity events in `App.tsx` to reduce visual noise during high-traffic periods, while ensuring critical alerts remain immediate.
+- **Orbital Assets Theming**: Updated `PassPredictorWidget` and the dashboard orbital passes grid to use a unified purple color theme (`text-purple-400`, etc.) for intelligence-related satellites.
+
+### Changed
+
+- **Global Situation View**: Removed country and place labels from the Global Situation globe for a cleaner, purely tactical overview focused on infrastructure and sensors.
+
+### Fixed
+
+- **Dashboard UI Corruption**: Resolved JSX syntax errors and component fragmentation in the dashboard's orbital pass elements resulting from the theming transition.
+
 ## [0.46.4] - 2026-03-23
 
 ### Added
