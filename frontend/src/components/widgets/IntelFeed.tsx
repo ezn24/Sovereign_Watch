@@ -12,7 +12,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
+import { filterAviationEvent } from "../../filters/AviationEventFilter";
+import { filterMaritimeEvent } from "../../filters/MaritimeEventFilter";
+import { filterOrbitalEvent } from "../../filters/OrbitalEventFilter";
 import { CoTEntity, IntelEvent, MapActions, MapFilters } from "../../types";
+import { getEventStyle } from "../../utils/EventCategorizer";
 import { LayerFilters } from "./LayerFilters";
 
 interface IntelFeedProps {
@@ -32,115 +36,29 @@ export const IntelFeed = ({
 }: IntelFeedProps) => {
   const [showFilters, setShowFilters] = useState(false);
 
-  // 1. Memoize filtered events to avoid recalculating on every render
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
       if (!filters) return true;
 
-      // Root filters
-      if (event.entityType === "air" && !filters.showAir) return false;
-      if (event.entityType === "sea" && !filters.showSea) return false;
+      if (event.entityType === "air") {
+        if (!filters.showAir) return false;
+        if (!filterAviationEvent(event, filters)) return false;
+      }
+
+      if (event.entityType === "sea") {
+        if (!filters.showSea) return false;
+        if (!filterMaritimeEvent(event, filters)) return false;
+      }
+
       if (event.entityType === "orbital") {
         if (!filters.showSatellites) return false;
-        const msg = event.message?.toLowerCase() || "";
-        const classification = (
-          event.classification?.category || ""
-        ).toLowerCase();
-
-        // Check sub-filters based on message content or classification if available
-        if (
-          msg.includes("gps") ||
-          msg.includes("gnss") ||
-          classification.includes("gps")
-        ) {
-          if (filters.showSatGPS === false) return false;
-        } else if (
-          msg.includes("weather") ||
-          msg.includes("noaa") ||
-          classification.includes("weather")
-        ) {
-          if (filters.showSatWeather === false) return false;
-        } else if (
-          msg.includes("comms") ||
-          msg.includes("communications") ||
-          msg.includes("starlink") ||
-          classification.includes("comms")
-        ) {
-          if (filters.showSatComms === false) return false;
-        } else if (
-          msg.includes("intel") ||
-          msg.includes("surveillance") ||
-          msg.includes("military") ||
-          classification.includes("surveillance")
-        ) {
-          if (filters.showSatSurveillance === false) return false;
-        } else {
-          // Everything else (debris, active unclassified, etc.) falls to 'Other'
-          if (filters.showSatOther === false) return false;
-        }
-      }
-
-      // Air Filters
-      if (event.entityType === "air" && event.classification) {
-        const cls = event.classification;
-
-        // Platform overrides
-        if (cls.platform === "helicopter") {
-          return filters.showHelicopter !== false;
-        }
-        if (cls.platform === "drone" || cls.platform === "uav") {
-          return filters.showDrone !== false;
-        }
-
-        // Affiliation check
-        if (cls.affiliation === "military" && filters.showMilitary === false)
-          return false;
-        if (
-          cls.affiliation === "government" &&
-          filters.showGovernment === false
-        )
-          return false;
-        if (
-          cls.affiliation === "commercial" &&
-          filters.showCommercial === false
-        )
-          return false;
-        if (
-          cls.affiliation === "general_aviation" &&
-          filters.showPrivate === false
-        )
-          return false;
-      }
-
-      // Sea filters
-      if (event.entityType === "sea" && event.classification) {
-        const cat = event.classification.category;
-        if (cat === "cargo" && filters.showCargo === false) return false;
-        if (cat === "tanker" && filters.showTanker === false) return false;
-        if (cat === "passenger" && filters.showPassenger === false)
-          return false;
-        if (cat === "fishing" && filters.showFishing === false) return false;
-        if (cat === "military" && filters.showSeaMilitary === false)
-          return false;
-        if (cat === "law_enforcement" && filters.showLawEnforcement === false)
-          return false;
-        if (cat === "sar" && filters.showSar === false) return false;
-        if (cat === "tug" && filters.showTug === false) return false;
-        if (cat === "pleasure" && filters.showPleasure === false) return false;
-        if (cat === "hsc" && filters.showHsc === false) return false;
-        if (cat === "pilot" && filters.showPilot === false) return false;
-        if (
-          (cat === "special" || cat === "unknown") &&
-          filters.showSpecial === false
-        )
-          return false;
+        if (!filterOrbitalEvent(event, filters)) return false;
       }
 
       return true;
     });
   }, [events, filters]);
 
-  // 2. stable callback for click handling
   const handleItemClick = useCallback(
     (event: IntelEvent) => {
       if (onEntitySelect && mapActions) {
@@ -315,7 +233,8 @@ export const IntelFeed = ({
   );
 };
 
-// 3. Isolated sub-component with React.memo to prevent unnecessary re-renders
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
 const IntelEventItem = React.memo(
   ({
     event,
@@ -327,62 +246,10 @@ const IntelEventItem = React.memo(
     const isAir = event.entityType === "air";
     const isOrbital = event.entityType === "orbital";
     const isInfra = event.entityType === "infra";
-    const isLost = event.type === "lost";
     const isAlert = event.type === "alert";
-    const isMil = event.classification?.affiliation === "military";
-    const isGov = event.classification?.affiliation === "government";
-    const isRF =
-      isInfra &&
-      (event.message?.includes("RF") || event.message?.includes("Repeater"));
-    const infraColor = isRF ? "emerald-400" : "cyan-400";
+    const isLost = event.type === "lost";
 
-    const accentColor = isAlert
-      ? "bg-alert-red"
-      : isLost
-        ? "bg-alert-amber"
-        : isMil
-          ? "bg-amber-500"
-          : isGov
-            ? "bg-blue-400"
-            : isOrbital
-              ? "bg-purple-400"
-              : isInfra
-                ? `bg-${infraColor}`
-                : isAir
-                  ? "bg-air-accent"
-                  : "bg-sea-accent";
-
-    const textColor = isAlert
-      ? "text-alert-red"
-      : isLost
-        ? "text-alert-amber"
-        : isMil
-          ? "text-amber-500"
-          : isGov
-            ? "text-blue-400"
-            : isOrbital
-              ? "text-purple-400"
-              : isInfra
-                ? `text-${infraColor}`
-                : isAir
-                  ? "text-air-accent"
-                  : "text-sea-accent";
-
-    const borderLight = isAlert
-      ? "border-alert-red/30"
-      : isLost
-        ? "border-alert-amber/30"
-        : isMil
-          ? "border-amber-500/30"
-          : isGov
-            ? "border-blue-400/30"
-            : isOrbital
-              ? "border-purple-400/30"
-              : isInfra
-                ? `border-${infraColor}/30`
-                : isAir
-                  ? "border-air-accent/30"
-                  : "border-sea-accent/30";
+    const { accentColor, textColor, borderLight } = getEventStyle(event);
 
     return (
       <button
@@ -468,7 +335,8 @@ const IntelEventItem = React.memo(
   },
 );
 
-// Internal utility icons
+// ─── Internal utility icons ───────────────────────────────────────────────────
+
 const ActivityIndicator = () => (
   <div className="relative h-6 w-6">
     <div className="absolute inset-0 rounded-full border border-hud-green opacity-20 animate-ping" />
