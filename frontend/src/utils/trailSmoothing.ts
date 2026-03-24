@@ -8,7 +8,7 @@ import { chaikinSmooth } from "./map/geoUtils";
 export function getSmoothedTrail(
   trail: TrailPoint[],
   existing?: CoTEntity,
-): [number, number, number][] {
+): number[][] {
   if (existing?.smoothedTrail && existing.trail === trail) {
     return existing.smoothedTrail;
   }
