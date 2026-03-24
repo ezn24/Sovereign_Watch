@@ -46,3 +46,6 @@
 ## 2024-05-18 - Tooltip-Only Icons are Insufficient
 **Learning:** Found multiple icon-only buttons (like Play/Pause, News Refresh) that relied entirely on the `title` attribute for accessibility. Screen reader users need explicit `aria-label` attributes because `title` is often ignored or inconsistently read by assistive technologies.
 **Action:** Always add explicit `aria-label` to icon-only buttons, even if a `title` tooltip is present. Ensure interactive buttons also have visible focus states (`focus-visible:ring-1 ...`) for keyboard users.
+## 2024-03-20 - Clear Search Button Accessibility
+**Learning:** Icon-only or symbolic clear buttons (`×`) inside search inputs often lack descriptive labels and focus states because they are visually perceived as part of the input.
+**Action:** Always add `aria-label`, `title`, and distinct keyboard focus indicators (`focus-visible:ring-1`) to input clear buttons to ensure they are discoverable and actionable by all users.
