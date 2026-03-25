@@ -5,8 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  flatted: ^3.4.2
-  fast-xml-parser: ^5.5.8
+  flatted: 3.4.2
+  fast-xml-parser: 5.5.9
 
 importers:
 
