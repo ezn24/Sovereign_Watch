@@ -134,7 +134,9 @@ export const OrbitalSidebarLeft: React.FC<OrbitalSidebarLeftProps> = ({
                 {searchTerm && (
                     <button
                         onClick={() => setSearchTerm('')}
-                        className="text-white/30 hover:text-white/60 text-[10px] leading-none"
+                        aria-label="Clear search"
+                        title="Clear search"
+                        className="text-white/30 hover:text-white/60 text-[10px] leading-none px-1 rounded-sm focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
                     >
                         ×
                     </button>
