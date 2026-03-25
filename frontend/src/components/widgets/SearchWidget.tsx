@@ -171,6 +171,7 @@ export const SearchWidget: React.FC<SearchWidgetProps> = ({ mapActions, onEntity
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search Callsign / UID..."
+                    aria-label="Search Callsign or UID"
                     className="w-full bg-white/5 border border-white/10 rounded pl-9 pr-8 py-2 text-[10px] font-bold tracking-[.3em] text-white/50 placeholder-white/30 focus:outline-none focus:border-cyan-400/60 focus:shadow-[0_0_10px_rgba(34,211,238,0.2)] transition-all uppercase"
                 />
                 {query && (
