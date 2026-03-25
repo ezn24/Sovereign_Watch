@@ -96,7 +96,7 @@ export const SystemStatus: React.FC<SystemStatusProps> = ({
         </div>
       </div>
 
-      <IntegrationStatus radiorefEnabled={integrations?.radioref_enabled} />
+      <IntegrationStatus />
     </div>
   );
 };
