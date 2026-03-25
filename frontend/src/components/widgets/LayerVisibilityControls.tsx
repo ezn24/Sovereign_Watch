@@ -43,6 +43,8 @@ export const LayerVisibilityControls: React.FC<
       filters.showOutages === true ||
       filters.showTowers === true);
 
+  const envIsOn = !!filters && (!!filters.showAurora || !!filters.showJamming);
+
   const toggleInfra = () => {
     if (!onFilterChange || !filters) return;
     if (infraIsOn) {
@@ -61,17 +63,28 @@ export const LayerVisibilityControls: React.FC<
     }
   };
 
+  const toggleEnv = () => {
+    if (!onFilterChange || !filters) return;
+    if (envIsOn) {
+      onFilterChange("showAurora", false);
+      onFilterChange("showJamming", false);
+    } else {
+      onFilterChange("showAurora", getFilterPref("showAurora", false));
+      onFilterChange("showJamming", getFilterPref("showJamming", true));
+    }
+  };
+
   return (
     <>
       {/* Map Layers header with quick-toggle icons */}
       <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-3 py-2 transition-colors relative">
         <button
-          className="absolute inset-0 w-full h-full text-left focus-visible:ring-1 focus-visible:ring-hud-green outline-none cursor-pointer"
+          className="absolute inset-0 h-full w-full cursor-pointer text-left focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
           onClick={() => setShowLayers(!showLayers)}
           aria-expanded={showLayers}
           aria-label="Toggle Map Layers"
         />
-        <div className="flex items-center gap-2 relative pointer-events-none">
+        <div className="relative flex items-center gap-2 pointer-events-none">
           <Layers size={13} className="text-cyan-400" aria-hidden="true" />
           <span className="text-[10px] font-bold tracking-[.3em] text-white/50 uppercase">
             Map Layers
@@ -115,18 +128,18 @@ export const LayerVisibilityControls: React.FC<
               <button
                 onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
-                  onFilterChange("showAurora", !filters.showAurora);
+                  toggleEnv();
                 }}
                 className={`p-1 rounded transition-all active:scale-95 focus-visible:ring-1 focus-visible:ring-purple-400 outline-none ${
-                  filters.showAurora
+                  envIsOn
                     ? "bg-purple-400/10 text-purple-400 border border-purple-400/30"
                     : "text-white/30 hover:text-white/70 hover:bg-white/5 border border-transparent"
                 }`}
-                title="Toggle Environmental Forecast"
-                aria-label="Toggle Environmental Forecast"
-                aria-pressed={filters.showAurora}
+                title="Toggle Environmental Layers"
+                aria-label="Toggle Environmental Layers"
+                aria-pressed={envIsOn}
               >
-                <Globe size={12} aria-hidden="true" />
+                <WifiOff size={12} aria-hidden="true" />
               </button>
             </div>
           )}
@@ -572,9 +585,7 @@ export const LayerVisibilityControls: React.FC<
                     <TowerControl
                       size={10}
                       className={
-                        filters.showTowers
-                          ? "text-orange-500"
-                          : "text-white/20"
+                        filters.showTowers ? "text-orange-500" : "text-white/20"
                       }
                     />
                     <span
@@ -636,7 +647,7 @@ export const LayerVisibilityControls: React.FC<
           {/* Environmental */}
           <div className="flex flex-col gap-1">
             <div
-              className={`group flex items-center justify-between rounded border transition-all ${filters.showAurora ? "border-purple-400/30 bg-purple-400/10 shadow-[0_0_8px_rgba(168,85,247,0.2)]" : "border-white/5 bg-white/5 hover:bg-white/10"}`}
+              className={`group flex items-center justify-between rounded border transition-all ${envIsOn ? "border-purple-400/30 bg-purple-400/10 shadow-[0_0_8px_rgba(168,85,247,0.2)]" : "border-white/5 bg-white/5 hover:bg-white/10"}`}
             >
               <button
                 className="flex flex-1 items-center justify-between p-2 cursor-pointer text-left focus-visible:ring-1 focus-visible:ring-hud-green outline-none w-full"
@@ -649,9 +660,7 @@ export const LayerVisibilityControls: React.FC<
                 <div className="flex items-center gap-3">
                   <Globe
                     size={14}
-                    className={
-                      filters.showAurora ? "text-purple-400" : "text-white/20"
-                    }
+                    className={envIsOn ? "text-purple-400" : "text-white/20"}
                     aria-hidden="true"
                   />
                   <div className="flex flex-col">
@@ -676,25 +685,23 @@ export const LayerVisibilityControls: React.FC<
                 className="border-l border-white/10 p-2 focus-visible:ring-1 focus-visible:ring-hud-green outline-none"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onFilterChange("showAurora", !filters.showAurora);
+                  toggleEnv();
                 }}
                 aria-label="Toggle Environmental Layers"
-                aria-pressed={filters.showAurora}
+                aria-pressed={envIsOn}
               >
                 <input
                   type="checkbox"
                   className="sr-only"
-                  checked={filters.showAurora || false}
-                  onChange={() =>
-                    onFilterChange("showAurora", !filters.showAurora)
-                  }
+                  checked={envIsOn}
+                  onChange={() => toggleEnv()}
                   tabIndex={-1}
                 />
                 <div
-                  className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${filters.showAurora ? "bg-purple-400" : "bg-white/10 hover:bg-white/20"}`}
+                  className={`h-3 w-6 cursor-pointer rounded-full transition-colors relative ${envIsOn ? "bg-purple-400" : "bg-white/10 hover:bg-white/20"}`}
                 >
                   <div
-                    className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${filters.showAurora ? "left-3.5" : "left-0.5"}`}
+                    className={`absolute top-0.5 h-2 w-2 rounded-full bg-black transition-all ${envIsOn ? "left-3.5" : "left-0.5"}`}
                   />
                 </div>
               </button>
@@ -732,6 +739,39 @@ export const LayerVisibilityControls: React.FC<
                   >
                     <div
                       className={`absolute top-0.5 h-1 w-1 rounded-full bg-black transition-all ${filters.showAurora ? "left-2.5" : "left-0.5"}`}
+                    />
+                  </div>
+                </label>
+
+                <label
+                  className={`group flex cursor-pointer items-center justify-between rounded border p-1 transition-all ${filters.showJamming ? "border-rose-500/50 bg-rose-500/10 shadow-[0_0_8px_rgba(244,63,94,0.2)]" : "border-white/5 bg-white/5"}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <WifiOff
+                      size={10}
+                      className={
+                        filters.showJamming ? "text-rose-400" : "text-white/20"
+                      }
+                    />
+                    <span
+                      className={`text-[9px] font-bold tracking-wide ${filters.showJamming ? "text-rose-400/80" : "text-white/30"}`}
+                    >
+                      GPS INTEGRITY ZONES
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={filters.showJamming || false}
+                    onChange={(e) =>
+                      handleSubFilterChange("showJamming", e.target.checked)
+                    }
+                  />
+                  <div
+                    className={`h-2 w-4 shrink-0 cursor-pointer rounded-full transition-colors relative ${filters.showJamming ? "bg-rose-400/80" : "bg-white/10"}`}
+                  >
+                    <div
+                      className={`absolute top-0.5 h-1 w-1 rounded-full bg-black transition-all ${filters.showJamming ? "left-2.5" : "left-0.5"}`}
                     />
                   </div>
                 </label>
