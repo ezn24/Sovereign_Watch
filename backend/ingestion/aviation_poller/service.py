@@ -249,6 +249,15 @@ class PollerService:
                             ac["_source"] = source.name
                             ac["_fetched_at"] = fetched_at
                         await self.process_aircraft_batch(aircraft, lat, lon)
+                        # Throttled heartbeat: update at most once per 30s
+                        if fetched_at - getattr(self, "_adsb_last_heartbeat", 0) >= 30:
+                            self._adsb_last_heartbeat = fetched_at
+                            try:
+                                await self.redis_client.set(
+                                    "adsb:last_fetch", str(fetched_at), ex=600
+                                )
+                            except Exception:
+                                pass
 
                     # Update cell priority based on observed traffic.
                     # Use raw count (pre-arbitration) as the activity signal.
@@ -265,6 +274,14 @@ class PollerService:
 
             except Exception as e:
                 logger.error(f"CRITICAL error in {source.name} loop: {e}")
+                try:
+                    await self.redis_client.set(
+                        "poller:adsb:last_error",
+                        json.dumps({"ts": time.time(), "msg": str(e)}),
+                        ex=86400,
+                    )
+                except Exception:
+                    pass
                 await asyncio.sleep(5)
 
     async def opensky_loop(self):
